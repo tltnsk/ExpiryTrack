@@ -1,6 +1,1 @@
 @ExpiryTrack.Api_HostAddress = http://localhost:5030
-
-GET {{ExpiryTrack.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

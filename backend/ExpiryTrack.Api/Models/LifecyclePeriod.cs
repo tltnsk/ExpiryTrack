@@ -12,11 +12,11 @@ public class LifecyclePeriod
     public int ItemId { get; set; }
     public Item Item { get; set; } = null!;
 
-    // The renewal request that produced this period
+    // The renewal request that created this period
     // null for the first period
     public int? CreatedFromRequestId { get; set; }
     public RenewalRequest? CreatedFromRequest { get; set; }
 
-    // Renewal requests submitted for this period
+    // Renewal requests made for this period
     public ICollection<RenewalRequest> RenewalRequests { get; set; } = new List<RenewalRequest>();
 }

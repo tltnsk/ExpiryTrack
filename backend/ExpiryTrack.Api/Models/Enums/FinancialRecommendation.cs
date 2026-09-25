@@ -2,7 +2,7 @@
 
 namespace ExpiryTrack.Api.Models.Enums;
 
-public enum FinanceRecommendation
+public enum FinancialRecommendation
 {
     Approve,
     Reject

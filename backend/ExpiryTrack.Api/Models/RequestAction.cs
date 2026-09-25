@@ -12,7 +12,7 @@ public class RequestAction
     public RequestStatus ToStatus { get; set; }
 
     // Set only by finance officers
-    public FinanceRecommendation? Recommendation { get; set; }
+    public FinancialRecommendation? Recommendation { get; set; }
     public string? Comment { get; set; }
     public DateTime CreatedAt { get; set; }
 
@@ -20,6 +20,6 @@ public class RequestAction
     public RenewalRequest Request { get; set; } = null!;
 
     // NULL = system (daily expiry job)
-    public int? ActorId { get; set; }
-    public User? Actor { get; set; }
+    public int? ActorUserId { get; set; }
+    public User? ActorUser { get; set; }
 }

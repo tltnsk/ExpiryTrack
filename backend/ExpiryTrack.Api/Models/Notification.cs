@@ -9,8 +9,8 @@ public class Notification
     public bool IsRead { get; set; }
     public DateTime CreatedAt { get; set; }
 
-    public int RecipientId { get; set; }
-    public User Recipient { get; set; } = null!;
+    public int RecipientUserId { get; set; }
+    public User RecipientUser { get; set; } = null!;
 
     // related item 
     public int? ItemId { get; set; }

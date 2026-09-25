@@ -1,6 +1,8 @@
+// Outcome of a financial review
+
 namespace ExpiryTrack.Api.Models.Enums;
 
-public enum Recommendation
+public enum FinanceRecommendation
 {
     Approve,
     Reject

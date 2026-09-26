@@ -1,6 +1,6 @@
 namespace ExpiryTrack.Api.Models;
 
-public class Caetgory
+public class Category
 {
     public int Id { get; set; }
     public string Name { get; set; } = "";

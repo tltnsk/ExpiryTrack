@@ -1,4 +1,4 @@
-namespace PrivateExpiryTrack.Api.Models;
+namespace ExpiryTrack.Api.Models;
 
 // In-app notification, linked to at most one item or one request
 public class Notification

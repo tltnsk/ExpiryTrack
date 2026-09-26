@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ExpiryTrack.Api.Models;
 
 namespace ExpiryTrack.Api.Data;
 

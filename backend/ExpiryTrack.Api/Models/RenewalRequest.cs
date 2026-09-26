@@ -13,13 +13,9 @@ public class RenewalRequest
     public DateOnly ProposedExpirationDate { get; set; }
     public decimal? ProposedCost { get; set; }
     public string? Justification { get; set; }
-    public bool ClarificationUsed { get; set; }
     public DateTime SubmittedAt { get; set; }
     public DateTime? DecidedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
-
-    // used to ensure that a period has only one open renewal request
-    public int? OpenPeriodId { get; private set; }
 
     // The period that is being renewed
     public int PeriodId { get; set; }

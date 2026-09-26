@@ -17,6 +17,6 @@ public class ItemStateHistory
     public Item Item { get; set; } = null!;
 
 
-    public int? ChangedById { get; set; }
-    public User? ChangedBy { get; set; }
+    public int? ChangedByUserId { get; set; }
+    public User? ChangedByUser { get; set; }
 }

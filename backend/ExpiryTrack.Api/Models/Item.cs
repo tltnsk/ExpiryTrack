@@ -31,12 +31,6 @@ public class Item
     // All validity periods of this item 
     public ICollection<LifecyclePeriod> Periods { get; set; } = new List<LifecyclePeriod>();
 
-    // Items this item depends on
-    public ICollection<ItemDependency> DependsOn { get; set; } = new List<ItemDependency>();
-
-    // Items that depend on this item 
-    public ICollection<ItemDependency> RequiredBy { get; set; } = new List<ItemDependency>();
-
     public ICollection<ItemStateHistory> StateHistory { get; set; } = new List<ItemStateHistory>();
     public ICollection<Document> Documents { get; set; } = new List<Document>();
 }

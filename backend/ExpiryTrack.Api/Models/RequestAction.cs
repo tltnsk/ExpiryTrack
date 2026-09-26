@@ -12,7 +12,7 @@ public class RequestAction
     public RequestStatus ToStatus { get; set; }
 
     // Set only by finance officers
-    public FinancialRecommendation? Recommendation { get; set; }
+    public FinancialRecommendation? FinancialRecommendation { get; set; }
     public string? Comment { get; set; }
     public DateTime CreatedAt { get; set; }
 

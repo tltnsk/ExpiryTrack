@@ -16,7 +16,6 @@ public class AppDbContext : DbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Item> Items => Set<Item>();
     public DbSet<LifecyclePeriod> LifecyclePeriods => Set<LifecyclePeriod>();
-    public DbSet<ItemDependency> ItemDependencies => Set<ItemDependency>();
     public DbSet<RenewalRequest> RenewalRequests => Set<RenewalRequest>();
     public DbSet<RequestAction> RequestActions => Set<RequestAction>();
     public DbSet<ItemStateHistory> ItemStateHistory => Set<ItemStateHistory>();

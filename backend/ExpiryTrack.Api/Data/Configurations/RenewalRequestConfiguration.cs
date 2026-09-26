@@ -23,7 +23,7 @@ public class RenewalRequestConfiguration : IEntityTypeConfiguration<RenewalReque
         // the period being renewed
         // one to many: a period can have several requests over time
         builder.HasOne(r => r.Period)
-            .WithMany(p => p.RenewalRequest)
+            .WithMany(p => p.RenewalRequests)
             .HasForeignKey(r => r.PeriodId);
     }
 }

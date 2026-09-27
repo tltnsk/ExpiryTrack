@@ -19,6 +19,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 
+    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "ExpiryTrack API"));
+
     // fill an empty database with roles and test users
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

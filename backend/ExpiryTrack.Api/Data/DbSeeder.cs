@@ -13,7 +13,7 @@ public static class DbSeeder
             return;
 
         db.Roles.AddRange(
-            new Role { Name = "Administator" },
+            new Role { Name = "Administrator" },
             new Role { Name = "Employee" },
             new Role { Name = "DepartmentManager" },
             new Role { Name = "FinanceOfficer" });

@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ExpiryTrack.Api.DTOs;
+namespace ExpiryTrack.Api.DTO;
 
 public class LoginRequest
 {

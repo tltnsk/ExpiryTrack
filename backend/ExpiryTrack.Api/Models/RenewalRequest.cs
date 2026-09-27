@@ -29,5 +29,4 @@ public class RenewalRequest
     public LifecyclePeriod? CreatedPeriod { get; set; }
 
     public ICollection<RequestAction> Actions { get; set; } = new List<RequestAction>();
-    public ICollection<Document> Documents { get; set; } = new List<Document>();
 }

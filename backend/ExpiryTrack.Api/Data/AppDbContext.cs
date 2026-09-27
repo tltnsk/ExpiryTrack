@@ -19,7 +19,6 @@ public class AppDbContext : DbContext
     public DbSet<RenewalRequest> RenewalRequests => Set<RenewalRequest>();
     public DbSet<RequestAction> RequestActions => Set<RequestAction>();
     public DbSet<ItemStateHistory> ItemStateHistory => Set<ItemStateHistory>();
-    public DbSet<Document> Documents => Set<Document>();
     public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

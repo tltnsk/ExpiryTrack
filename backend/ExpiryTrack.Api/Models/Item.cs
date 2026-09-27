@@ -32,5 +32,4 @@ public class Item
     public ICollection<LifecyclePeriod> Periods { get; set; } = new List<LifecyclePeriod>();
 
     public ICollection<ItemStateHistory> StateHistory { get; set; } = new List<ItemStateHistory>();
-    public ICollection<Document> Documents { get; set; } = new List<Document>();
 }

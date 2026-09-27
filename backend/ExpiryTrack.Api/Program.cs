@@ -18,6 +18,12 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    // fill an empty database with roles and test users
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await DbSeeder.SeedRolesAsync(db);
+    await DbSeeder.SeedTestUsersAsync(db);
 }
 
 app.UseHttpsRedirection();

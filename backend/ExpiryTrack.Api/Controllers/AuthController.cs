@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ExpiryTrack.Api.Data;
-using ExpiryTrack.Api.DTOs;
+using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
 
 namespace ExpiryTrack.Api.Controllers;

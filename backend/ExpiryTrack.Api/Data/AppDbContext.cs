@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<RequestAction> RequestActions => Set<RequestAction>();
     public DbSet<ItemStateHistory> ItemStateHistory => Set<ItemStateHistory>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<Document> Documents => Set<Document>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

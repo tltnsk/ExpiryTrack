@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using ExpiryTrack.Api.Models;
 
-namespace ExpiryTrack.Api.DTOs;
+namespace ExpiryTrack.Api.DTO;
 
 // what the admin sends to create a user
 public class CreateUserRequest

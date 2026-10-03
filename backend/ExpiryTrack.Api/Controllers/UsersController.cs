@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExpiryTrack.Api.Controllers;
 
-
 [ApiController]
 [Route("api/users")]
 [Authorize(Roles = "Admnistrators")]
@@ -40,5 +39,21 @@ public class UsersController : ControllerBase
             responses.Add(response);
         }
         return Ok(responses);
+    }
+
+
+    // GET /api/users/{id}
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var user = await _db.Users
+            .Include(u => u.Role)
+            .Include(u => u.Department)
+            .SingleOrDefaultAsync(u => u.Id == id);
+
+        if (user == null)
+            return NotFound();
+
+        return Ok(UserResponse.FromUser(user));
     }
 }

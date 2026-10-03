@@ -79,4 +79,18 @@ public class UserResponse
     public string? DepartmentName { get; set; }
     public bool IsActive { get; set; }
 
+    public static UserResponse FromUser(User user)
+    {
+        return new UserResponse
+        {
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Role = user.Role.Name,
+            DepartmentId = user.DepartmentId,
+            DepartmentName = user.Department?.Name,
+            IsActive = user.IsActive
+        };
+    }
 }

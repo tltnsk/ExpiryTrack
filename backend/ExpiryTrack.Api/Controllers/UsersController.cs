@@ -1,7 +1,10 @@
+using System.Security.Claims;
 using ExpiryTrack.Api.Data;
 using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
+using ExpiryTrack.Api.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,7 +12,7 @@ namespace ExpiryTrack.Api.Controllers;
 
 [ApiController]
 [Route("api/users")]
-[Authorize(Roles = "Admnistrators")]
+[Authorize(Roles = "Administrator")]
 public class UsersController : ControllerBase
 {
     private readonly AppDbContext _db;
@@ -91,7 +94,7 @@ public class UsersController : ControllerBase
         await _db.SaveChangesAsync();
 
         var created = await LoadUser(user.Id);
-        return created($"/api/users/{user.Id}", UserResponse.FromUser(created!));
+        return Created($"/api/users/{user.Id}", UserResponse.FromUser(created!));
     }
 
     // PUT /api/users/{id} 
@@ -188,7 +191,7 @@ public class UsersController : ControllerBase
         if (!needsDepartment && departmentId != null)
             return "Administrators and finance officers do not belong to a department.";
 
-        if (departmentId != null && !await _db.Departments.AnyAsync(d => d.Id == departmentId && d.IsActive))
+        if (departmentId != null && !await _db.Departments.AnyAsync(d => d.Id == departmentId && d.isActive))
             return "The department does not exist or is inactive.";
 
         return null;

@@ -90,6 +90,46 @@ public class DepartmentsController : ControllerBase
         return Ok(ToResponse(department));
     }
 
+    // PUT /api/department/{id}/manager
+    // assigning a manager to a deparment
+    [HttpPut("{id}/manager")]
+    public async Task<IActionResult> AssignManager(int id, AssignManagerRequest request)
+    {
+        var department = await _db.Departments.Include(d => d.Manager).SingleOrDefaultAsync(d => d.Id == id);
+
+        if (department == null) return NotFound();
+
+        // in the case when a department needs to temporarily not have a manager
+        // for example, when deactivating a user 
+        // an admin won't be able to deactivate a user if they're managing a department 
+        if (request.UserId == null)
+        {
+            department.ManagerId = null;
+            department.Manager = null;
+            await _db.SaveChangesAsync();
+            return Ok(ToResponse(department));
+        }
+
+        var user = await _db.Users.Include(u => u.Role).SingleOrDefaultAsync(u => u.Id == request.UserId);
+
+        if (user == null) return BadRequest("User not found.");
+
+        if (!user.IsActive) return BadRequest("The user is not active.");
+
+        if (user.Role.Name != "DepartmentManager") return BadRequest("The user is not a department manager.");
+
+        if (user.DepartmentId != id) return BadRequest("The user does not belong to this department.");
+
+        if (await _db.Departments.AnyAsync(d => d.ManagerId == request.UserId && d.Id != id))
+            return Conflict("This user already manages another department.");
+
+        department.ManagerId = user.Id;
+        department.Manager = user;
+
+        await _db.SaveChangesAsync();
+        return Ok(ToResponse(department));
+    }
+
     private static DepartmentResponse ToResponse(Department department)
     {
         return new DepartmentResponse

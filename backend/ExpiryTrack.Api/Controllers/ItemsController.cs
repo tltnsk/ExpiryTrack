@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using ExpiryTrack.Api.Data;
 using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
+using ExpiryTrack.Api.Models.Enums;
 
 
 namespace ExpiryTrack.Api.Controllers;
@@ -22,22 +23,158 @@ public class ItemsController : ControllerBase
     }
 
     // get an item by its id 
-    // GET /api/items/{id]
+    // GET /api/items/{id}
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        Item? item = await _db.Items
-                        .Include(i => i.Category)
-                        .Include(i => i.Department)
-                        .Include(i => i.ResponsibleUser)
-                        .Include(i => i.CurrentPeriod)
-                        .SingleOrDefaultAsync(i => i.Id == id);
+        Item? item = await LoadItem(id);
         if (item != null)
         {
             return Ok(ToResponse(item));
         }
         // return error if item doesn't exist 
         return NotFound();
+    }
+    
+    // helper method for getting the user id from the cookie claims
+    private int GetCurrentUserId()
+    {
+        return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+    }
+    
+    // POST /api/items 
+    // creating an item with its first period FR-ITEM-01, FR-ITEM-02, FR-ITEM-03, FR-ITEM-05
+    // only employees and department managers can create an item 
+
+    [Authorize(Roles = "Employee,DepartmentManager")]
+    [HttpPost]
+    public async Task<IActionResult> Create(CreateItemRequest request)
+    {
+        // getting the current user
+        var currentUser = await _db.Users
+            .Include(u => u.Role)
+            .SingleAsync(u => u.Id == GetCurrentUserId());
+
+        int responsibleUserId;
+        int departmentId = currentUser.DepartmentId.Value;
+
+        // if the current user is an employee, they're automatically responsible for the item they're creating 
+        // the item belongs to their department too
+        if (currentUser.Role.Name == "Employee")
+        {
+            responsibleUserId = currentUser.Id;
+        } else 
+        {
+            // return bad request if responsible employee isn't specified
+            if (request.ResponsibleUserId == null)
+            {
+                return BadRequest("Select the responsible employee.");
+            }
+            
+            // load the responsible user from the database
+            var responsibleUser = await _db.Users
+                .Include(u => u.Role)
+                .SingleOrDefaultAsync(u => u.Id == request.ResponsibleUserId);
+
+            if (responsibleUser == null)
+            {
+                return BadRequest("Responsible user not found.");
+            }
+
+            if (!responsibleUser.IsActive)
+            {
+                return BadRequest("Responsible user is not active.");
+            }
+
+            if (responsibleUser.Role.Name != "Employee")
+            {
+                return BadRequest("Responsible user must be an employee.");
+            }
+
+            if (responsibleUser.DepartmentId != currentUser.DepartmentId)
+            {
+                return BadRequest("The employee does not belong to your department.");
+            }
+            responsibleUserId = responsibleUser.Id;
+        }
+        
+        var category = await _db.Categories.FindAsync(request.CategoryId);
+        if (category == null || !category.IsActive)
+        {
+            return BadRequest("The category does not exist or it is not active.");
+        }
+        
+        // get today's date 
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        if (request.ExpirationDate <= today)
+        {
+            return BadRequest("The expiration date must be a future date.");
+        }
+
+        if (request.StartDate >= request.ExpirationDate)
+        {
+            return BadRequest("The start date must be before the expiration date.");
+        }
+        
+        // DayNumber returns how many days have passed since that date
+        int daysLeft = request.ExpirationDate.DayNumber - today.DayNumber;
+        
+        // set the state based on how many days the item has left to the warning period
+
+        var state = daysLeft <= category.WarningPeriodDays ? LifecycleState.ExpiringSoon : LifecycleState.Active;
+        
+        // for data consistency, we need to save everything in one transaction
+        using var transaction = _db.Database.BeginTransaction();
+        
+        var now = DateTime.UtcNow;
+
+        var item = new Item
+        {
+            ResponsibleUserId = responsibleUserId,
+            Name = request.Name.Trim(),
+            Description = request.Description,
+            Provider = request.Provider,
+            ReferenceNumber = request.ReferenceNumber,
+            CategoryId = category.Id,
+            DepartmentId = departmentId,
+            LifecycleState = state,
+            StateChangedAt = now,
+            CreatedAt = now,
+        };
+        
+        _db.Items.Add(item);
+        await _db.SaveChangesAsync();
+
+        var period = new LifecyclePeriod
+        {
+            ItemId = item.Id,
+            PeriodNumber = 1,
+            StartDate = request.StartDate,
+            ExpirationDate = request.ExpirationDate,
+            Cost = request.Cost,
+            CreatedAt = now,
+        };
+        
+        _db.LifecyclePeriods.Add(period);
+        await _db.SaveChangesAsync();
+        
+        item.CurrentPeriodId = period.Id;
+        
+        _db.ItemStateHistory.Add(new ItemStateHistory
+        {
+            ItemId = item.Id,
+            FromState = null,
+            ToState = state,
+            ChangedByUserId = currentUser.Id,
+            Reason = "Item created",
+            ChangedAt = now,
+        });
+        await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        
+        var created = await LoadItem(item.Id);
+        return Created($"/api/items/{item.Id}", ToResponse(created!));
     }
     
     // DTO returned by API 
@@ -64,5 +201,16 @@ public class ItemsController : ControllerBase
             ExpirationDate = item.CurrentPeriod.ExpirationDate,
             Cost = item.CurrentPeriod.Cost
         };
+    }
+    
+    // helper method for loading an item
+    private async Task<Item?> LoadItem(int id)
+    {
+        return await _db.Items
+            .Include(i => i.Category)
+            .Include(i => i.Department)
+            .Include(i => i.ResponsibleUser)
+            .Include(i => i.CurrentPeriod)
+            .SingleOrDefaultAsync(i => i.Id == id);
     }
 }

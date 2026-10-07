@@ -17,7 +17,36 @@ public class ItemsController : ControllerBase
 {
     private readonly AppDbContext _db;
 
-    public ItemsController(AppDbContext db)
+    // helper method for getting the user id from the cookie claims
+    private int GetCurrentUserId()
+    {
+        return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+    }
+
+    // load the logged-in user along with their role
+    private async Task<User> LoadCurrentUser()
+    {
+        return await _db.Users
+            .Include(u => u.Role)
+            .SingleAsync(u => u.Id == GetCurrentUserId());
+    }
+
+    // helper method that returns whether the user can see the item 
+    private static bool CanSee(Item item, User currentUser)
+    {
+        // employees can only see the items they're responsible for
+        if (currentUser.Role.Name == "Employee")
+            return item.ResponsibleUserId == currentUser.Id;
+        
+        // department managers can see the items in their department
+        if (currentUser.Role.Name == "DepartmentManager")
+            return item.DepartmentId == currentUser.DepartmentId;
+
+        // admins and finance officers can see all the items 
+        return true;
+    }
+
+public ItemsController(AppDbContext db)
     {
         _db = db;
     }
@@ -28,18 +57,63 @@ public class ItemsController : ControllerBase
     public async Task<IActionResult> GetById(int id)
     {
         Item? item = await LoadItem(id);
-        if (item != null)
+        User currentUser = await LoadCurrentUser();
+        
+        // if the item does not exist or the user is not allowed to see the item return NotFound 
+        if (item == null || !CanSee(item, currentUser))
         {
-            return Ok(ToResponse(item));
+            return NotFound();
         }
-        // return error if item doesn't exist 
-        return NotFound();
+        return Ok(ToResponse(item));
     }
     
-    // helper method for getting the user id from the cookie claims
-    private int GetCurrentUserId()
+    // get all the items (role based), the ones expiring soonest first
+    // GET /api/items
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
     {
-        return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        User currentUser = await LoadCurrentUser();
+        List<Item> items;
+
+        if (currentUser.Role.Name == "Employee")
+        {
+            items = await _db.Items
+                .Include(i => i.Category)
+                .Include(i => i.Department)
+                .Include(i => i.ResponsibleUser)
+                .Include(i => i.CurrentPeriod)
+                .Where(i => i.ResponsibleUserId == currentUser.Id)
+                .OrderBy(i => i.CurrentPeriod.ExpirationDate)
+                .ToListAsync();
+        } else if (currentUser.Role.Name == "DepartmentManager")
+        {
+            items = await _db.Items
+                .Include(i => i.Category)
+                .Include(i => i.Department)
+                .Include(i => i.ResponsibleUser)
+                .Include(i => i.CurrentPeriod)
+                .Where(i => i.DepartmentId == currentUser.DepartmentId)
+                .OrderBy(i => i.CurrentPeriod!.ExpirationDate)
+                .ToListAsync();
+        }
+        else
+        {
+            items = await _db.Items
+                .Include(i => i.Category)
+                .Include(i => i.Department)
+                .Include(i => i.ResponsibleUser)
+                .Include(i => i.CurrentPeriod)
+                .OrderBy(i => i.CurrentPeriod!.ExpirationDate)
+                .ToListAsync();
+        }
+        
+        var responses = new List<ItemResponse>();
+        foreach (var item in items)
+        {
+            responses.Add(ToResponse(item));
+        }
+        
+        return Ok(responses);
     }
     
     // POST /api/items 

@@ -284,6 +284,59 @@ public ItemsController(AppDbContext db)
         return Ok(ToResponse(item));
     }
     
+    // reassigning an item
+    // only the manager can reassign an item 
+    public async Task<IActionResult> Reassign(int id, ReassignItemRequest request)
+    {
+        // the manager who reassigns the item 
+        User assignerUser = await LoadCurrentUser();
+        
+        // employee the item is being reassigned to 
+        User? assignedUser = await _db.Users
+            .Include(u => u.Role)
+            .SingleOrDefaultAsync(u => u.Id == assignerUser.Id);
+        
+        Item? item = await LoadItem(id);
+
+        // the manager can only reassign items from their department
+        if (item == null || !CanSee(item, assignerUser))
+        {
+            return NotFound();
+        }
+        
+        // only active and expiring soon items can be reassigned
+        if (item.LifecycleState != LifecycleState.ExpiringSoon && item.LifecycleState != LifecycleState.Active)
+        {
+            return BadRequest("Lifecycle state must be expiring or active.");
+        }
+
+        if (assignedUser == null)
+        {
+            return BadRequest("User not found.");
+        }
+
+        if (!assignedUser.IsActive)
+        {
+            return BadRequest("User is not active.");
+        }
+
+        if (assignedUser.Role.Name != "Employee")
+        {
+            return BadRequest("The user is not an employee.");
+        }
+
+        if (assignedUser.DepartmentId != assignerUser.DepartmentId)
+        {
+            return BadRequest("The user does not belong to your department.");
+        }
+        
+        item.ResponsibleUserId = assignedUser.Id;
+        item.ResponsibleUser = assignedUser;
+        
+        await _db.SaveChangesAsync();
+        return Ok(ToResponse(item));
+    }
+    
     // DTO returned by API 
     private static ItemResponse ToResponse(Item item)
     {

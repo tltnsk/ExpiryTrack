@@ -55,6 +55,12 @@ public class UpdateItemRequest
     public string? ReferenceNumber { get; set; }
 }
 
+// what the department manager sends when reassigning an item (the user ID)
+public class ReassignItemRequest
+{
+    public int ResponsibleUserId { get; set; }
+}
+
 public class ItemResponse
 {
     public int Id { get; set; }

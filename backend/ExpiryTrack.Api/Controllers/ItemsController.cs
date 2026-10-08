@@ -251,6 +251,39 @@ public ItemsController(AppDbContext db)
         return Created($"/api/items/{item.Id}", ToResponse(created!));
     }
     
+    // updating an item
+    // only employee and department manager can update the item and they can only update the descriptive fields
+    // PUT /api/items/{id}
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Employee,DepartmentManager")]
+    public async Task<IActionResult> Update(int id, UpdateItemRequest request)
+    {
+        // load the item and the current user
+        Item? item = await LoadItem(id);
+        User currentUser =  await LoadCurrentUser();
+        
+        // if the item doesn't belong to the user's department 
+        if (item == null || !CanSee(item, currentUser))
+        {
+            return NotFound();
+        }
+
+        // users can only update expiring soon or active items 
+        if (item.LifecycleState != LifecycleState.ExpiringSoon && item.LifecycleState != LifecycleState.Active)
+        {
+            return BadRequest("Lifecycle state must be expiring or active.");
+        }
+
+        item.Name = request.Name.Trim();
+        item.Description = request.Description;
+        item.Provider = request.Provider;
+        item.ReferenceNumber = request.ReferenceNumber;
+        
+        await _db.SaveChangesAsync();
+        
+        return Ok(ToResponse(item));
+    }
+    
     // DTO returned by API 
     private static ItemResponse ToResponse(Item item)
     {

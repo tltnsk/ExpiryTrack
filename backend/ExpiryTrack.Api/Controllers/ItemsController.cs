@@ -337,6 +337,58 @@ public ItemsController(AppDbContext db)
         return Ok(ToResponse(item));
     }
     
+    // cancelling an item
+    // only the manager can cancel an item
+    // the item needs to be expiring soon or active with no open renewal requests
+    // PUT /api/items/{id}/cancel
+    [Authorize(Roles = "DepartmentManager")]
+    [HttpPut("{id}/cancel")]
+    public async Task<IActionResult> Cancel(int id)
+    {
+        User currentUser = await LoadCurrentUser();
+        Item? item = await LoadItem(id);
+
+        if (item == null || !CanSee(item, currentUser))
+        {
+            return NotFound();
+        }
+
+        if (item.LifecycleState != LifecycleState.ExpiringSoon && item.LifecycleState != LifecycleState.Active)
+        {
+            return BadRequest("Only Active and Expiring Soon items can be cancelled.");
+        }
+
+        bool hasOpenRequest = await _db.RenewalRequests.AnyAsync(r =>
+            r.PeriodId == item.CurrentPeriodId && r.Status != RequestStatus.Rejected && r.Status != RequestStatus.Completed);
+        if (hasOpenRequest)
+        {
+            return BadRequest("You cannot cancel the item because it has a renewal request open.");
+        }
+        
+        var now = DateTime.UtcNow;
+        
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        
+        // storing the old history for item state history
+        LifecycleState oldState = item.LifecycleState;
+        item.LifecycleState = LifecycleState.Cancelled;
+        item.StateChangedAt = now;
+        
+        _db.ItemStateHistory.Add(new ItemStateHistory
+        {
+            ItemId = item.Id,
+            FromState = oldState,
+            ToState = LifecycleState.Cancelled,
+            ChangedByUserId = currentUser.Id,
+            Reason = "Item cancelled",
+            ChangedAt = now,
+        });
+        
+        await _db.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return Ok(ToResponse(item));
+    }
+    
     // DTO returned by API 
     private static ItemResponse ToResponse(Item item)
     {

@@ -17,7 +17,7 @@ public class ItemsController : ControllerBase
 {
     private readonly AppDbContext _db;
 
-    // helper method for getting the user id from the cookie claims
+    // helper method for getting the user id from the authentication claims
     private int GetCurrentUserId()
     {
         return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
@@ -31,7 +31,7 @@ public class ItemsController : ControllerBase
             .SingleAsync(u => u.Id == GetCurrentUserId());
     }
 
-    // helper method that returns whether the user can see the item 
+    // helper method that returns whether the user has access to the item 
     private static bool CanSee(Item item, User currentUser)
     {
         // employees can only see the items they're responsible for
@@ -59,7 +59,7 @@ public ItemsController(AppDbContext db)
         Item? item = await LoadItem(id);
         User currentUser = await LoadCurrentUser();
         
-        // if the item does not exist or the user is not allowed to see the item return NotFound 
+        // if the item does not exist or the user is not allowed to access the item return NotFound 
         if (item == null || !CanSee(item, currentUser))
         {
             return NotFound();
@@ -117,7 +117,7 @@ public ItemsController(AppDbContext db)
     }
     
     // POST /api/items 
-    // creating an item with its first period FR-ITEM-01, FR-ITEM-02, FR-ITEM-03, FR-ITEM-05
+    // creating an item with its first period (FR-ITEM-01, FR-ITEM-02, FR-ITEM-03, FR-ITEM-05)
     // only employees and department managers can create an item 
 
     [Authorize(Roles = "Employee,DepartmentManager")]
@@ -132,8 +132,8 @@ public ItemsController(AppDbContext db)
         int responsibleUserId;
         int departmentId = currentUser.DepartmentId.Value;
 
+        // Determine the responsible employee and department
         // if the current user is an employee, they're automatically responsible for the item they're creating 
-        // the item belongs to their department too
         if (currentUser.Role.Name == "Employee")
         {
             responsibleUserId = currentUser.Id;
@@ -173,6 +173,8 @@ public ItemsController(AppDbContext db)
         }
         
         var category = await _db.Categories.FindAsync(request.CategoryId);
+        
+        // check that the category actually exists and is active
         if (category == null || !category.IsActive)
         {
             return BadRequest("The category does not exist or it is not active.");
@@ -191,7 +193,7 @@ public ItemsController(AppDbContext db)
             return BadRequest("The start date must be before the expiration date.");
         }
         
-        // DayNumber returns how many days have passed since that date
+        // calculate how many days are left until expiration
         int daysLeft = request.ExpirationDate.DayNumber - today.DayNumber;
         
         // set the state based on how many days the item has left to the warning period
@@ -203,6 +205,7 @@ public ItemsController(AppDbContext db)
         
         var now = DateTime.UtcNow;
 
+        // create the item 
         var item = new Item
         {
             ResponsibleUserId = responsibleUserId,
@@ -220,6 +223,7 @@ public ItemsController(AppDbContext db)
         _db.Items.Add(item);
         await _db.SaveChangesAsync();
 
+        // create the first lifecycle period
         var period = new LifecyclePeriod
         {
             ItemId = item.Id,
@@ -233,6 +237,7 @@ public ItemsController(AppDbContext db)
         _db.LifecyclePeriods.Add(period);
         await _db.SaveChangesAsync();
         
+        // set the current period 
         item.CurrentPeriodId = period.Id;
         
         _db.ItemStateHistory.Add(new ItemStateHistory
@@ -252,7 +257,8 @@ public ItemsController(AppDbContext db)
     }
     
     // updating an item
-    // only employee and department manager can update the item and they can only update the descriptive fields
+    // only employee and department manager can update the items that are accessible for them 
+    // they can only update the descriptive fields
     // PUT /api/items/{id}
     [HttpPut("{id}")]
     [Authorize(Roles = "Employee,DepartmentManager")]
@@ -285,16 +291,19 @@ public ItemsController(AppDbContext db)
     }
     
     // reassigning an item
-    // only the manager can reassign an item 
+    // only a department manager can reassign an item to another employee
+    // PUT /api/items/{id}/reassign
+    [Authorize(Roles = "DepartmentManager")]
+    [HttpPut("{id}/reassign")]
     public async Task<IActionResult> Reassign(int id, ReassignItemRequest request)
     {
         // the manager who reassigns the item 
         User assignerUser = await LoadCurrentUser();
-        
+         
         // employee the item is being reassigned to 
         User? assignedUser = await _db.Users
             .Include(u => u.Role)
-            .SingleOrDefaultAsync(u => u.Id == assignerUser.Id);
+            .SingleOrDefaultAsync(u => u.Id == request.ResponsibleUserId);
         
         Item? item = await LoadItem(id);
 
@@ -369,7 +378,7 @@ public ItemsController(AppDbContext db)
         
         await using var transaction = await _db.Database.BeginTransactionAsync();
         
-        // storing the old history for item state history
+        // keeping the previous state for the history record
         LifecycleState oldState = item.LifecycleState;
         item.LifecycleState = LifecycleState.Cancelled;
         item.StateChangedAt = now;
@@ -389,7 +398,7 @@ public ItemsController(AppDbContext db)
         return Ok(ToResponse(item));
     }
     
-    // DTO returned by API 
+    // convert an Item entity to an ItemResponse DTO 
     private static ItemResponse ToResponse(Item item)
     {
         return new ItemResponse

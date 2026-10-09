@@ -51,7 +51,7 @@ public class UpdateItemRequest
     [MaxLength(150)]
     public string? Provider { get; set; }
 
-    [MaxLength(150)]
+    [MaxLength(100)]
     public string? ReferenceNumber { get; set; }
 }
 

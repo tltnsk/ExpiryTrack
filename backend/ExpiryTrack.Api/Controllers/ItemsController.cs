@@ -37,7 +37,7 @@ public class ItemsController : ControllerBase
         // employees can only see the items they're responsible for
         if (currentUser.Role.Name == "Employee")
             return item.ResponsibleUserId == currentUser.Id;
-        
+
         // department managers can see the items in their department
         if (currentUser.Role.Name == "DepartmentManager")
             return item.DepartmentId == currentUser.DepartmentId;
@@ -46,7 +46,7 @@ public class ItemsController : ControllerBase
         return true;
     }
 
-public ItemsController(AppDbContext db)
+    public ItemsController(AppDbContext db)
     {
         _db = db;
     }
@@ -58,7 +58,7 @@ public ItemsController(AppDbContext db)
     {
         Item? item = await LoadItem(id);
         User currentUser = await LoadCurrentUser();
-        
+
         // if the item does not exist or the user is not allowed to access the item return NotFound 
         if (item == null || !CanSee(item, currentUser))
         {
@@ -66,7 +66,7 @@ public ItemsController(AppDbContext db)
         }
         return Ok(ToResponse(item));
     }
-    
+
     // get all the items (role based), the ones expiring soonest first
     // GET /api/items
     [HttpGet]
@@ -85,7 +85,8 @@ public ItemsController(AppDbContext db)
                 .Where(i => i.ResponsibleUserId == currentUser.Id)
                 .OrderBy(i => i.CurrentPeriod.ExpirationDate)
                 .ToListAsync();
-        } else if (currentUser.Role.Name == "DepartmentManager")
+        }
+        else if (currentUser.Role.Name == "DepartmentManager")
         {
             items = await _db.Items
                 .Include(i => i.Category)
@@ -106,16 +107,16 @@ public ItemsController(AppDbContext db)
                 .OrderBy(i => i.CurrentPeriod!.ExpirationDate)
                 .ToListAsync();
         }
-        
+
         var responses = new List<ItemResponse>();
         foreach (var item in items)
         {
             responses.Add(ToResponse(item));
         }
-        
+
         return Ok(responses);
     }
-    
+
     // POST /api/items 
     // creating an item with its first period (FR-ITEM-01, FR-ITEM-02, FR-ITEM-03, FR-ITEM-05)
     // only employees and department managers can create an item 
@@ -137,14 +138,15 @@ public ItemsController(AppDbContext db)
         if (currentUser.Role.Name == "Employee")
         {
             responsibleUserId = currentUser.Id;
-        } else 
+        }
+        else
         {
             // return bad request if responsible employee isn't specified
             if (request.ResponsibleUserId == null)
             {
                 return BadRequest("Select the responsible employee.");
             }
-            
+
             // load the responsible user from the database
             var responsibleUser = await _db.Users
                 .Include(u => u.Role)
@@ -171,15 +173,15 @@ public ItemsController(AppDbContext db)
             }
             responsibleUserId = responsibleUser.Id;
         }
-        
+
         var category = await _db.Categories.FindAsync(request.CategoryId);
-        
+
         // check that the category actually exists and is active
         if (category == null || !category.IsActive)
         {
             return BadRequest("The category does not exist or it is not active.");
         }
-        
+
         // get today's date 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
@@ -192,17 +194,17 @@ public ItemsController(AppDbContext db)
         {
             return BadRequest("The start date must be before the expiration date.");
         }
-        
+
         // calculate how many days are left until expiration
         int daysLeft = request.ExpirationDate.DayNumber - today.DayNumber;
-        
+
         // set the state based on how many days the item has left to the warning period
 
         var state = daysLeft <= category.WarningPeriodDays ? LifecycleState.ExpiringSoon : LifecycleState.Active;
-        
+
         // for data consistency, we need to save everything in one transaction
         using var transaction = _db.Database.BeginTransaction();
-        
+
         var now = DateTime.UtcNow;
 
         // create the item 
@@ -219,7 +221,7 @@ public ItemsController(AppDbContext db)
             StateChangedAt = now,
             CreatedAt = now,
         };
-        
+
         _db.Items.Add(item);
         await _db.SaveChangesAsync();
 
@@ -233,13 +235,13 @@ public ItemsController(AppDbContext db)
             Cost = request.Cost,
             CreatedAt = now,
         };
-        
+
         _db.LifecyclePeriods.Add(period);
         await _db.SaveChangesAsync();
-        
+
         // set the current period 
         item.CurrentPeriodId = period.Id;
-        
+
         _db.ItemStateHistory.Add(new ItemStateHistory
         {
             ItemId = item.Id,
@@ -251,11 +253,11 @@ public ItemsController(AppDbContext db)
         });
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
-        
+
         var created = await LoadItem(item.Id);
         return Created($"/api/items/{item.Id}", ToResponse(created!));
     }
-    
+
     // updating an item
     // only employee and department manager can update the items that are accessible for them 
     // they can only update the descriptive fields
@@ -266,8 +268,8 @@ public ItemsController(AppDbContext db)
     {
         // load the item and the current user
         Item? item = await LoadItem(id);
-        User currentUser =  await LoadCurrentUser();
-        
+        User currentUser = await LoadCurrentUser();
+
         // if the item doesn't belong to the user's department 
         if (item == null || !CanSee(item, currentUser))
         {
@@ -284,12 +286,12 @@ public ItemsController(AppDbContext db)
         item.Description = request.Description;
         item.Provider = request.Provider;
         item.ReferenceNumber = request.ReferenceNumber;
-        
+
         await _db.SaveChangesAsync();
-        
+
         return Ok(ToResponse(item));
     }
-    
+
     // reassigning an item
     // only a department manager can reassign an item to another employee
     // PUT /api/items/{id}/reassign
@@ -299,12 +301,12 @@ public ItemsController(AppDbContext db)
     {
         // the manager who reassigns the item 
         User assignerUser = await LoadCurrentUser();
-         
+
         // employee the item is being reassigned to 
         User? assignedUser = await _db.Users
             .Include(u => u.Role)
             .SingleOrDefaultAsync(u => u.Id == request.ResponsibleUserId);
-        
+
         Item? item = await LoadItem(id);
 
         // the manager can only reassign items from their department
@@ -312,7 +314,7 @@ public ItemsController(AppDbContext db)
         {
             return NotFound();
         }
-        
+
         // only active and expiring soon items can be reassigned
         if (item.LifecycleState != LifecycleState.ExpiringSoon && item.LifecycleState != LifecycleState.Active)
         {
@@ -338,14 +340,14 @@ public ItemsController(AppDbContext db)
         {
             return BadRequest("The user does not belong to your department.");
         }
-        
+
         item.ResponsibleUserId = assignedUser.Id;
         item.ResponsibleUser = assignedUser;
-        
+
         await _db.SaveChangesAsync();
         return Ok(ToResponse(item));
     }
-    
+
     // cancelling an item
     // only the manager can cancel an item
     // the item needs to be expiring soon or active with no open renewal requests
@@ -373,16 +375,16 @@ public ItemsController(AppDbContext db)
         {
             return BadRequest("You cannot cancel the item because it has a renewal request open.");
         }
-        
+
         var now = DateTime.UtcNow;
-        
+
         await using var transaction = await _db.Database.BeginTransactionAsync();
-        
+
         // keeping the previous state for the history record
         LifecycleState oldState = item.LifecycleState;
         item.LifecycleState = LifecycleState.Cancelled;
         item.StateChangedAt = now;
-        
+
         _db.ItemStateHistory.Add(new ItemStateHistory
         {
             ItemId = item.Id,
@@ -392,12 +394,12 @@ public ItemsController(AppDbContext db)
             Reason = "Item cancelled",
             ChangedAt = now,
         });
-        
+
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
         return Ok(ToResponse(item));
     }
-    
+
     // convert an Item entity to an ItemResponse DTO 
     private static ItemResponse ToResponse(Item item)
     {
@@ -423,7 +425,7 @@ public ItemsController(AppDbContext db)
             Cost = item.CurrentPeriod.Cost
         };
     }
-    
+
     // helper method for loading an item
     private async Task<Item?> LoadItem(int id)
     {

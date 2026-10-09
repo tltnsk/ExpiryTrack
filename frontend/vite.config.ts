@@ -15,4 +15,10 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    proxy: {
+      // requests to /api/... are forwarded to the backend
+      '/api': 'http://localhost:5030',
+    }
+  }
 })

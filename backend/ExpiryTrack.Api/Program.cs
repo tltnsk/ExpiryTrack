@@ -53,6 +53,8 @@ if (app.Environment.IsDevelopment())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await DbSeeder.SeedRolesAsync(db);
     await DbSeeder.SeedTestUsersAsync(db);
+    await DbSeeder.SeedTestCategoriesAsync(db);
+    await DbSeeder.SeedItemsAsync(db);
 }
 
 app.UseHttpsRedirection();

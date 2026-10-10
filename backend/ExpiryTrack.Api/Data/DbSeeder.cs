@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ExpiryTrack.Api.Models;
+using ExpiryTrack.Api.Models.Enums;
 
 namespace ExpiryTrack.Api.Data;
 
@@ -43,6 +44,89 @@ public static class DbSeeder
 
         // the manager has an id only after being saved
         it.ManagerId = manager.Id;
+        await db.SaveChangesAsync();
+    }
+
+    public static async Task SeedTestCategoriesAsync(AppDbContext db)
+    {
+        if (await db.Categories.AnyAsync())
+            return;
+
+        db.Categories.AddRange(
+        new Category
+        {
+            Name = "Software Licence",
+            Description = "Software licences and subscriptions",
+            WarningPeriodDays = 30
+        },
+        new Category
+        {
+            Name = "Contract",
+            Description = "Service and supplier contracts",
+            WarningPeriodDays = 60,
+            RequiresFinancialReview = true,
+            FinanceReviewThreshold = 5000
+        },
+        new Category
+        {
+            Name = "Insurance",
+            Description = "Insurance policies",
+            WarningPeriodDays = 45,
+            RequiresFinancialReview = true
+        });
+        await db.SaveChangesAsync();
+    }
+
+    public static async Task SeedItemsAsync(AppDbContext db)
+    {
+        if (await db.Items.AnyAsync())
+            return;
+
+        var categories = await db.Categories.ToDictionaryAsync(c => c.Name);
+        var employee = await db.Users.SingleAsync(u => u.Email == "employee@test.com");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        await CreateItem(db, "SLL certificate for company website", "Sectigo", categories["Software Licence"], employee, today.AddDays(15), 89.90m);
+        await CreateItem(db, "Microsoft 365 Business Standard", "Microsoft", categories["Software Licence"], employee, today.AddDays(21), 2400m);
+        await CreateItem(db, "Office cleaning services contract", "CleanPro Services Ltd.", categories["Contract"], employee, today.AddDays(51), 9600m);
+        await CreateItem(db, "Server room equipment insurance", "SafeGuard Insurance", categories["Insurance"], employee, today.AddDays(96), 1850m);
+        await CreateItem(db, "JetBrains All Products Pack", "JetBrains", categories["Software Licence"], employee, today.AddDays(141), 780m);
+        await CreateItem(db, "Dell hardware support agreement", "Dell", categories["Contract"], employee, today.AddDays(900), null);
+    }
+    private static async Task CreateItem(AppDbContext db, string name, string provider, Category category, User responsible, DateOnly expirationDate, decimal? cost)
+    {
+        var now = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(now);
+        int daysLeft = expirationDate.DayNumber - today.DayNumber;
+        var state = daysLeft <= category.WarningPeriodDays ? LifecycleState.ExpiringSoon : LifecycleState.Active;
+
+        var item = new Item
+        {
+            Name = name,
+            Provider = provider,
+            CategoryId = category.Id,
+            DepartmentId = responsible.DepartmentId!.Value,
+            ResponsibleUserId = responsible.Id,
+            LifecycleState = state,
+            StateChangedAt = now,
+            CreatedAt = now
+        };
+
+        var period = new LifecyclePeriod
+        {
+            PeriodNumber = 1,
+            StartDate = expirationDate.AddYears(-1),
+            ExpirationDate = expirationDate,
+            Cost = cost,
+            CreatedAt = now
+        };
+
+        item.Periods.Add(period);
+        item.StateHistory.Add(new ItemStateHistory { FromState = null, ToState = state, Reason = "Item created", ChangedAt = now });
+        db.Items.Add(item);
+        await db.SaveChangesAsync();
+
+        item.CurrentPeriodId = period.Id;
         await db.SaveChangesAsync();
     }
 

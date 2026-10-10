@@ -85,6 +85,7 @@ public class UsersController : ControllerBase
             Email = email,
             RoleId = role.Id,
             DepartmentId = request.DepartmentId,
+            IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
 

@@ -31,6 +31,7 @@ public class AuthController : ControllerBase
         // we are retrieving the role because we're going to put it in the authentication cookie 
         var user = await _db.Users
             .Include(u => u.Role)
+            .Include(u => u.Department)
             .SingleOrDefaultAsync(u => u.Email == request.Email);
 
         if (user == null || !user.IsActive)
@@ -52,7 +53,7 @@ public class AuthController : ControllerBase
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
 
         // successful login, return 200 OK
-        return Ok(ToResponse(user));
+        return Ok(UserResponse.FromUser(user));
     }
 
     // POST /api/auth/logout
@@ -75,23 +76,12 @@ public class AuthController : ControllerBase
 
         var user = await _db.Users
             .Include(u => u.Role)
+            .Include(u => u.Department)
             .SingleOrDefaultAsync(u => u.Id == userId);
 
         if (user == null || !user.IsActive)
             return Unauthorized();
 
-        return Ok(ToResponse(user));
-    }
-
-    private static UserResponse ToResponse(User user)
-    {
-        return new UserResponse
-        {
-            Id = user.Id,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            Email = user.Email,
-            Role = user.Role.Name
-        };
+        return Ok(UserResponse.FromUser(user));
     }
 }

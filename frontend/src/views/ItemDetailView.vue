@@ -57,6 +57,18 @@ onMounted(async () => {
             <dt>Reference Number</dt>
             <dd>{{ item.referenceNumber ?? '-' }}</dd>
         </dl>
+
+        <h3>Current Period</h3>
+        <dl>
+            <dt>Period</dt>
+            <dd>{{ item.periodNumber }}</dd>
+            <dt>Start date</dt>
+            <dd>{{ item.startDate }}</dd>
+            <dt>Expiration Date</dt>
+            <dd>{{ item.expirationDate }}</dd>
+            <dt>Cost</dt>
+            <dd>{{ item.cost ?? '-' }}</dd>
+        </dl>
     </div>
 </template>
 

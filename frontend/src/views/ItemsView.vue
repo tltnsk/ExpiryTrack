@@ -47,13 +47,14 @@ onMounted(async() => {
         </thead>
         <tbody>
             <tr v-for="item in items" :key="item.id">
-                <td>{{ item.name }}</td>
+                <td>
+                    <RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
                 <td>{{ item.categoryName }}</td>
                 <td>{{ item.responsibleUserName }}</td>
                 <td>{{ item.expirationDate }}</td>
                 <td>{{ item.cost ?? '-' }}</td>
                 <td>
-                <span class="badge" :class="item.lifecycleState">{{ item.lifecycleState }}</span>
+                <span>{{ item.lifecycleState }}</span>
                 </td>
             </tr>
         </tbody>

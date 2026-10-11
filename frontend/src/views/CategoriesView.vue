@@ -34,6 +34,8 @@ onMounted(async () => {
 <template>
   <h2>Categories</h2>
 
+  <RouterLink v-if="auth.user?.role === 'Administrator'" to="/categories/new">New Category</RouterLink>
+
   <p v-if="loading">Loading...</p>
   <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>
   <p v-else-if="categories.length === 0">No categories yet.</p>

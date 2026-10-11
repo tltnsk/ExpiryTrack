@@ -22,6 +22,7 @@ async function logout() {
     </div>
     <nav v-if="auth.user">
       <RouterLink to="/items">Items</RouterLink>
+      <RouterLink to="/categories">Categories</RouterLink>
     </nav>
   </header>
 

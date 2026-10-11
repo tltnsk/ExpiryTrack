@@ -5,6 +5,7 @@ import ItemsView from '@/views/ItemsView.vue'
 import ItemDetailView from '@/views/ItemDetailView.vue'
 import ItemCreateView from '@/views/ItemCreateView.vue'
 import ItemEditView from '@/views/ItemEditView.vue'
+import CategoriesView from '@/views/CategoriesView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -14,7 +15,8 @@ const router = createRouter({
     { path: '/items', component: ItemsView },
     { path: '/items/:id', component: ItemDetailView },
     { path: '/items/new', component: ItemCreateView },
-    { path: '/items/:id/edit', component: ItemEditView }
+    { path: '/items/:id/edit', component: ItemEditView },
+    { path: '/categories', component: CategoriesView }
   ],
 })
 

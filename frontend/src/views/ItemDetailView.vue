@@ -23,11 +23,16 @@ const id = route.params.id
 
 const item = ref<Item | null>(null)
 const loading = ref(true)
+const errorMessage = ref('')
 
 onMounted(async () => {
     const response = await fetch(`/api/items/${id}`)
     if (response.ok) {
         item.value = await response.json()
+    } else if (response.status === 404 || response.status === 400) {
+    errorMessage.value = 'Item not found.'
+    } else {
+        errorMessage.value = `Could not load item (error ${response.status}).`
     }
     loading.value = false
 })
@@ -37,6 +42,8 @@ onMounted(async () => {
     <RouterLink to="/items">Back to Items</RouterLink>
 
     <p v-if="loading">Loading...</p>
+
+    <p v-else-if="errorMessage"> {{  errorMessage }}</p>
 
     <div v-else-if="item">
         <h2>{{ item.name }}</h2>

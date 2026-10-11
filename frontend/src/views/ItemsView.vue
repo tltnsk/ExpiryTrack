@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 
 // ItemResponse 
 interface Item {
@@ -15,6 +16,7 @@ interface Item {
 const items = ref<Item[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
+const auth = useAuthStore()
 
 onMounted(async() => {
     const response = await fetch('/api/items')
@@ -29,6 +31,7 @@ onMounted(async() => {
 
 <template>
     <h2>Items</h2>
+    <RouterLink v-if="auth.user?.role === 'Employee'" to="/items/new">New Item</RouterLink>
 
     <p v-if="loading">Loading...</p>
     <p v-else-if="errorMessage"> {{ errorMessage }}</p>

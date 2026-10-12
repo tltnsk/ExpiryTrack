@@ -23,6 +23,7 @@ async function logout() {
     <nav v-if="auth.user">
       <RouterLink to="/items">Items</RouterLink>
       <RouterLink to="/categories">Categories</RouterLink>
+      <RouterLink v-if="auth.user?.role === 'Administrator'" to="/departments">Departments</RouterLink>
     </nav>
   </header>
 

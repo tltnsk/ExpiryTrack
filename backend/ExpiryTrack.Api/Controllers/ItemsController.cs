@@ -42,7 +42,11 @@ public class ItemsController : ControllerBase
         if (currentUser.Role.Name == "DepartmentManager")
             return item.DepartmentId == currentUser.DepartmentId;
 
-        // admins and finance officers can see all the items 
+        // finance officers can only see items that have cost
+        if (currentUser.Role.Name == "FinanceOfficer")
+            return item.CurrentPeriod!.Cost != null;
+
+        // admins can see all the items 
         return true;
     }
 
@@ -94,6 +98,18 @@ public class ItemsController : ControllerBase
                 .Include(i => i.ResponsibleUser)
                 .Include(i => i.CurrentPeriod)
                 .Where(i => i.DepartmentId == currentUser.DepartmentId)
+                .OrderBy(i => i.CurrentPeriod!.ExpirationDate)
+                .ToListAsync();
+        }
+        else if (currentUser.Role.Name == "FinanceOfficer")
+        {
+            items = await _db.Items
+                .Include(i => i.Category)
+                .Include(i => i.Department)
+                .Include(i => i.ResponsibleUser)
+                .Include(i => i.CurrentPeriod)
+                // finance officers can only see items if the current period has a cost
+                .Where(i => i.CurrentPeriod!.Cost != null)
                 .OrderBy(i => i.CurrentPeriod!.ExpirationDate)
                 .ToListAsync();
         }

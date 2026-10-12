@@ -10,6 +10,7 @@ import CategoriesCreateView from '@/views/CategoriesCreateView.vue'
 import CategoriesEditView from '@/views/CategoriesEditView.vue'
 import DepartmentsViews from '@/views/DepartmentsViews.vue'
 import DepartmentsCreateView from '@/views/DepartmentsCreateView.vue'
+import DepartmentsEditView from '@/views/DepartmentsEditView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -24,7 +25,8 @@ const router = createRouter({
     { path: '/categories/new', component: CategoriesCreateView },
     { path: '/categories/:id/edit', component: CategoriesEditView },
     { path: '/departments', component: DepartmentsViews },
-    { path: '/departments/new', component: DepartmentsCreateView }
+    { path: '/departments/new', component: DepartmentsCreateView },
+    { path: '/departments/:id/edit', component: DepartmentsEditView }
   ],
 })
 

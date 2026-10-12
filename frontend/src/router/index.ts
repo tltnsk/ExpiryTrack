@@ -45,6 +45,16 @@ router.beforeEach(async (to) => {
   if (auth.user !== null && to.path === '/login') {
     return '/items'
   }
+
+  // if any other user besides admin tries to access departments
+  if (auth.user?.role !== "Administrator" && to.path.startsWith('/departments')) {
+    return '/items'
+  }
+
+  // if any other user tries to edit or create categories
+  if (auth.user?.role !== "Administrator" && to.path.startsWith('/categories/')) {
+    return '/categories'
+  }
 })
 
 export default router

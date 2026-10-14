@@ -12,11 +12,18 @@ interface Item {
     lifecycleState: string
     categoryName: string
     departmentName: string
+    responsibleUserId: number
     responsibleUserName: string
     periodNumber: string
     startDate: string 
     expirationDate: string
     cost: number
+}
+
+interface User {
+    id: number
+    firstName: string
+    lastName: string
 }
 
 const route = useRoute()
@@ -27,17 +34,31 @@ const item = ref<Item | null>(null)
 const loading = ref(true)
 const errorMessage = ref('')
 const cancelError = ref('')
+const reassignError = ref('')
+
+const employees = ref<User[]>([])
+const responsibleUserId = ref<number | null>(null)
 
 onMounted(async () => {
     const response = await fetch(`/api/items/${id}`)
     if (response.ok) {
-        item.value = await response.json()
+        const data: Item = await response.json()
+        item.value = data
+        responsibleUserId.value = data.responsibleUserId
     } else if (response.status === 404 || response.status === 400) {
     errorMessage.value = 'Item not found.'
     } else {
         errorMessage.value = `Could not load item (error ${response.status}).`
     }
     loading.value = false
+
+    // only managers can reassign, so only they need the list of employees
+    if (auth.user?.role === 'DepartmentManager') {
+        const employeesResponse = await fetch('/api/users/employees')
+        if (employeesResponse.ok) {
+            employees.value = await employeesResponse.json()
+        }
+    }
 })
 
 async function cancelItem() {
@@ -57,6 +78,36 @@ async function cancelItem() {
         }
     }
 }
+
+async function reassignEmployee() {
+  reassignError.value = ''
+  const response = await fetch(`/api/items/${id}/reassign`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      responsibleUserId: responsibleUserId.value
+    })
+  })
+
+  if (response.status === 400) {
+    const contentType = response.headers.get('Content-Type') ?? ''
+    if (contentType.includes('json')) {
+      const problem = await response.json()
+      reassignError.value = Object.values(problem.errors).flat().join(' ')
+    } else {
+      reassignError.value = await response.text()
+    }
+    return
+  }
+  if (!response.ok) {
+    reassignError.value = `Could not reassign the item (error ${response.status}).`
+    return
+  }
+
+  // the response is the updated item, so the page shows the new responsible employee
+  item.value = await response.json()
+}
+
 </script>
 
 <template>
@@ -100,6 +151,23 @@ async function cancelItem() {
 
         <button v-if="auth.user?.role === 'DepartmentManager' && (item.lifecycleState === 'Active' || item.lifecycleState === 'ExpiringSoon')"  @click="cancelItem">Cancel Item</button>
         <p v-if="cancelError">{{ cancelError }}</p>
+        
+        <form v-if="auth.user?.role === 'DepartmentManager' && (item.lifecycleState === 'Active' || item.lifecycleState === 'ExpiringSoon')" @submit.prevent="reassignEmployee">
+            <div>
+                <label>
+                    Reassign Employee
+                    <select v-model="responsibleUserId" required>
+                        <option :value="null" disabled>Select a responsible employee</option>
+                        <option v-if="employees.length===0" :value="null" disabled>No active employees in your department.</option>
+                        <option v-for="employee in employees" :key="employee.id" :value="employee.id">
+                          {{ employee.firstName }} {{  employee.lastName }}
+                        </option>
+                    </select>
+                </label>
+            </div>
+            <button type="submit">Reassign employee</button>
+            <p v-if="reassignError" class="error">{{ reassignError }}</p>
+        </form>
     </div>
 </template>
 

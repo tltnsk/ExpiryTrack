@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 // CategoryResponse
 interface Category {
@@ -8,6 +9,12 @@ interface Category {
     name: string,
     warningPeriodDays: number,
     isActive: boolean
+}
+
+interface User {
+  id: number
+  firstName: string
+  lastName: string
 }
 
 const router = useRouter()
@@ -21,15 +28,25 @@ const referenceNumber = ref('')
 const startDate = ref('')
 const expirationDate = ref('')
 const cost = ref('')
+const responsibleUserId = ref<number | null>(null)
 
 const errorMessage = ref('')
 const saving = ref(false)
+
+const auth = useAuthStore()
+const employees = ref<User[]>([])
 
 onMounted(async () => {
     const response = await fetch('/api/categories')
     if (response.ok) {
         const all: Category[] = await response.json()
         categories.value = all.filter((c) => c.isActive)
+    }
+    if (auth.user?.role === 'DepartmentManager') {
+      const employeesResponse = await fetch('/api/users/employees')
+      if (employeesResponse.ok) {
+        employees.value = await employeesResponse.json()
+      }
     }
 })
 
@@ -49,6 +66,7 @@ async function createItem() {
       startDate: startDate.value,
       expirationDate: expirationDate.value,
       cost: cost.value === '' ? null : Number(cost.value),
+      responsibleUserId: responsibleUserId.value
     }),
   })
 
@@ -130,6 +148,19 @@ async function createItem() {
       <label>
         Cost
         <input v-model="cost" type="number" min="0.01" step="0.01" placeholder="Leave empty if free" />
+      </label>
+    </div>
+    <div v-if="auth.user?.role === 'DepartmentManager'">
+      <label>
+        Responsible Employee
+        <select v-model="responsibleUserId" required>
+          <option :value="null" disabled>Select a responsible user</option>
+          <option v-if="employees.length===0" :value="null" disabled>No active employees in your department.</option>
+          <option v-for="employee in employees" :key="employee.id" :value="employee.id">
+            {{ employee.firstName }} {{  employee.lastName }}
+          </option>
+    
+        </select>
       </label>
     </div>
 

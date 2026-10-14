@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
-// ItemResponse in C# (only the fields this page uses)
+// UserResposnse 
 interface User {
   id: number
   firstName: string
@@ -10,7 +10,7 @@ interface User {
   email: string
   role: string
   departmentId: number | null
-  departmentName: string
+  departmentName: string | null
   isActive: boolean
 }
 
@@ -37,7 +37,7 @@ onMounted(async () => {
 
   <p v-if="loading">Loading...</p>
   <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>
-  <p v-else-if="users.length === 0">No items yet.</p>
+  <p v-else-if="users.length === 0">No users yet.</p>
 
   <table v-else>
     <thead>
@@ -55,9 +55,9 @@ onMounted(async () => {
             <RouterLink :to="`/users/${user.id}`">{{ user.firstName }} {{ user.lastName }}</RouterLink>
         </td>
         <td> {{ user.email}}</td>
-        <td> {{  user.role }}</td>
-        <td> {{ user.departmentName }}</td>
-        <td> {{ user.isActive }}</td>
+        <td> {{ user.role }}</td>
+        <td> {{ user.departmentName  ?? '-'}}</td>
+        <td> {{ user.isActive ? "Yes" : "No"}}</td>
       </tr>
     </tbody>
   </table>

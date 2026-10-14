@@ -17,6 +17,7 @@ interface User {
 const users = ref<User[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
+const actionError = ref('')
 const auth = useAuthStore()
 
 onMounted(async () => {
@@ -28,6 +29,31 @@ onMounted(async () => {
   }
   loading.value = false
 })
+
+// activate/deactivate user
+async function toggleActive(user: User) {
+  const newValue = !user.isActive
+  const action = newValue ? 'activate' : 'deactivate'
+
+  if (!confirm(`Are you sure you want to ${action} ${user.firstName} ${user.lastName}?`)) {
+    return
+  }
+
+  actionError.value = ''
+  const response = await fetch(`/api/users/${user.id}/active`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isActive: newValue }),
+  })
+
+  if (response.ok) {
+    user.isActive = newValue
+  } else if (response.status === 409) {
+    actionError.value = await response.text()
+  } else {
+    actionError.value = `Could not change the user (error ${response.status}).`
+  }
+}
 </script> 
 
 <template>
@@ -60,6 +86,7 @@ onMounted(async () => {
         <td> {{ user.isActive ? "Yes" : "No"}}</td>
         <td v-if="auth.user?.role === 'Administrator'">
           <RouterLink :to="`/users/${user.id}/edit`">Edit</RouterLink>
+          <button @click="toggleActive(user)">{{ user.isActive ? 'Deactivate' : 'Activate' }}</button>
         </td>
       </tr>
     </tbody>

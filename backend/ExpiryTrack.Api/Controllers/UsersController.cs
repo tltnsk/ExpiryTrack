@@ -99,7 +99,7 @@ public class UsersController : ControllerBase
     }
 
     // PUT /api/users/{id} 
-    // update name, email, role and department
+    // update name and email 
     // FR-ADM-01, FR-ADM-03
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, UpdateUserRequest request)
@@ -113,19 +113,9 @@ public class UsersController : ControllerBase
         if (await _db.Users.AnyAsync(u => u.Email == email && u.Id != id))
             return Conflict("A user with this email already exists.");
 
-        var role = await _db.Roles.SingleOrDefaultAsync(r => r.Name == request.Role);
-        if (role == null)
-            return BadRequest("Unknown role.");
-
-        var departmentError = await CheckDepartment(role.Name, request.DepartmentId);
-        if (departmentError != null)
-            return BadRequest(departmentError);
-
         user.FirstName = request.FirstName.Trim();
         user.LastName = request.LastName.Trim();
         user.Email = email;
-        user.RoleId = role.Id;
-        user.DepartmentId = request.DepartmentId;
         await _db.SaveChangesAsync();
 
         var updated = await LoadUser(id);

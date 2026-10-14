@@ -50,13 +50,6 @@ public class UpdateUserRequest
     [EmailAddress]
     [MaxLength(255)]
     public string Email { get; set; } = "";
-
-    [Required]
-    public string Role { get; set; } = "";
-
-    // employee and department manager belong to a department
-    // finance officer and administrator don't
-    public int? DepartmentId { get; set; }
 }
 
 // what the admin sends to activate or deactivate a user

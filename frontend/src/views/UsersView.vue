@@ -58,6 +58,9 @@ onMounted(async () => {
         <td> {{ user.role }}</td>
         <td> {{ user.departmentName  ?? '-'}}</td>
         <td> {{ user.isActive ? "Yes" : "No"}}</td>
+        <td v-if="auth.user?.role === 'Administrator'">
+          <RouterLink :to="`/users/${user.id}/edit`">Edit</RouterLink>
+        </td>
       </tr>
     </tbody>
   </table>

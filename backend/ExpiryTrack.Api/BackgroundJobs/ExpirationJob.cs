@@ -16,7 +16,7 @@ public class ExpirationJob : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // runs once at startup and then every 24 hours
-        using var timer = new PeriodicTiemr(TimeSpan.FromHours(24));
+        using var timer = new PeriodicTimer(TimeSpan.FromHours(24));
         do
         {
             try

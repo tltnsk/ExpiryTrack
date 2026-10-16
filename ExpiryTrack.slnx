@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/backend/">
     <Project Path="backend/ExpiryTrack.Api/ExpiryTrack.Api.csproj" />
+    <Project Path="backend/ExpiryTrack.Tests/ExpiryTrack.Tests.csproj" />
   </Folder>
 </Solution>

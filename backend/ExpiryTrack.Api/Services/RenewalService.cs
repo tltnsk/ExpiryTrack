@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ExpiryTrack.Api.Data;
-using ExpiryTrack.Api.DTOs;
+using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
 using ExpiryTrack.Api.Models.Enums;
 
@@ -56,6 +56,32 @@ public class RenewalService
         var needsReview = data.ProposedCost != null && item.Category.RequiresFinancialReview &&
                           (item.Category.FinanceReviewThreshold == null ||
                            data.ProposedCost >= item.Category.FinanceReviewThreshold);
+        
+        DateTime now = DateTime.UtcNow;
+        
+        RenewalRequest request = new RenewalRequest
+        {
+            Status = needsReview ? RequestStatus.PendingFinancialReview : RequestStatus.PendingManagerApproval,
+            NeedsFinancialReview = needsReview,
+            ProposedExpirationDate = data.ProposedExpirationDate,
+            ProposedCost = data.ProposedCost,
+            Justification = data.Justification, 
+            PeriodId = item.CurrentPeriodId!.Value,
+            RequestedByUserId = userId,
+            SubmittedAt = now,
+        };
+
+        RequestAction action = new RequestAction
+        {
+            ActionType = RequestActionType.Submitted,
+            FromStatus = null,
+            ToStatus = needsReview ? RequestStatus.PendingFinancialReview : RequestStatus.PendingManagerApproval,
+            ActorUserId = userId,
+            CreatedAt = now,
+        };
+        
+        request.Actions.Add(action);
+        _db.RenewalRequests.Add(request);
 
         if (needsReview)
         {

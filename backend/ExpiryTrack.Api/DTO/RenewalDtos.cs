@@ -28,6 +28,8 @@ public class RenewalRequestResponse
     public DateTime? CompletedAt { get; set; }
     public int PeriodId { get; set; }
     public int RequestedByUserId { get; set; }
+    public int ItemId { get; set; }
+    public string ItemName { get; set; } = "";
 
     public static RenewalRequestResponse FromRequest(RenewalRequest request)
     {
@@ -43,7 +45,9 @@ public class RenewalRequestResponse
             DecidedAt = request.DecidedAt,
             CompletedAt = request.CompletedAt,
             PeriodId = request.PeriodId,
-            RequestedByUserId = request.RequestedByUserId
+            RequestedByUserId = request.RequestedByUserId,
+            ItemId = request.Period.ItemId,
+            ItemName = request.Period.Item.Name
         };
     }
 }

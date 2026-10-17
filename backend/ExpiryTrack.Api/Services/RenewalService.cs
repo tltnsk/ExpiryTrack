@@ -3,6 +3,7 @@ using ExpiryTrack.Api.Data;
 using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
 using ExpiryTrack.Api.Models.Enums;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace ExpiryTrack.Api.Services;
 
@@ -113,6 +114,59 @@ public class RenewalService
                 RecipientUserId = item.Department.ManagerId.Value,
                 CreatedAt = now,
             };
+            _db.Notifications.Add(notification);
+        }
+
+        await _db.SaveChangesAsync();
+        return new RenewalResult { Request = request };
+    }
+
+    public async Task<RenewalResult> FinanceReviewAsync(int requestId, int userId, FinanceReviewRequest data)
+    {
+        RenewalRequest? request = await _db.RenewalRequests
+            .Include(r => r.Period)
+            .ThenInclude(p => p.Item)
+            .ThenInclude(i => i.Department)
+            .SingleOrDefaultAsync(r => r.Id == requestId);
+
+        if (request == null || !request.NeedsFinancialReview)
+        {
+            return new RenewalResult {NotFound = true};
+        }
+
+        if (request.Status != RequestStatus.PendingFinancialReview)
+        {
+            return new RenewalResult {Error = "This request has already been processed."};
+        }
+        
+        request.Status = RequestStatus.PendingManagerApproval;
+        DateTime now = DateTime.UtcNow;
+        
+        RequestAction action = new RequestAction
+        {
+            ActionType = RequestActionType.FinanceReviewed,
+            FromStatus = RequestStatus.PendingFinancialReview,
+            ToStatus = RequestStatus.PendingManagerApproval,
+            FinancialRecommendation = data.Recommendation,
+            Comment = data.Comment,
+            ActorUserId = userId,
+            CreatedAt = now,
+        };
+        
+        request.Actions.Add(action);
+        _db.RenewalRequests.Add(request);
+
+        if (request.Period.Item.Department.ManagerId != null)
+        {
+            Notification notification = new Notification()
+            {
+                Type = "RequestReviewed",
+                Message = $"{request.Period.Item.Name} is expiring soon.",
+                Request = request,
+                RecipientUserId = request.Period.Item.Department.ManagerId.Value,
+                CreatedAt = now,
+            };
+            
             _db.Notifications.Add(notification);
         }
 

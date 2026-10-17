@@ -51,3 +51,12 @@ public class RenewalRequestResponse
         };
     }
 }
+
+// what the finance officer returns for a request
+public class FinanceReviewRequest
+{
+    [Required]
+    public FinancialRecommendation? Recommendation { get; set; }
+    [Required]
+    public string? Comment { get; set; }
+}

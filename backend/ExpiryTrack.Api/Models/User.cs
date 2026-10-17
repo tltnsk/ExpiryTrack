@@ -8,7 +8,7 @@ public class User
     public string LastName { get; set; } = "";
     public string Email { get; set; } = "";
     public string PasswordHash { get; set; } = "";
-    public bool IsActive { get; set; }
+    public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
 
     // foreign key 

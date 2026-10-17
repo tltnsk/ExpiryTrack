@@ -20,7 +20,7 @@ public static class TestData
     }
 
     // adds one item with category, department, employee and current period
-    public static Item AddItem(AppDbContext db, LifecycleState state, int daysLeft, int warningPeriodDays = 30, User? manager = null)
+    public static Item AddItem(AppDbContext db, LifecycleState state, int daysLeft, int warningPeriodDays = 30, User? manager = null, bool requiresFinancialReview = false, decimal? threshold = null)
     {
         var department = new Department { Name = "IT" };
         if (manager != null)
@@ -29,7 +29,13 @@ public static class TestData
             department.Manager = manager;
         }
         var employee = new User { FirstName = "Test", LastName = "Employee", Email = "employee@test.com", RoleId = 1, Department = department };
-        var category = new Category { Name = "Software Licence", WarningPeriodDays = warningPeriodDays };
+        var category = new Category
+        {
+            Name = "Software Licence",
+            WarningPeriodDays = warningPeriodDays,
+            RequiresFinancialReview = requiresFinancialReview,
+            FinanceReviewThreshold = threshold,
+        };
 
         var item = new Item
         {

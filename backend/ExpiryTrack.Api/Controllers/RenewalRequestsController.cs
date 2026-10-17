@@ -33,6 +33,7 @@ public class RenewalRequestsController : ControllerBase
         return Created($"/api/requests/{result.Request!.Id}", RenewalRequestResponse.FromRequest(result.Request!));
     }
 
+    // GET /api/requests/{id}
     [HttpGet("requests/{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -49,8 +50,9 @@ public class RenewalRequestsController : ControllerBase
     }
     
     // all the requests for an item
+    // GET /api/items/{itemId}/requests
     [HttpGet("items/{itemId:int}/requests")]
-    public async Task<IActionResult> GetAllRequests(int itemId)
+    public async Task<IActionResult> GetForItem(int itemId)
     {
         User currentUser =  await LoadCurrentUser();
         
@@ -84,6 +86,53 @@ public class RenewalRequestsController : ControllerBase
         }
         return NotFound();
     }
+    
+    // all requests 
+    [HttpGet("requests")]
+    public async Task<IActionResult> GetAllRequests()
+    {
+        User currentUser = await LoadCurrentUser();
+        List<RenewalRequest> renewalRequests = new List<RenewalRequest>();
+
+        if (currentUser.Role.Name == "Employee")
+        {
+            renewalRequests = await _db.RenewalRequests
+                .Include(r => r.Period)
+                .ThenInclude(p => p.Item)
+                .Where(r => r.Period.Item.ResponsibleUserId == currentUser.Id)
+                .OrderByDescending(r => r.SubmittedAt)
+                .ToListAsync();
+        } else if (currentUser.Role.Name == "DepartmentManager")
+        {
+            renewalRequests = await _db.RenewalRequests
+                .Include(r => r.Period)
+                .ThenInclude(p => p.Item)
+                .Where(r => r.Period.Item.DepartmentId == currentUser.DepartmentId)
+                .OrderByDescending(r => r.SubmittedAt)
+                .ToListAsync();
+        } else if (currentUser.Role.Name == "FinanceOfficer")
+        {
+            renewalRequests = await _db.RenewalRequests
+                .Include(r => r.Period)
+                .ThenInclude(p => p.Item)
+                .Where(r => r.NeedsFinancialReview)
+                .OrderByDescending(r => r.SubmittedAt)
+                .ToListAsync();
+        } else if (currentUser.Role.Name == "Administrator")
+        {
+            renewalRequests = await _db.RenewalRequests
+                .Include(r => r.Period)
+                .ThenInclude(p => p.Item)
+                .OrderByDescending(r => r.SubmittedAt)
+                .ToListAsync();
+        }
+        var responses = new List<RenewalRequestResponse>();
+        foreach (var renewalRequest in renewalRequests)
+        {
+            responses.Add(RenewalRequestResponse.FromRequest(renewalRequest));
+        }
+        return Ok(responses);
+    }
 
     private int GetCurrentUserId()
     {
@@ -108,7 +157,7 @@ public class RenewalRequestsController : ControllerBase
         if (currentUser.Role.Name == "DepartmentManager")
             return request.Period.Item.DepartmentId == currentUser.DepartmentId;
 
-        // finance officers can only see the requeses for items that need financial review
+        // finance officers can only see the requests for items that need financial review
         if (currentUser.Role.Name == "FinanceOfficer")
             return request.NeedsFinancialReview;
 

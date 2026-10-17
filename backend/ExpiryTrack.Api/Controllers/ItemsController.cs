@@ -32,7 +32,7 @@ public class ItemsController : ControllerBase
     }
 
     // helper method that returns whether the user has access to the item 
-    private static bool CanSee(Item item, User currentUser)
+    public static bool CanSee(Item item, User currentUser)
     {
         // employees can only see the items they're responsible for
         if (currentUser.Role.Name == "Employee")

@@ -41,11 +41,48 @@ public class RenewalRequestsController : ControllerBase
             .ThenInclude(p => p.Item)
             .FirstOrDefaultAsync(r => r.Id == id);
 
-        var currentUser = await LoadCurrentUser();
+        User currentUser = await LoadCurrentUser();
 
         if (renewalRequest == null || !CanSeeRequest(renewalRequest, currentUser)) return NotFound();
 
         return Ok(RenewalRequestResponse.FromRequest(renewalRequest));
+    }
+    
+    // all the requests for an item
+    [HttpGet("items/{itemId:int}/requests")]
+    public async Task<IActionResult> GetAllRequests(int itemId)
+    {
+        User currentUser =  await LoadCurrentUser();
+        
+        Item? item = await _db.Items
+            .Include(i => i.CurrentPeriod)
+            .FirstOrDefaultAsync(i => i.Id == itemId);
+        
+        if (item == null) return NotFound();
+
+        if (ItemsController.CanSee(item, currentUser))
+        {
+            List<RenewalRequest> renewalRequests;
+        
+            // Requests of all periods of the item
+            renewalRequests = await _db.RenewalRequests
+                .Include(r => r.Period)
+                .ThenInclude(p => p.Item)
+                .Where(i => i.Period.ItemId == itemId)
+                .OrderByDescending(r => r.SubmittedAt)
+                .ToListAsync();
+            
+            var responses = new List<RenewalRequestResponse>();
+            foreach (var renewalRequest in renewalRequests)
+            {
+                if (CanSeeRequest(renewalRequest, currentUser))
+                {
+                    responses.Add(RenewalRequestResponse.FromRequest(renewalRequest));
+                }
+            }
+            return Ok(responses);
+        }
+        return NotFound();
     }
 
     private int GetCurrentUserId()
@@ -78,4 +115,5 @@ public class RenewalRequestsController : ControllerBase
         // admins can see all the requests 
         return true;
     }
+
 }

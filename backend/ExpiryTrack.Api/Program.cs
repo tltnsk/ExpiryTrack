@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using ExpiryTrack.Api.Data;
 using System.Text.Json.Serialization;
+using ExpiryTrack.Api.Services;
+using ExpiryTrack.Api.BackgroundJobs;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +44,10 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
+
+builder.Services.AddScoped<ExpirationService>();
+builder.Services.AddScoped<RenewalService>();
+builder.Services.AddHostedService<ExpirationJob>();
 
 var app = builder.Build();
 

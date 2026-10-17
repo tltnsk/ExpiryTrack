@@ -154,7 +154,6 @@ public class RenewalService
         };
         
         request.Actions.Add(action);
-        _db.RenewalRequests.Add(request);
 
         if (request.Period.Item.Department.ManagerId != null)
         {

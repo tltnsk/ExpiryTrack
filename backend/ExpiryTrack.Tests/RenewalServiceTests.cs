@@ -8,13 +8,22 @@ namespace ExpiryTrack.Tests;
 public class RenewalServiceTests
 {
     // create a SubmitRenewalRequest object
-    public static SubmitRenewalRequest SubmitData(decimal? cost = null)
+    private static SubmitRenewalRequest SubmitData(decimal? cost = null)
     {
         return new SubmitRenewalRequest
         {
             ProposedExpirationDate = TestData.Today.AddYears(1),
             ProposedCost = cost,
             Justification = "Item still needed.",
+        };
+    }
+
+    private static FinanceReviewRequest FinanceData(FinancialRecommendation recommendation)
+    {
+        return new FinanceReviewRequest
+        {
+            Recommendation = recommendation,
+            Comment = "Good to go",
         };
     }
 
@@ -164,12 +173,71 @@ public class RenewalServiceTests
     public async Task SubmitNoManager()
     {
         using var db = TestData.CreateDb();
-        var item = TestData.AddItem(db, LifecycleState.Active, daysLeft: 40, requiresFinancialReview: true, threshold: 5000);
+        var item = TestData.AddItem(db, LifecycleState.Active, daysLeft: 20);
         var service = new RenewalService(db);
 
         var result = await service.SubmitAsync(item.Id, item.ResponsibleUserId, SubmitData(cost: 300));
 
         Assert.NotNull(result.Error);
         Assert.Empty(db.RenewalRequests);
+    }
+
+    [Fact]
+    public async Task FinanceReview_Approved()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+ 
+        var request = TestData.AddRequest(db, item, RequestStatus.PendingFinancialReview);
+        request.NeedsFinancialReview = true;
+        db.SaveChanges();
+        var service = new RenewalService(db);
+        
+        var result = await service.FinanceReviewAsync(request.Id, 99, FinanceData(FinancialRecommendation.Approve));
+
+        Assert.Null(result.Error);
+        Assert.NotNull(result.Request);
+        Assert.Equal(RequestStatus.PendingManagerApproval, result.Request.Status);
+        
+        var action = Assert.Single(db.RequestActions);
+        Assert.Equal(RequestActionType.FinanceReviewed, action.ActionType);
+        Assert.Equal(RequestStatus.PendingFinancialReview, action.FromStatus);
+        Assert.Equal(FinancialRecommendation.Approve, action.FinancialRecommendation);
+
+        var notification = Assert.Single(db.Notifications);
+        Assert.Equal(manager.Id, notification.RecipientUserId);
+    }
+
+    [Fact]
+    public async Task FinanceReview_WrongStatus()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+ 
+        var request = TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
+        request.NeedsFinancialReview = true;
+        db.SaveChanges();
+        var service = new RenewalService(db);
+        
+        var result = await service.FinanceReviewAsync(request.Id, 99, FinanceData(FinancialRecommendation.Approve));
+
+        Assert.Contains("already been processed", result.Error);
+        Assert.Empty(db.RequestActions);
+    }
+
+    [Fact]
+    public async Task FinanceReview_RequestNotFound()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+        
+        var service = new RenewalService(db);
+        
+        var result = await service.FinanceReviewAsync(999, 99, FinanceData(FinancialRecommendation.Approve));
+        
+        Assert.True(result.NotFound);
     }
 }

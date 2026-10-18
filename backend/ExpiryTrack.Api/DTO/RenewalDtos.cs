@@ -60,3 +60,9 @@ public class FinanceReviewRequest
     [Required]
     public string? Comment { get; set; }
 }
+
+// what the manager returns for a request
+public class ManagerDecisionRequest
+{
+    public string? Comment { get; set; }
+}

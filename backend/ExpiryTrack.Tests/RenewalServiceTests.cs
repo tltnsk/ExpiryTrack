@@ -188,18 +188,18 @@ public class RenewalServiceTests
         using var db = TestData.CreateDb();
         var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
         var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
- 
+
         var request = TestData.AddRequest(db, item, RequestStatus.PendingFinancialReview);
         request.NeedsFinancialReview = true;
         db.SaveChanges();
         var service = new RenewalService(db);
-        
+
         var result = await service.FinanceReviewAsync(request.Id, 99, FinanceData(FinancialRecommendation.Approve));
 
         Assert.Null(result.Error);
         Assert.NotNull(result.Request);
         Assert.Equal(RequestStatus.PendingManagerApproval, result.Request.Status);
-        
+
         var action = Assert.Single(db.RequestActions);
         Assert.Equal(RequestActionType.FinanceReviewed, action.ActionType);
         Assert.Equal(RequestStatus.PendingFinancialReview, action.FromStatus);
@@ -215,12 +215,12 @@ public class RenewalServiceTests
         using var db = TestData.CreateDb();
         var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
         var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
- 
+
         var request = TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
         request.NeedsFinancialReview = true;
         db.SaveChanges();
         var service = new RenewalService(db);
-        
+
         var result = await service.FinanceReviewAsync(request.Id, 99, FinanceData(FinancialRecommendation.Approve));
 
         Assert.Contains("already been processed", result.Error);
@@ -233,11 +233,11 @@ public class RenewalServiceTests
         using var db = TestData.CreateDb();
         var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
         var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
-        
+
         var service = new RenewalService(db);
-        
+
         var result = await service.FinanceReviewAsync(999, 99, FinanceData(FinancialRecommendation.Approve));
-        
+
         Assert.True(result.NotFound);
     }
 }

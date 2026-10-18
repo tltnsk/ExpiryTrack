@@ -172,4 +172,52 @@ public class RenewalService
         await _db.SaveChangesAsync();
         return new RenewalResult { Request = request };
     }
+
+    public async Task<RenewalResult> ApproveAsync(int requestId, int userId, ManagerDecisionRequest data)
+    {
+        RenewalRequest? request = await _db.RenewalRequests.Include(r => r.Period)
+            .ThenInclude(p => p.Item)
+            .ThenInclude(i => i.Department)
+            .SingleOrDefaultAsync(r => r.Id == requestId);
+        
+        if (request == null || request.Period.Item.Department.ManagerId != userId)
+        {
+            return new RenewalResult {NotFound = true};
+        }
+        
+        if (request.Status != RequestStatus.PendingManagerApproval)
+        {
+            return new RenewalResult {Error = "This request has already been processed."};
+        }
+        
+        request.Status = RequestStatus.Approved;
+        DateTime now = DateTime.UtcNow;
+        request.DecidedAt = now;
+        
+        RequestAction action = new RequestAction
+        {
+            ActionType = RequestActionType.Approved,
+            FromStatus = RequestStatus.PendingManagerApproval,
+            ToStatus = RequestStatus.Approved,
+            Comment = data.Comment,
+            ActorUserId = userId,
+            CreatedAt = now,
+        };
+        
+        request.Actions.Add(action);
+        
+        Notification notification = new Notification()
+        {
+            Type = "RequestApproved",
+            Message = $"{request.Period.Item.Name} is approved for renewal.",
+            Request = request,
+            RecipientUserId = request.Period.Item.ResponsibleUserId,
+            CreatedAt = now,
+        };
+        
+        _db.Notifications.Add(notification);
+        
+        await _db.SaveChangesAsync();
+        return new RenewalResult { Request = request };
+    }
 }

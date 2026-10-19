@@ -133,6 +133,58 @@ public class RenewalRequestsController : ControllerBase
         }
         return Ok(responses);
     }
+    
+    [HttpPost("requests/{id:int}/finance-review")]
+    [Authorize(Roles = "FinanceOfficer")]
+    public async Task<IActionResult> PostFinanceReview(int id, FinanceReviewRequest data)
+    {
+        RenewalResult result = await _rs.FinanceReviewAsync(id, GetCurrentUserId(), data);
+
+        if (result.NotFound) return NotFound();
+        
+        if (result.Error != null) return BadRequest(result.Error);
+
+        return Ok(RenewalRequestResponse.FromRequest(result.Request!));
+    }
+
+    [HttpPost("requests/{id:int}/approve")]
+    [Authorize(Roles = "DepartmentManager")]
+    public async Task<IActionResult> PostApprove(int id, ManagerDecisionRequest data)
+    {
+        RenewalResult result = await _rs.ApproveAsync(id, GetCurrentUserId(), data);
+        
+        if (result.NotFound) return NotFound();
+        
+        if (result.Error != null) return BadRequest(result.Error);
+        
+        return Ok(RenewalRequestResponse.FromRequest(result.Request!));
+    }
+    
+    [HttpPost("requests/{id:int}/reject")]
+    [Authorize(Roles = "DepartmentManager")]
+    public async Task<IActionResult> PostReject(int id, ManagerDecisionRequest data)
+    {
+        RenewalResult result = await _rs.RejectAsync(id, GetCurrentUserId(), data);
+        
+        if (result.NotFound) return NotFound();
+        
+        if (result.Error != null) return BadRequest(result.Error);
+        
+        return Ok(RenewalRequestResponse.FromRequest(result.Request!));
+    }
+    
+    [HttpPost("requests/{id:int}/request-clarification")]
+    [Authorize(Roles = "DepartmentManager")]
+    public async Task<IActionResult> PostClarification(int id, ManagerDecisionRequest data)
+    {
+        RenewalResult result = await _rs.ClarificationAsync(id, GetCurrentUserId(), data);
+        
+        if (result.NotFound) return NotFound();
+        
+        if (result.Error != null) return BadRequest(result.Error);
+        
+        return Ok(RenewalRequestResponse.FromRequest(result.Request!));
+    }
 
     private int GetCurrentUserId()
     {

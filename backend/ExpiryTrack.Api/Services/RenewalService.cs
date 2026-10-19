@@ -220,4 +220,121 @@ public class RenewalService
         await _db.SaveChangesAsync();
         return new RenewalResult { Request = request };
     }
+    
+    public async Task<RenewalResult> RejectAsync(int requestId, int userId, ManagerDecisionRequest data)
+    {
+        RenewalRequest? request = await _db.RenewalRequests.Include(r => r.Period)
+            .ThenInclude(p => p.Item)
+            .ThenInclude(i => i.Department)
+            .SingleOrDefaultAsync(r => r.Id == requestId);
+        
+        if (request == null || request.Period.Item.Department.ManagerId != userId)
+        {
+            return new RenewalResult {NotFound = true};
+        }
+        
+        // the manager can reject the renewal request also when waiting for a clarification from the employee
+        if (request.Status != RequestStatus.PendingManagerApproval && request.Status != RequestStatus.ClarificationRequired)
+        {
+            return new RenewalResult {Error = "Cannot process the renewal request."};
+        }
+
+        if (string.IsNullOrWhiteSpace(data.Comment))
+        {
+            return new RenewalResult {Error = "Reason is required when rejecting a request."};
+        }
+        
+        RequestStatus oldStatus = request.Status;
+        request.Status = RequestStatus.Rejected;
+        DateTime now = DateTime.UtcNow;
+        request.DecidedAt = now;
+
+        RequestAction action = new RequestAction
+        {
+            ActionType = RequestActionType.Rejected,
+            FromStatus = oldStatus,
+            ToStatus = RequestStatus.Rejected,
+            Comment = data.Comment,
+            ActorUserId = userId,
+            CreatedAt = now,
+        };
+        
+        request.Actions.Add(action);
+        
+        Notification notification = new Notification()
+        {
+            Type = "RequestRejected",
+            Message = $"{request.Period.Item.Name} is rejected by the manager.",
+            Request = request,
+            RecipientUserId = request.Period.Item.ResponsibleUserId,
+            CreatedAt = now,
+        };
+        
+        _db.Notifications.Add(notification);
+        
+        await _db.SaveChangesAsync();
+        return new RenewalResult { Request = request };
+    }
+    
+    public async Task<RenewalResult> ClarificationAsync(int requestId, int userId, ManagerDecisionRequest data)
+    {
+        RenewalRequest? request = await _db.RenewalRequests.Include(r => r.Period)
+            .ThenInclude(p => p.Item)
+            .ThenInclude(i => i.Department)
+            .SingleOrDefaultAsync(r => r.Id == requestId);
+        
+        if (request == null || request.Period.Item.Department.ManagerId != userId)
+        {
+            return new RenewalResult {NotFound = true};
+        }
+        
+        // managers can only request one clarification for the renewal request 
+        RequestAction? requestAction = await _db.RequestActions.Include(r => r.Request)
+            .Where(r => r.ActionType == RequestActionType.ClarificationRequested)
+            .SingleOrDefaultAsync(r => r.RequestId == requestId);
+        
+        if (request.Status != RequestStatus.PendingManagerApproval)
+        {
+            return new RenewalResult {Error = "This request has already been processed."};
+        }
+
+        if (requestAction != null)
+        {
+            return new RenewalResult {Error = "Clarification has already been requested for this renewal request."};
+        }
+
+        if (string.IsNullOrWhiteSpace(data.Comment))
+        {
+            return new RenewalResult {Error = "Must provide a question for clarification."};
+        }
+        
+        request.Status = RequestStatus.ClarificationRequired;
+        DateTime now = DateTime.UtcNow;
+        
+        RequestAction action = new RequestAction
+        {
+            ActionType = RequestActionType.ClarificationRequested,
+            FromStatus = RequestStatus.PendingManagerApproval,
+            ToStatus = RequestStatus.ClarificationRequired,
+            Comment = data.Comment,
+            ActorUserId = userId,
+            CreatedAt = now,
+        };
+        
+        request.Actions.Add(action);
+        
+        Notification notification = new Notification()
+        {
+            Type = "ClarificationRequested",
+            Message = $"Manager required clarification for {request.Period.Item.Name} renewal request.",
+            Request = request,
+            RecipientUserId = request.Period.Item.ResponsibleUserId,
+            CreatedAt = now,
+        };
+        
+        _db.Notifications.Add(notification);
+        
+        await _db.SaveChangesAsync();
+        return new RenewalResult { Request = request };
+    }
 }

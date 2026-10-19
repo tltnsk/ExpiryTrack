@@ -186,6 +186,16 @@ public class RenewalRequestsController : ControllerBase
         return Ok(RenewalRequestResponse.FromRequest(result.Request!));
     }
 
+    [HttpPost("requests/{id:int}/provide-clarification")]
+    [Authorize(Roles = "Employee")]
+    public async Task<IActionResult> PostProvideClarification(int id, ClarificationAnswerRequest data)
+    {
+        RenewalResult result = await _rs.AnswerClarificationAsync(id, GetCurrentUserId(), data);
+        if (result.NotFound) return NotFound();
+        if (result.Error != null) return BadRequest(result.Error);
+        return Ok(RenewalRequestResponse.FromRequest((result.Request!)));
+    }
+
     private int GetCurrentUserId()
     {
         return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

@@ -337,4 +337,59 @@ public class RenewalService
         await _db.SaveChangesAsync();
         return new RenewalResult { Request = request };
     }
+
+    public async Task<RenewalResult> AnswerClarificationAsync(int requestId, int userId, ClarificationAnswerRequest data)
+    { 
+        RenewalRequest? request = await _db.RenewalRequests.Include(r => r.Period)
+            .ThenInclude(p => p.Item)
+            .ThenInclude(i => i.Department)
+            .SingleOrDefaultAsync(r => r.Id == requestId);
+        
+        if (request == null || request.Period.Item.ResponsibleUserId != userId)
+        {
+            return new RenewalResult {NotFound = true};
+        }
+        
+        if (request.Status != RequestStatus.ClarificationRequired)
+        {
+            return new RenewalResult {Error = "This request has already been processed."};
+        }
+        
+        if (string.IsNullOrWhiteSpace(data.Answer))
+        {
+            return new RenewalResult {Error = "Must provide an answer for clarification."};
+        }
+        
+        request.Status = RequestStatus.PendingManagerApproval;
+        DateTime now = DateTime.UtcNow;
+        
+        RequestAction action = new RequestAction
+        {
+            ActionType = RequestActionType.ClarificationProvided,
+            FromStatus = RequestStatus.ClarificationRequired,
+            ToStatus = RequestStatus.PendingManagerApproval,
+            Comment = data.Answer,
+            ActorUserId = userId,
+            CreatedAt = now,
+        };
+        
+        request.Actions.Add(action);
+
+        if (request.Period.Item.Department.ManagerId != null)
+        {
+            Notification notification = new Notification()
+            {
+                Type = "ClarificationProvided",
+                Message = $"Employee provided clarification for {request.Period.Item.Name}.",
+                Request = request,
+                RecipientUserId = request.Period.Item.Department.ManagerId.Value,
+                CreatedAt = now,
+            };
+        
+            _db.Notifications.Add(notification);
+        }
+        
+        await _db.SaveChangesAsync();
+        return new RenewalResult { Request = request };
+    }
 }

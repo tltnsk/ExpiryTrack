@@ -35,6 +35,14 @@ public class RenewalServiceTests
         };
     }
 
+    private static ClarificationAnswerRequest EmployeeData(string answer)
+    {
+        return new ClarificationAnswerRequest()
+        {
+            Answer = answer,
+        };
+    }
+
     [Fact]
     public async Task CategoryWithoutReview()
     {
@@ -426,4 +434,87 @@ public class RenewalServiceTests
         Assert.NotNull(result.Error);
         Assert.Single(db.RequestActions);
     }
+    
+    // AnswerClarificationAsync tests
+    [Fact]
+    public async Task AnswerClarification_Works()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.ClarificationRequired);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.AnswerClarificationAsync(request.Id, item.ResponsibleUserId, EmployeeData("We need this item for next year."));
+
+        Assert.Null(result.Error);
+        Assert.NotNull(result.Request);
+        Assert.Equal(RequestStatus.PendingManagerApproval, result.Request.Status);
+
+        var action = Assert.Single(db.RequestActions);
+        Assert.Equal(RequestActionType.ClarificationProvided, action.ActionType);
+        Assert.Equal(RequestStatus.ClarificationRequired, action.FromStatus);
+
+        var notification = Assert.Single(db.Notifications);
+        Assert.Equal(item.Department.ManagerId, notification.RecipientUserId);
+    }
+    
+    // request not found and different employee
+    [Fact]
+    public async Task AnswerClarification_OtherEmployee_NotFound()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var manager2 = new User {FirstName = "Test" , LastName = "Manager 2", RoleId = 3};
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+        var item2 = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 22,manager: manager2);
+
+        var request = TestData.AddRequest(db, item2, RequestStatus.ClarificationRequired);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.AnswerClarificationAsync(request.Id, item.ResponsibleUserId, EmployeeData(" "));
+
+        Assert.True(result.NotFound);
+        Assert.Empty(db.RequestActions);
+    }
+    
+    // wrong status
+    [Fact]
+    public async Task AnswerClarification_AlreadyProcessed()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.Approved);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.AnswerClarificationAsync(request.Id, item.ResponsibleUserId, EmployeeData(" "));
+
+        Assert.Contains("already been processed", result.Error);
+        Assert.Empty(db.RequestActions);
+    }
+    
+    // no answer provided
+    [Fact]
+    public async Task AnswerClarification_NoAnswerProvided()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.ClarificationRequired);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.AnswerClarificationAsync(request.Id, item.ResponsibleUserId, EmployeeData(""));
+
+        Assert.Contains("answer", result.Error);
+        Assert.Empty(db.RequestActions);
+    }
+
 }

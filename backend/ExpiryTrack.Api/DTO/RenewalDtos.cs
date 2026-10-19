@@ -66,3 +66,10 @@ public class ManagerDecisionRequest
 {
     public string? Comment { get; set; }
 }
+
+// what the employee sends for a clarification
+public class ClarificationAnswerRequest
+{
+    [Required]
+    public string? Answer { get; set; }
+}

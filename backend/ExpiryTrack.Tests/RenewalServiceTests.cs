@@ -27,6 +27,14 @@ public class RenewalServiceTests
         };
     }
 
+    private static ManagerDecisionRequest ManagerData(string comment)
+    {
+        return new ManagerDecisionRequest()
+        {
+            Comment = comment,
+        };
+    }
+
     [Fact]
     public async Task CategoryWithoutReview()
     {
@@ -239,5 +247,183 @@ public class RenewalServiceTests
         var result = await service.FinanceReviewAsync(999, 99, FinanceData(FinancialRecommendation.Approve));
 
         Assert.True(result.NotFound);
+    }
+
+    [Fact]
+    public async Task ManagerReview_Approved()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.ApproveAsync(request.Id, manager.Id, ManagerData("Approved"));
+
+        Assert.Null(result.Error);
+        Assert.NotNull(result.Request);
+        Assert.Equal(RequestStatus.Approved, result.Request.Status);
+
+        var action = Assert.Single(db.RequestActions);
+        Assert.Equal(RequestActionType.Approved, action.ActionType);
+        Assert.Equal(RequestStatus.PendingManagerApproval, action.FromStatus);
+
+        var notification = Assert.Single(db.Notifications);
+        Assert.Equal(item.ResponsibleUserId, notification.RecipientUserId);
+    }
+
+    // wrong status
+    [Fact]
+    public async Task ManagerReview_WrongStatus()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.PendingFinancialReview);
+        request.NeedsFinancialReview = true;
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.ApproveAsync(request.Id, manager.Id, ManagerData(" "));
+
+        Assert.Contains("already been processed", result.Error);
+        Assert.Empty(db.RequestActions);
+    }
+    
+    // not this department - not found
+    [Fact]
+    public async Task ManagerReview_WrongDepartment()
+    {
+        using var db = TestData.CreateDb();
+        var managerA = new User {FirstName = "Test", LastName = "Manager A", RoleId = 3};
+        var managerB = new User {FirstName = "Test", LastName = "Manager B", RoleId = 3};
+        var itemA = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 15, manager: managerA);
+        var itemB = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 15, manager: managerB);
+        
+        var request = TestData.AddRequest(db, itemA, RequestStatus.PendingManagerApproval);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.ApproveAsync(request.Id, managerB.Id, ManagerData(" "));
+
+        Assert.True(result.NotFound);
+        Assert.Empty(db.RequestActions);
+    }
+    
+    // reject without a reason should show an error
+    [Fact]
+    public async Task ManagerReview_RejectWithoutAReason()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.RejectAsync(request.Id, manager.Id, ManagerData(""));
+        
+        Assert.Contains("Reason", result.Error);
+        Assert.Empty(db.RequestActions);
+    }
+    
+    // reject with a reason 
+    [Fact]
+    public async Task ManagerReview_RejectWithAReason()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.RejectAsync(request.Id, manager.Id, ManagerData("Not needed"));
+        
+        Assert.Null(result.Error);
+        Assert.NotNull(result.Request);
+        Assert.Equal(RequestStatus.Rejected, result.Request.Status);
+
+        var action = Assert.Single(db.RequestActions);
+        Assert.Equal(RequestActionType.Rejected, action.ActionType);
+        Assert.Equal(RequestStatus.PendingManagerApproval, action.FromStatus);
+
+        var notification = Assert.Single(db.Notifications);
+        Assert.Equal(item.ResponsibleUserId, notification.RecipientUserId);
+    }
+    
+    // clarification with question works
+    [Fact]
+    public async Task ManagerReview_ClarificationWithQuestion()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.ClarificationAsync(request.Id, manager.Id, ManagerData("Provide more details."));
+        
+        Assert.Null(result.Error);
+        Assert.NotNull(result.Request);
+        Assert.Equal(RequestStatus.ClarificationRequired, result.Request.Status);
+
+        var action = Assert.Single(db.RequestActions);
+        Assert.Equal(RequestActionType.ClarificationRequested, action.ActionType);
+        Assert.Equal(RequestStatus.PendingManagerApproval, action.FromStatus);
+
+        var notification = Assert.Single(db.Notifications);
+        Assert.Equal(item.ResponsibleUserId, notification.RecipientUserId);
+    }
+    
+    // clarification without question does not work
+    [Fact]
+    public async Task ManagerReview_ClarificationWithoutQuestion()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.ClarificationAsync(request.Id, manager.Id, ManagerData(""));
+        
+        Assert.Contains("question", result.Error);
+        Assert.Empty(db.RequestActions);
+    }
+    
+    // clarification requested for a second time should show an error
+    [Fact]
+    public async Task ManagerReview_SecondClarification()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.Active, daysLeft: 40, manager: manager);
+        var service = new RenewalService(db);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
+        
+        db.RequestActions.Add(new RequestAction
+        {
+            RequestId = request.Id,
+            ActionType = RequestActionType.ClarificationRequested,
+            ToStatus = RequestStatus.ClarificationRequired,
+            CreatedAt = DateTime.UtcNow,
+        });
+        db.SaveChanges();
+
+        var result = await service.ClarificationAsync(request.Id, manager.Id, ManagerData("Again?"));
+    
+        Assert.NotNull(result.Error);
+        Assert.Single(db.RequestActions);
     }
 }

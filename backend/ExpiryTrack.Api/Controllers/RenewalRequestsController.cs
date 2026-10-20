@@ -40,6 +40,8 @@ public class RenewalRequestsController : ControllerBase
         RenewalRequest? renewalRequest = await _db.RenewalRequests
             .Include(r => r.Period)
             .ThenInclude(p => p.Item)
+            .Include(r => r.Actions)
+            .ThenInclude(r => r.ActorUser)
             .FirstOrDefaultAsync(r => r.Id == id);
 
         User currentUser = await LoadCurrentUser();
@@ -48,24 +50,24 @@ public class RenewalRequestsController : ControllerBase
 
         return Ok(RenewalRequestResponse.FromRequest(renewalRequest));
     }
-    
+
     // all the requests for an item
     // GET /api/items/{itemId}/requests
     [HttpGet("items/{itemId:int}/requests")]
     public async Task<IActionResult> GetForItem(int itemId)
     {
-        User currentUser =  await LoadCurrentUser();
-        
+        User currentUser = await LoadCurrentUser();
+
         Item? item = await _db.Items
             .Include(i => i.CurrentPeriod)
             .FirstOrDefaultAsync(i => i.Id == itemId);
-        
+
         if (item == null) return NotFound();
 
         if (ItemsController.CanSee(item, currentUser))
         {
             List<RenewalRequest> renewalRequests;
-        
+
             // Requests of all periods of the item
             renewalRequests = await _db.RenewalRequests
                 .Include(r => r.Period)
@@ -73,7 +75,7 @@ public class RenewalRequestsController : ControllerBase
                 .Where(i => i.Period.ItemId == itemId)
                 .OrderByDescending(r => r.SubmittedAt)
                 .ToListAsync();
-            
+
             var responses = new List<RenewalRequestResponse>();
             foreach (var renewalRequest in renewalRequests)
             {
@@ -86,7 +88,7 @@ public class RenewalRequestsController : ControllerBase
         }
         return NotFound();
     }
-    
+
     // all requests 
     [HttpGet("requests")]
     public async Task<IActionResult> GetAllRequests()
@@ -102,7 +104,8 @@ public class RenewalRequestsController : ControllerBase
                 .Where(r => r.Period.Item.ResponsibleUserId == currentUser.Id)
                 .OrderByDescending(r => r.SubmittedAt)
                 .ToListAsync();
-        } else if (currentUser.Role.Name == "DepartmentManager")
+        }
+        else if (currentUser.Role.Name == "DepartmentManager")
         {
             renewalRequests = await _db.RenewalRequests
                 .Include(r => r.Period)
@@ -110,7 +113,8 @@ public class RenewalRequestsController : ControllerBase
                 .Where(r => r.Period.Item.DepartmentId == currentUser.DepartmentId)
                 .OrderByDescending(r => r.SubmittedAt)
                 .ToListAsync();
-        } else if (currentUser.Role.Name == "FinanceOfficer")
+        }
+        else if (currentUser.Role.Name == "FinanceOfficer")
         {
             renewalRequests = await _db.RenewalRequests
                 .Include(r => r.Period)
@@ -118,7 +122,8 @@ public class RenewalRequestsController : ControllerBase
                 .Where(r => r.NeedsFinancialReview)
                 .OrderByDescending(r => r.SubmittedAt)
                 .ToListAsync();
-        } else if (currentUser.Role.Name == "Administrator")
+        }
+        else if (currentUser.Role.Name == "Administrator")
         {
             renewalRequests = await _db.RenewalRequests
                 .Include(r => r.Period)
@@ -133,7 +138,7 @@ public class RenewalRequestsController : ControllerBase
         }
         return Ok(responses);
     }
-    
+
     [HttpPost("requests/{id:int}/finance-review")]
     [Authorize(Roles = "FinanceOfficer")]
     public async Task<IActionResult> PostFinanceReview(int id, FinanceReviewRequest data)
@@ -141,7 +146,7 @@ public class RenewalRequestsController : ControllerBase
         RenewalResult result = await _rs.FinanceReviewAsync(id, GetCurrentUserId(), data);
 
         if (result.NotFound) return NotFound();
-        
+
         if (result.Error != null) return BadRequest(result.Error);
 
         return Ok(RenewalRequestResponse.FromRequest(result.Request!));
@@ -152,37 +157,37 @@ public class RenewalRequestsController : ControllerBase
     public async Task<IActionResult> PostApprove(int id, ManagerDecisionRequest data)
     {
         RenewalResult result = await _rs.ApproveAsync(id, GetCurrentUserId(), data);
-        
+
         if (result.NotFound) return NotFound();
-        
+
         if (result.Error != null) return BadRequest(result.Error);
-        
+
         return Ok(RenewalRequestResponse.FromRequest(result.Request!));
     }
-    
+
     [HttpPost("requests/{id:int}/reject")]
     [Authorize(Roles = "DepartmentManager")]
     public async Task<IActionResult> PostReject(int id, ManagerDecisionRequest data)
     {
         RenewalResult result = await _rs.RejectAsync(id, GetCurrentUserId(), data);
-        
+
         if (result.NotFound) return NotFound();
-        
+
         if (result.Error != null) return BadRequest(result.Error);
-        
+
         return Ok(RenewalRequestResponse.FromRequest(result.Request!));
     }
-    
+
     [HttpPost("requests/{id:int}/request-clarification")]
     [Authorize(Roles = "DepartmentManager")]
     public async Task<IActionResult> PostClarification(int id, ManagerDecisionRequest data)
     {
         RenewalResult result = await _rs.ClarificationAsync(id, GetCurrentUserId(), data);
-        
+
         if (result.NotFound) return NotFound();
-        
+
         if (result.Error != null) return BadRequest(result.Error);
-        
+
         return Ok(RenewalRequestResponse.FromRequest(result.Request!));
     }
 
@@ -200,7 +205,7 @@ public class RenewalRequestsController : ControllerBase
     [Authorize(Roles = "Employee")]
     public async Task<IActionResult> PostCompleteRenewal(int id, CompleteRenewalRequest data)
     {
-        RenewalResult result = await _rs.CompleteAsync(id, GetCurrentUserId(), data); 
+        RenewalResult result = await _rs.CompleteAsync(id, GetCurrentUserId(), data);
         if (result.NotFound) return NotFound();
         if (result.Error != null) return BadRequest(result.Error);
         return Ok(RenewalRequestResponse.FromRequest((result.Request!)));

@@ -31,6 +31,8 @@ public class RenewalRequestResponse
     public int ItemId { get; set; }
     public string ItemName { get; set; } = "";
 
+    public List<RequestActionResponse> Actions { get; set; } = new();
+
     public static RenewalRequestResponse FromRequest(RenewalRequest request)
     {
         return new RenewalRequestResponse
@@ -47,7 +49,11 @@ public class RenewalRequestResponse
             PeriodId = request.PeriodId,
             RequestedByUserId = request.RequestedByUserId,
             ItemId = request.Period.ItemId,
-            ItemName = request.Period.Item.Name
+            ItemName = request.Period.Item.Name,
+            Actions = request.Actions
+                .OrderBy(a => a.CreatedAt)
+                .Select(a => RequestActionResponse.FromAction(a))
+                .ToList(),
         };
     }
 }
@@ -79,4 +85,32 @@ public class CompleteRenewalRequest
 {
     [Range(0.01, 9999999.99)]
     public decimal? ActualCost { get; set; }
+}
+
+// comments in history
+public class RequestActionResponse
+{
+    public RequestActionType Type { get; set; }
+    public RequestStatus? FromStatus { get; set; }
+    public RequestStatus ToStatus { get; set; }
+    public string? Comment { get; set; }
+    public FinancialRecommendation? Recommendation { get; set; }
+    public int? ActorUserId { get; set; }
+    public string ActorUserName { get; set; } = "System";
+    public DateTime CreatedAt { get; set; }
+
+    public static RequestActionResponse FromAction(RequestAction action)
+    {
+        return new RequestActionResponse
+        {
+            Type = action.ActionType,
+            FromStatus = action.FromStatus,
+            ToStatus = action.ToStatus,
+            Recommendation = action.FinancialRecommendation,
+            Comment = action.Comment,
+            ActorUserId = action.ActorUserId,
+            ActorUserName = action.ActorUser != null ? action.ActorUser.FirstName + " " + action.ActorUser.LastName : "System",
+            CreatedAt = action.CreatedAt,
+        };
+    }
 }

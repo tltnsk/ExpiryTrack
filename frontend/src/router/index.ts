@@ -14,6 +14,8 @@ import DepartmentsEditView from '@/views/DepartmentsEditView.vue'
 import UsersView from '@/views/UsersView.vue'
 import UsersCreateView from '@/views/UsersCreateView.vue'
 import UsersEditView from '@/views/UsersEditView.vue'
+import RequestsView from '@/views/RequestsView.vue'
+import RequestDetailView from '@/views/RequestDetailView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -32,7 +34,9 @@ const router = createRouter({
     { path: '/departments/:id/edit', component: DepartmentsEditView },
     { path: '/users', component: UsersView },
     { path: '/users/new', component: UsersCreateView },
-    { path: '/users/:id/edit', component: UsersEditView }
+    { path: '/users/:id/edit', component: UsersEditView },
+    { path: '/requests', component: RequestsView }, 
+    { path: '/requests/:id', component: RequestDetailView }
   ],
 })
 

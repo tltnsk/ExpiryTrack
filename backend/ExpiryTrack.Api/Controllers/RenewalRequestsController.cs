@@ -23,7 +23,7 @@ public class RenewalRequestsController : ControllerBase
         _db = db;
     }
 
-    [HttpPost("items/{itemId}/requests")]
+    [HttpPost("items/{itemId:int}/requests")]
     [Authorize(Roles = "Employee")]
     public async Task<IActionResult> Submit(int itemId, SubmitRenewalRequest data)
     {

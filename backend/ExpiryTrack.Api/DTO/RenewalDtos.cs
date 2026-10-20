@@ -73,3 +73,10 @@ public class ClarificationAnswerRequest
     [Required]
     public string? Answer { get; set; }
 }
+
+// what the employee sends after completing renewal
+public class CompleteRenewalRequest
+{
+    [Range(0.01, 9999999.99)]
+    public decimal? ActualCost { get; set; }
+}

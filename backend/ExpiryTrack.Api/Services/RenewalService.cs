@@ -392,4 +392,118 @@ public class RenewalService
         await _db.SaveChangesAsync();
         return new RenewalResult { Request = request };
     }
+    
+    public async Task<RenewalResult> CompleteAsync(int requestId, int userId, CompleteRenewalRequest data)
+    {
+        DateTime now = DateTime.UtcNow;
+        // get today's date 
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        
+        // include the category as it is needed for setting the lifecycle state after the renewal is completed 
+        RenewalRequest? request = await _db.RenewalRequests.
+            Include(r => r.Period)
+                .ThenInclude(p => p.Item)
+                .ThenInclude(i => i.Category)
+            .Include(r => r.Period)
+                .ThenInclude(p => p.Item)
+                .ThenInclude(i => i.Department)
+            .SingleOrDefaultAsync(r => r.Id == requestId);
+        
+        if (request == null || request.Period.Item.ResponsibleUserId != userId)
+        {
+            return new RenewalResult {NotFound = true};
+        }
+        
+        if (request.Status != RequestStatus.Approved)
+        {
+            return new RenewalResult {Error = "This request has not been approved or has already been processed."};
+        }
+        
+        // the new period must be valid
+        // the new expiration date must be after today
+        if (request.ProposedExpirationDate <= today)
+        {
+            return new RenewalResult {Error = "The proposed data must be later than today."};
+        }
+
+        request.Status = RequestStatus.Completed;
+        
+        request.CompletedAt = now;
+        // remember the old state 
+        LifecycleState oldState = request.Period.Item.LifecycleState;
+           
+        // calculate how many days are left until expiration
+        int daysLeft = request.ProposedExpirationDate.DayNumber - today.DayNumber;
+        // find the new state based on the days left until expiration and the item's warning period days
+        LifecycleState newState = daysLeft <= request.Period.Item.Category.WarningPeriodDays
+            ? LifecycleState.ExpiringSoon
+            : LifecycleState.Active;
+        
+        RequestAction action = new RequestAction
+        {
+            ActionType = RequestActionType.Completed,
+            FromStatus = RequestStatus.Approved,
+            ToStatus = RequestStatus.Completed,
+            ActorUserId = userId,
+            CreatedAt = now,
+        };
+        
+        request.Actions.Add(action);
+
+        // send a notification to the department manager that the renewal has been completed 
+        if (request.Period.Item.Department.ManagerId != null)
+        {
+            Notification notification = new Notification()
+            {
+                Type = "RenewalCompleted",
+                Message = $"Renewal for {request.Period.Item.Name} has been completed.",
+                Request = request,
+                RecipientUserId = request.Period.Item.Department.ManagerId.Value,
+                CreatedAt = now,
+            };
+            _db.Notifications.Add(notification);
+        }
+        
+        LifecyclePeriod period = new LifecyclePeriod()
+        {
+            PeriodNumber = request.Period.PeriodNumber + 1,
+            StartDate = today,
+            ExpirationDate = request.ProposedExpirationDate,
+            Cost = data.ActualCost,
+            CreatedAt = now,
+            ItemId = request.Period.Item.Id,
+            CreatedFromRequestId = request.Id,
+        };
+        
+        // add the period 
+        request.Period.Item.Periods.Add(period);
+        
+        // set the item's period to the new period
+        request.Period.Item.CurrentPeriod = period;
+        
+        // set item's EscalatedAt to null 
+        request.Period.Item.EscalatedAt = null;
+        
+        // set the item's lifecycle state to the new state
+        request.Period.Item.LifecycleState = newState;
+
+        request.Period.Item.StateChangedAt = now;
+        
+        // add the record to item's history 
+        ItemStateHistory history = new ItemStateHistory()
+        {
+            FromState = oldState,
+            // state is set based on the number of days left until expiration 
+            ToState = newState,
+            ChangedAt = now,
+            ItemId = request.Period.Item.Id,
+            ChangedByUserId = userId,
+            Reason = "Renewal completed"
+        };
+        
+        _db.ItemStateHistory.Add(history);
+        
+        await _db.SaveChangesAsync();
+        return new RenewalResult { Request = request };
+    }
 }

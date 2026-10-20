@@ -43,6 +43,14 @@ public class RenewalServiceTests
         };
     }
 
+    private static CompleteRenewalRequest CompleteRenewalData(decimal actualCost)
+    {
+        return new CompleteRenewalRequest()
+        {
+            ActualCost = actualCost,
+        };
+    }
+
     [Fact]
     public async Task CategoryWithoutReview()
     {
@@ -517,4 +525,109 @@ public class RenewalServiceTests
         Assert.Empty(db.RequestActions);
     }
 
+    // Unit tests for CompleteAsync
+    
+    // valid case
+    [Fact]
+    public async Task CompleteAsync_Valid()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.Approved);
+        item.EscalatedAt = DateTime.UtcNow;
+        
+        db.SaveChanges();
+        var service = new RenewalService(db);
+        
+        var result = await service.CompleteAsync(request.Id, item.ResponsibleUserId, CompleteRenewalData(1000));
+        
+        Assert.Null(result.Error);
+        Assert.NotNull(result.Request);
+        Assert.Equal(RequestStatus.Completed, result.Request.Status);
+
+        var action = Assert.Single(db.RequestActions);
+        Assert.Equal(RequestActionType.Completed, action.ActionType);
+        Assert.Equal(RequestStatus.Approved, action.FromStatus);
+
+        var notification = Assert.Single(db.Notifications);
+        Assert.Equal(item.Department.ManagerId, notification.RecipientUserId);
+        
+        Assert.Equal(2, db.LifecyclePeriods.Count());
+
+        Assert.Equal(2, item.CurrentPeriod!.PeriodNumber);
+        
+        Assert.Equal(1000, item.CurrentPeriod.Cost);
+        
+        Assert.Equal(LifecycleState.Active, item.LifecycleState);
+        
+        Assert.Equal(item.CurrentPeriod.ExpirationDate, request.ProposedExpirationDate);
+        
+        Assert.Null(item.EscalatedAt);
+
+        var history = Assert.Single(db.ItemStateHistory);
+        Assert.Equal( LifecycleState.ExpiringSoon, history.FromState);
+        Assert.Equal(LifecycleState.Active,history.ToState);
+        
+        Assert.NotNull(result.Request.CompletedAt);
+    }
+  
+    // when renewal is not approved -> error
+    [Fact]
+    public async Task CompleteAsync_NotApproved()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.Rejected);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+        
+        var result = await service.CompleteAsync(request.Id, item.ResponsibleUserId, CompleteRenewalData(1000));
+        
+        Assert.Contains("not been approved", result.Error);
+        Assert.Empty(db.RequestActions);
+        Assert.Equal(LifecycleState.ExpiringSoon, item.LifecycleState);
+        Assert.Single(db.LifecyclePeriods);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_DatePassed()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+        
+        var request = TestData.AddRequest(db, item, RequestStatus.Approved);
+        request.ProposedExpirationDate = DateOnly.FromDateTime(DateTime.UtcNow);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+        
+        var result = await service.CompleteAsync(request.Id, item.ResponsibleUserId, CompleteRenewalData(1000));
+        
+        Assert.Contains("later than today", result.Error);
+        Assert.Empty(db.RequestActions);
+        Assert.Equal(LifecycleState.ExpiringSoon, item.LifecycleState);
+        Assert.Equal(1, db.LifecyclePeriods.Count());
+    }
+    
+    [Fact]
+    public async Task CompleteAsync_AnotherEmployee()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var manager2 = new User {FirstName = "Test" , LastName = "Manager 2", RoleId = 3};
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
+        var item2 = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 22,manager: manager2);
+
+        var request = TestData.AddRequest(db, item2, RequestStatus.ClarificationRequired);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+        var result = await service.CompleteAsync(request.Id, item.ResponsibleUserId, CompleteRenewalData(1000));
+        
+        Assert.True(result.NotFound);
+        Assert.Empty(db.RequestActions);
+    }
 }

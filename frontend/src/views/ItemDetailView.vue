@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -26,6 +26,23 @@ interface User {
     lastName: string
 }
 
+
+interface RenewalRequest {
+    id: number
+    itemId: number
+    itemName: string
+    status: string
+    needsFinancialReview: boolean
+    proposedExpirationDate: string
+    proposedCost: number | null
+    justification: string | null
+    submittedAt: string 
+    decidedAt: string | null
+    completedAt: string | null
+    periodId: number
+    requestedByUserId: number
+}
+
 const route = useRoute()
 const auth = useAuthStore()
 const id = route.params.id
@@ -38,6 +55,9 @@ const reassignError = ref('')
 
 const employees = ref<User[]>([])
 const responsibleUserId = ref<number | null>(null)
+
+
+const requests = ref<RenewalRequest[]>([])
 
 onMounted(async () => {
     const response = await fetch(`/api/items/${id}`)
@@ -59,7 +79,15 @@ onMounted(async () => {
             employees.value = await employeesResponse.json()
         }
     }
+
+    const requestsResponse = await fetch(`/api/items/${id}/requests`)
+    if (requestsResponse.ok) {
+        requests.value = await requestsResponse.json()
+    }
 })
+
+const hasOpenRequest = computed(() =>requests.value.some(r => r.status !== "Rejected" && r.status !== "Completed"))
+
 
 async function cancelItem() {
     cancelError.value = ''
@@ -168,7 +196,29 @@ async function reassignEmployee() {
             <button type="submit">Reassign employee</button>
             <p v-if="reassignError" class="error">{{ reassignError }}</p>
         </form>
+        <RouterLink v-if="auth.user?.role=='Employee' && item.lifecycleState=='ExpiringSoon' && !hasOpenRequest" :to="`/items/${item.id}/renew`">Submit a Renewal Request</RouterLink>
+
+        <h2>Renewal Requests</h2>
+        <p v-if="requests.length === 0">No renewal requests yet.</p>
+        <table v-else>
+        <thead>
+            <tr>
+              <th>Status</th>
+              <th>Proposed Date</th>
+              <th>Submitted</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-for="request in requests" :key="request.id">
+                <td>{{ request.status }}</td>
+                <td>{{ request.proposedExpirationDate }}</td>
+                <td>{{ request.submittedAt }}</td>
+                <td><RouterLink :to="`/requests/${request.id}`">Go to request</RouterLink></td>
+            </tr>
+        </tbody>
+    </table>
     </div>
+
 </template>
 
 <style scoped>

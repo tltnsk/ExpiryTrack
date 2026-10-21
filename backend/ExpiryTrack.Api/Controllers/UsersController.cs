@@ -25,7 +25,7 @@ public class UsersController : ControllerBase
     // helper method for getting the user id from the authentication claims
     private int GetCurrentUserId()
     {
-        return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     }
 
     // load the logged-in user along with their role
@@ -160,7 +160,7 @@ public class UsersController : ControllerBase
             bool ownsItems = await _db.Items.AnyAsync(i => i.ResponsibleUserId == id
                 && (i.LifecycleState == LifecycleState.Active || i.LifecycleState == LifecycleState.ExpiringSoon));
             if (ownsItems)
-                return Conflict("This user is still responsible for items.");
+                return Conflict("This user is still responsible for items. Reassign the items first.");
 
             bool hasOpenRequests = await _db.RenewalRequests.AnyAsync(r => r.RequestedByUserId == id
                 && r.Status != RequestStatus.Rejected && r.Status != RequestStatus.Completed);

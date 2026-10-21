@@ -20,7 +20,7 @@ public class ItemsController : ControllerBase
     // helper method for getting the user id from the authentication claims
     private int GetCurrentUserId()
     {
-        return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        return int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     }
 
     // load the logged-in user along with their role
@@ -87,7 +87,7 @@ public class ItemsController : ControllerBase
                 .Include(i => i.ResponsibleUser)
                 .Include(i => i.CurrentPeriod)
                 .Where(i => i.ResponsibleUserId == currentUser.Id)
-                .OrderBy(i => i.CurrentPeriod.ExpirationDate)
+                .OrderBy(i => i.CurrentPeriod!.ExpirationDate)
                 .ToListAsync();
         }
         else if (currentUser.Role.Name == "DepartmentManager")
@@ -147,16 +147,18 @@ public class ItemsController : ControllerBase
             .SingleAsync(u => u.Id == GetCurrentUserId());
 
         int responsibleUserId;
-        int departmentId = currentUser.DepartmentId.Value;
+        int departmentId;
 
         // Determine the responsible employee and department
         // if the current user is an employee, they're automatically responsible for the item they're creating 
         if (currentUser.Role.Name == "Employee")
         {
             responsibleUserId = currentUser.Id;
+            departmentId = currentUser.DepartmentId.Value;
         }
         else
         {
+            departmentId = currentUser.DepartmentId.Value;
             // return bad request if responsible employee isn't specified
             if (request.ResponsibleUserId == null)
             {

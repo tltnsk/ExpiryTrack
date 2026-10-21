@@ -203,9 +203,9 @@ public class RenewalRequestsController : ControllerBase
 
     [HttpPost("requests/{id:int}/complete-renewal")]
     [Authorize(Roles = "Employee")]
-    public async Task<IActionResult> PostCompleteRenewal(int id, CompleteRenewalRequest data)
+    public async Task<IActionResult> PostCompleteRenewal(int id)
     {
-        RenewalResult result = await _rs.CompleteAsync(id, GetCurrentUserId(), data);
+        RenewalResult result = await _rs.CompleteAsync(id, GetCurrentUserId());
         if (result.NotFound) return NotFound();
         if (result.Error != null) return BadRequest(result.Error);
         return Ok(RenewalRequestResponse.FromRequest((result.Request!)));

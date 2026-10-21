@@ -43,14 +43,6 @@ public class RenewalServiceTests
         };
     }
 
-    private static CompleteRenewalRequest CompleteRenewalData(decimal actualCost)
-    {
-        return new CompleteRenewalRequest()
-        {
-            ActualCost = actualCost,
-        };
-    }
-
     [Fact]
     public async Task CategoryWithoutReview()
     {
@@ -308,17 +300,17 @@ public class RenewalServiceTests
         Assert.Contains("already been processed", result.Error);
         Assert.Empty(db.RequestActions);
     }
-    
+
     // not this department - not found
     [Fact]
     public async Task ManagerReview_WrongDepartment()
     {
         using var db = TestData.CreateDb();
-        var managerA = new User {FirstName = "Test", LastName = "Manager A", RoleId = 3};
-        var managerB = new User {FirstName = "Test", LastName = "Manager B", RoleId = 3};
+        var managerA = new User { FirstName = "Test", LastName = "Manager A", RoleId = 3 };
+        var managerB = new User { FirstName = "Test", LastName = "Manager B", RoleId = 3 };
         var itemA = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 15, manager: managerA);
         var itemB = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 15, manager: managerB);
-        
+
         var request = TestData.AddRequest(db, itemA, RequestStatus.PendingManagerApproval);
         db.SaveChanges();
         var service = new RenewalService(db);
@@ -328,7 +320,7 @@ public class RenewalServiceTests
         Assert.True(result.NotFound);
         Assert.Empty(db.RequestActions);
     }
-    
+
     // reject without a reason should show an error
     [Fact]
     public async Task ManagerReview_RejectWithoutAReason()
@@ -342,11 +334,11 @@ public class RenewalServiceTests
         var service = new RenewalService(db);
 
         var result = await service.RejectAsync(request.Id, manager.Id, ManagerData(""));
-        
+
         Assert.Contains("Reason", result.Error);
         Assert.Empty(db.RequestActions);
     }
-    
+
     // reject with a reason 
     [Fact]
     public async Task ManagerReview_RejectWithAReason()
@@ -360,7 +352,7 @@ public class RenewalServiceTests
         var service = new RenewalService(db);
 
         var result = await service.RejectAsync(request.Id, manager.Id, ManagerData("Not needed"));
-        
+
         Assert.Null(result.Error);
         Assert.NotNull(result.Request);
         Assert.Equal(RequestStatus.Rejected, result.Request.Status);
@@ -372,7 +364,7 @@ public class RenewalServiceTests
         var notification = Assert.Single(db.Notifications);
         Assert.Equal(item.ResponsibleUserId, notification.RecipientUserId);
     }
-    
+
     // clarification with question works
     [Fact]
     public async Task ManagerReview_ClarificationWithQuestion()
@@ -386,7 +378,7 @@ public class RenewalServiceTests
         var service = new RenewalService(db);
 
         var result = await service.ClarificationAsync(request.Id, manager.Id, ManagerData("Provide more details."));
-        
+
         Assert.Null(result.Error);
         Assert.NotNull(result.Request);
         Assert.Equal(RequestStatus.ClarificationRequired, result.Request.Status);
@@ -398,7 +390,7 @@ public class RenewalServiceTests
         var notification = Assert.Single(db.Notifications);
         Assert.Equal(item.ResponsibleUserId, notification.RecipientUserId);
     }
-    
+
     // clarification without question does not work
     [Fact]
     public async Task ManagerReview_ClarificationWithoutQuestion()
@@ -412,11 +404,11 @@ public class RenewalServiceTests
         var service = new RenewalService(db);
 
         var result = await service.ClarificationAsync(request.Id, manager.Id, ManagerData(""));
-        
+
         Assert.Contains("question", result.Error);
         Assert.Empty(db.RequestActions);
     }
-    
+
     // clarification requested for a second time should show an error
     [Fact]
     public async Task ManagerReview_SecondClarification()
@@ -427,7 +419,7 @@ public class RenewalServiceTests
         var service = new RenewalService(db);
 
         var request = TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
-        
+
         db.RequestActions.Add(new RequestAction
         {
             RequestId = request.Id,
@@ -438,11 +430,11 @@ public class RenewalServiceTests
         db.SaveChanges();
 
         var result = await service.ClarificationAsync(request.Id, manager.Id, ManagerData("Again?"));
-    
+
         Assert.NotNull(result.Error);
         Assert.Single(db.RequestActions);
     }
-    
+
     // AnswerClarificationAsync tests
     [Fact]
     public async Task AnswerClarification_Works()
@@ -468,16 +460,16 @@ public class RenewalServiceTests
         var notification = Assert.Single(db.Notifications);
         Assert.Equal(item.Department.ManagerId, notification.RecipientUserId);
     }
-    
+
     // request not found and different employee
     [Fact]
     public async Task AnswerClarification_OtherEmployee_NotFound()
     {
         using var db = TestData.CreateDb();
         var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
-        var manager2 = new User {FirstName = "Test" , LastName = "Manager 2", RoleId = 3};
+        var manager2 = new User { FirstName = "Test", LastName = "Manager 2", RoleId = 3 };
         var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
-        var item2 = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 22,manager: manager2);
+        var item2 = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 22, manager: manager2);
 
         var request = TestData.AddRequest(db, item2, RequestStatus.ClarificationRequired);
         db.SaveChanges();
@@ -488,7 +480,7 @@ public class RenewalServiceTests
         Assert.True(result.NotFound);
         Assert.Empty(db.RequestActions);
     }
-    
+
     // wrong status
     [Fact]
     public async Task AnswerClarification_AlreadyProcessed()
@@ -506,7 +498,7 @@ public class RenewalServiceTests
         Assert.Contains("already been processed", result.Error);
         Assert.Empty(db.RequestActions);
     }
-    
+
     // no answer provided
     [Fact]
     public async Task AnswerClarification_NoAnswerProvided()
@@ -526,7 +518,7 @@ public class RenewalServiceTests
     }
 
     // Unit tests for CompleteAsync
-    
+
     // valid case
     [Fact]
     public async Task CompleteAsync_Valid()
@@ -536,13 +528,14 @@ public class RenewalServiceTests
         var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
 
         var request = TestData.AddRequest(db, item, RequestStatus.Approved);
+        request.ProposedCost = 1000;
         item.EscalatedAt = DateTime.UtcNow;
-        
+
         db.SaveChanges();
         var service = new RenewalService(db);
-        
-        var result = await service.CompleteAsync(request.Id, item.ResponsibleUserId, CompleteRenewalData(1000));
-        
+
+        var result = await service.CompleteAsync(request.Id, item.ResponsibleUserId);
+
         Assert.Null(result.Error);
         Assert.NotNull(result.Request);
         Assert.Equal(RequestStatus.Completed, result.Request.Status);
@@ -553,26 +546,26 @@ public class RenewalServiceTests
 
         var notification = Assert.Single(db.Notifications);
         Assert.Equal(item.Department.ManagerId, notification.RecipientUserId);
-        
+
         Assert.Equal(2, db.LifecyclePeriods.Count());
 
         Assert.Equal(2, item.CurrentPeriod!.PeriodNumber);
-        
+
         Assert.Equal(1000, item.CurrentPeriod.Cost);
-        
+
         Assert.Equal(LifecycleState.Active, item.LifecycleState);
-        
+
         Assert.Equal(item.CurrentPeriod.ExpirationDate, request.ProposedExpirationDate);
-        
+
         Assert.Null(item.EscalatedAt);
 
         var history = Assert.Single(db.ItemStateHistory);
-        Assert.Equal( LifecycleState.ExpiringSoon, history.FromState);
-        Assert.Equal(LifecycleState.Active,history.ToState);
-        
+        Assert.Equal(LifecycleState.ExpiringSoon, history.FromState);
+        Assert.Equal(LifecycleState.Active, history.ToState);
+
         Assert.NotNull(result.Request.CompletedAt);
     }
-  
+
     // when renewal is not approved -> error
     [Fact]
     public async Task CompleteAsync_NotApproved()
@@ -584,9 +577,9 @@ public class RenewalServiceTests
         var request = TestData.AddRequest(db, item, RequestStatus.Rejected);
         db.SaveChanges();
         var service = new RenewalService(db);
-        
-        var result = await service.CompleteAsync(request.Id, item.ResponsibleUserId, CompleteRenewalData(1000));
-        
+
+        var result = await service.CompleteAsync(request.Id, item.ResponsibleUserId);
+
         Assert.Contains("not been approved", result.Error);
         Assert.Empty(db.RequestActions);
         Assert.Equal(LifecycleState.ExpiringSoon, item.LifecycleState);
@@ -599,34 +592,34 @@ public class RenewalServiceTests
         using var db = TestData.CreateDb();
         var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
         var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
-        
+
         var request = TestData.AddRequest(db, item, RequestStatus.Approved);
         request.ProposedExpirationDate = DateOnly.FromDateTime(DateTime.UtcNow);
         db.SaveChanges();
         var service = new RenewalService(db);
-        
-        var result = await service.CompleteAsync(request.Id, item.ResponsibleUserId, CompleteRenewalData(1000));
-        
+
+        var result = await service.CompleteAsync(request.Id, item.ResponsibleUserId);
+
         Assert.Contains("later than today", result.Error);
         Assert.Empty(db.RequestActions);
         Assert.Equal(LifecycleState.ExpiringSoon, item.LifecycleState);
         Assert.Equal(1, db.LifecyclePeriods.Count());
     }
-    
+
     [Fact]
     public async Task CompleteAsync_AnotherEmployee()
     {
         using var db = TestData.CreateDb();
         var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
-        var manager2 = new User {FirstName = "Test" , LastName = "Manager 2", RoleId = 3};
+        var manager2 = new User { FirstName = "Test", LastName = "Manager 2", RoleId = 3 };
         var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
-        var item2 = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 22,manager: manager2);
+        var item2 = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 22, manager: manager2);
 
         var request = TestData.AddRequest(db, item2, RequestStatus.ClarificationRequired);
         db.SaveChanges();
         var service = new RenewalService(db);
-        var result = await service.CompleteAsync(request.Id, item.ResponsibleUserId, CompleteRenewalData(1000));
-        
+        var result = await service.CompleteAsync(request.Id, item.ResponsibleUserId);
+
         Assert.True(result.NotFound);
         Assert.Empty(db.RequestActions);
     }

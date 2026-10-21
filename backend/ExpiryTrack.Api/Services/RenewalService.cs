@@ -57,16 +57,16 @@ public class RenewalService
         var needsReview = data.ProposedCost != null && item.Category.RequiresFinancialReview &&
                           (item.Category.FinanceReviewThreshold == null ||
                            data.ProposedCost >= item.Category.FinanceReviewThreshold);
-        
+
         DateTime now = DateTime.UtcNow;
-        
+
         RenewalRequest request = new RenewalRequest
         {
             Status = needsReview ? RequestStatus.PendingFinancialReview : RequestStatus.PendingManagerApproval,
             NeedsFinancialReview = needsReview,
             ProposedExpirationDate = data.ProposedExpirationDate,
             ProposedCost = data.ProposedCost,
-            Justification = data.Justification, 
+            Justification = data.Justification,
             PeriodId = item.CurrentPeriodId!.Value,
             RequestedByUserId = userId,
             SubmittedAt = now,
@@ -80,7 +80,7 @@ public class RenewalService
             ActorUserId = userId,
             CreatedAt = now,
         };
-        
+
         request.Actions.Add(action);
         _db.RenewalRequests.Add(request);
 
@@ -131,17 +131,17 @@ public class RenewalService
 
         if (request == null || !request.NeedsFinancialReview)
         {
-            return new RenewalResult {NotFound = true};
+            return new RenewalResult { NotFound = true };
         }
 
         if (request.Status != RequestStatus.PendingFinancialReview)
         {
-            return new RenewalResult {Error = "This request has already been processed."};
+            return new RenewalResult { Error = "This request has already been processed." };
         }
-        
+
         request.Status = RequestStatus.PendingManagerApproval;
         DateTime now = DateTime.UtcNow;
-        
+
         RequestAction action = new RequestAction
         {
             ActionType = RequestActionType.FinanceReviewed,
@@ -152,7 +152,7 @@ public class RenewalService
             ActorUserId = userId,
             CreatedAt = now,
         };
-        
+
         request.Actions.Add(action);
 
         if (request.Period.Item.Department.ManagerId != null)
@@ -165,7 +165,7 @@ public class RenewalService
                 RecipientUserId = request.Period.Item.Department.ManagerId.Value,
                 CreatedAt = now,
             };
-            
+
             _db.Notifications.Add(notification);
         }
 
@@ -179,21 +179,21 @@ public class RenewalService
             .ThenInclude(p => p.Item)
             .ThenInclude(i => i.Department)
             .SingleOrDefaultAsync(r => r.Id == requestId);
-        
+
         if (request == null || request.Period.Item.Department.ManagerId != userId)
         {
-            return new RenewalResult {NotFound = true};
+            return new RenewalResult { NotFound = true };
         }
-        
+
         if (request.Status != RequestStatus.PendingManagerApproval)
         {
-            return new RenewalResult {Error = "This request has already been processed."};
+            return new RenewalResult { Error = "This request has already been processed." };
         }
-        
+
         request.Status = RequestStatus.Approved;
         DateTime now = DateTime.UtcNow;
         request.DecidedAt = now;
-        
+
         RequestAction action = new RequestAction
         {
             ActionType = RequestActionType.Approved,
@@ -203,9 +203,9 @@ public class RenewalService
             ActorUserId = userId,
             CreatedAt = now,
         };
-        
+
         request.Actions.Add(action);
-        
+
         Notification notification = new Notification()
         {
             Type = "RequestApproved",
@@ -214,36 +214,36 @@ public class RenewalService
             RecipientUserId = request.Period.Item.ResponsibleUserId,
             CreatedAt = now,
         };
-        
+
         _db.Notifications.Add(notification);
-        
+
         await _db.SaveChangesAsync();
         return new RenewalResult { Request = request };
     }
-    
+
     public async Task<RenewalResult> RejectAsync(int requestId, int userId, ManagerDecisionRequest data)
     {
         RenewalRequest? request = await _db.RenewalRequests.Include(r => r.Period)
             .ThenInclude(p => p.Item)
             .ThenInclude(i => i.Department)
             .SingleOrDefaultAsync(r => r.Id == requestId);
-        
+
         if (request == null || request.Period.Item.Department.ManagerId != userId)
         {
-            return new RenewalResult {NotFound = true};
+            return new RenewalResult { NotFound = true };
         }
-        
+
         // the manager can reject the renewal request also when waiting for a clarification from the employee
         if (request.Status != RequestStatus.PendingManagerApproval && request.Status != RequestStatus.ClarificationRequired)
         {
-            return new RenewalResult {Error = "Cannot process the renewal request."};
+            return new RenewalResult { Error = "Cannot process the renewal request." };
         }
 
         if (string.IsNullOrWhiteSpace(data.Comment))
         {
-            return new RenewalResult {Error = "Reason is required when rejecting a request."};
+            return new RenewalResult { Error = "Reason is required when rejecting a request." };
         }
-        
+
         RequestStatus oldStatus = request.Status;
         request.Status = RequestStatus.Rejected;
         DateTime now = DateTime.UtcNow;
@@ -258,9 +258,9 @@ public class RenewalService
             ActorUserId = userId,
             CreatedAt = now,
         };
-        
+
         request.Actions.Add(action);
-        
+
         Notification notification = new Notification()
         {
             Type = "RequestRejected",
@@ -269,48 +269,48 @@ public class RenewalService
             RecipientUserId = request.Period.Item.ResponsibleUserId,
             CreatedAt = now,
         };
-        
+
         _db.Notifications.Add(notification);
-        
+
         await _db.SaveChangesAsync();
         return new RenewalResult { Request = request };
     }
-    
+
     public async Task<RenewalResult> ClarificationAsync(int requestId, int userId, ManagerDecisionRequest data)
     {
         RenewalRequest? request = await _db.RenewalRequests.Include(r => r.Period)
             .ThenInclude(p => p.Item)
             .ThenInclude(i => i.Department)
             .SingleOrDefaultAsync(r => r.Id == requestId);
-        
+
         if (request == null || request.Period.Item.Department.ManagerId != userId)
         {
-            return new RenewalResult {NotFound = true};
+            return new RenewalResult { NotFound = true };
         }
-        
+
         // managers can only request one clarification for the renewal request 
         RequestAction? requestAction = await _db.RequestActions.Include(r => r.Request)
             .Where(r => r.ActionType == RequestActionType.ClarificationRequested)
             .SingleOrDefaultAsync(r => r.RequestId == requestId);
-        
+
         if (request.Status != RequestStatus.PendingManagerApproval)
         {
-            return new RenewalResult {Error = "This request has already been processed."};
+            return new RenewalResult { Error = "This request has already been processed." };
         }
 
         if (requestAction != null)
         {
-            return new RenewalResult {Error = "Clarification has already been requested for this renewal request."};
+            return new RenewalResult { Error = "Clarification has already been requested for this renewal request." };
         }
 
         if (string.IsNullOrWhiteSpace(data.Comment))
         {
-            return new RenewalResult {Error = "Must provide a question for clarification."};
+            return new RenewalResult { Error = "Must provide a question for clarification." };
         }
-        
+
         request.Status = RequestStatus.ClarificationRequired;
         DateTime now = DateTime.UtcNow;
-        
+
         RequestAction action = new RequestAction
         {
             ActionType = RequestActionType.ClarificationRequested,
@@ -320,9 +320,9 @@ public class RenewalService
             ActorUserId = userId,
             CreatedAt = now,
         };
-        
+
         request.Actions.Add(action);
-        
+
         Notification notification = new Notification()
         {
             Type = "ClarificationRequested",
@@ -331,38 +331,38 @@ public class RenewalService
             RecipientUserId = request.Period.Item.ResponsibleUserId,
             CreatedAt = now,
         };
-        
+
         _db.Notifications.Add(notification);
-        
+
         await _db.SaveChangesAsync();
         return new RenewalResult { Request = request };
     }
 
     public async Task<RenewalResult> AnswerClarificationAsync(int requestId, int userId, ClarificationAnswerRequest data)
-    { 
+    {
         RenewalRequest? request = await _db.RenewalRequests.Include(r => r.Period)
             .ThenInclude(p => p.Item)
             .ThenInclude(i => i.Department)
             .SingleOrDefaultAsync(r => r.Id == requestId);
-        
+
         if (request == null || request.Period.Item.ResponsibleUserId != userId)
         {
-            return new RenewalResult {NotFound = true};
+            return new RenewalResult { NotFound = true };
         }
-        
+
         if (request.Status != RequestStatus.ClarificationRequired)
         {
-            return new RenewalResult {Error = "This request has already been processed."};
+            return new RenewalResult { Error = "This request has already been processed." };
         }
-        
+
         if (string.IsNullOrWhiteSpace(data.Answer))
         {
-            return new RenewalResult {Error = "Must provide an answer for clarification."};
+            return new RenewalResult { Error = "Must provide an answer for clarification." };
         }
-        
+
         request.Status = RequestStatus.PendingManagerApproval;
         DateTime now = DateTime.UtcNow;
-        
+
         RequestAction action = new RequestAction
         {
             ActionType = RequestActionType.ClarificationProvided,
@@ -372,7 +372,7 @@ public class RenewalService
             ActorUserId = userId,
             CreatedAt = now,
         };
-        
+
         request.Actions.Add(action);
 
         if (request.Period.Item.Department.ManagerId != null)
@@ -385,20 +385,20 @@ public class RenewalService
                 RecipientUserId = request.Period.Item.Department.ManagerId.Value,
                 CreatedAt = now,
             };
-        
+
             _db.Notifications.Add(notification);
         }
-        
+
         await _db.SaveChangesAsync();
         return new RenewalResult { Request = request };
     }
-    
-    public async Task<RenewalResult> CompleteAsync(int requestId, int userId, CompleteRenewalRequest data)
+
+    public async Task<RenewalResult> CompleteAsync(int requestId, int userId)
     {
         DateTime now = DateTime.UtcNow;
         // get today's date 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        
+
         // include the category as it is needed for setting the lifecycle state after the renewal is completed 
         RenewalRequest? request = await _db.RenewalRequests.
             Include(r => r.Period)
@@ -408,37 +408,37 @@ public class RenewalService
                 .ThenInclude(p => p.Item)
                 .ThenInclude(i => i.Department)
             .SingleOrDefaultAsync(r => r.Id == requestId);
-        
+
         if (request == null || request.Period.Item.ResponsibleUserId != userId)
         {
-            return new RenewalResult {NotFound = true};
+            return new RenewalResult { NotFound = true };
         }
-        
+
         if (request.Status != RequestStatus.Approved)
         {
-            return new RenewalResult {Error = "This request has not been approved or has already been processed."};
+            return new RenewalResult { Error = "This request has not been approved or has already been processed." };
         }
-        
+
         // the new period must be valid
         // the new expiration date must be after today
         if (request.ProposedExpirationDate <= today)
         {
-            return new RenewalResult {Error = "The proposed data must be later than today."};
+            return new RenewalResult { Error = "The proposed data must be later than today." };
         }
 
         request.Status = RequestStatus.Completed;
-        
+
         request.CompletedAt = now;
         // remember the old state 
         LifecycleState oldState = request.Period.Item.LifecycleState;
-           
+
         // calculate how many days are left until expiration
         int daysLeft = request.ProposedExpirationDate.DayNumber - today.DayNumber;
         // find the new state based on the days left until expiration and the item's warning period days
         LifecycleState newState = daysLeft <= request.Period.Item.Category.WarningPeriodDays
             ? LifecycleState.ExpiringSoon
             : LifecycleState.Active;
-        
+
         RequestAction action = new RequestAction
         {
             ActionType = RequestActionType.Completed,
@@ -447,7 +447,7 @@ public class RenewalService
             ActorUserId = userId,
             CreatedAt = now,
         };
-        
+
         request.Actions.Add(action);
 
         // send a notification to the department manager that the renewal has been completed 
@@ -463,32 +463,32 @@ public class RenewalService
             };
             _db.Notifications.Add(notification);
         }
-        
+
         LifecyclePeriod period = new LifecyclePeriod()
         {
             PeriodNumber = request.Period.PeriodNumber + 1,
             StartDate = today,
             ExpirationDate = request.ProposedExpirationDate,
-            Cost = data.ActualCost,
+            Cost = request.ProposedCost,
             CreatedAt = now,
             ItemId = request.Period.Item.Id,
             CreatedFromRequestId = request.Id,
         };
-        
+
         // add the period 
         request.Period.Item.Periods.Add(period);
-        
+
         // set the item's period to the new period
         request.Period.Item.CurrentPeriod = period;
-        
+
         // set item's EscalatedAt to null 
         request.Period.Item.EscalatedAt = null;
-        
+
         // set the item's lifecycle state to the new state
         request.Period.Item.LifecycleState = newState;
 
         request.Period.Item.StateChangedAt = now;
-        
+
         // add the record to item's history 
         ItemStateHistory history = new ItemStateHistory()
         {
@@ -500,9 +500,9 @@ public class RenewalService
             ChangedByUserId = userId,
             Reason = "Renewal completed"
         };
-        
+
         _db.ItemStateHistory.Add(history);
-        
+
         await _db.SaveChangesAsync();
         return new RenewalResult { Request = request };
     }

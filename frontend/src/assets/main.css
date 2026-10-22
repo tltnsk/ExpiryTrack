@@ -1,5 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Sixtyfour&display=swap');
+
 :root {
-  --background: #fdfdfd;
+  --background: #fffeff;
   --navy: #03058d;
   --primary-dark: #001b25;
   --text: #2b3a52; 
@@ -16,7 +18,7 @@ body {
     margin: 0 auto;
     max-width: 1000px;
     padding: 16px 24px;
-    font-family: Arial, Helvetica, sans-serif
+    font-family: "Montserrat", sans-serif;
 }
 
 h1, h2, h3 {
@@ -63,10 +65,157 @@ nav a {
 }
 
 nav a.router-link-active {
-  text-decoration: underline;
+  background-color: var(--navy);
+  color: var(--background);
+  padding: 2px;
+  border-radius: 10px;
   text-underline-offset: 4px;
 }
 
 .error {
   color: var(--danger);
+}
+
+table {
+  width: 100%;
+  margin: 12px 0 24px;
+}
+
+th,
+td {
+  padding: 10px 12px;
+  text-align: left;
+  border: 1px solid var(--border);
+}
+
+tbody tr:hover {
+  background: #ebe9f7;
+}
+
+form {
+  max-width: 420px;
+  margin: 16px auto;
+  padding: 24px;
+  background: white;
+}
+
+form > div {
+  margin-bottom: 16px;
+}
+
+input:not([type='checkbox']),
+select,
+textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  color: var(--text);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--navy);
+}
+
+/* a label with a checkbox: the box next to the text */
+label:has(input[type='checkbox']) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/*buttons*/
+button {
+  padding: 4px 4px;
+  margin-right: 8px;
+  background: var(--navy);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+button.danger {
+  color: white;
+  background: var(--danger);
+}
+
+form button[type='submit'] {
+  width: 100%;
+  margin: 8px 0 0;
+  padding: 10px;
+}
+
+header button {
+  margin: 0 0 0 8px;
+  padding: 4px 10px;
+  color: white;
+  background-color: var(--navy);
+}
+
+textarea {
+  resize: none;
+}
+
+/*details*/
+dl {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 10px 16px;
+  max-width: 640px;
+  margin: 12px 0 24px;
+  padding: 20px 24px;
+  border-radius: 10px;
+}
+
+dt {
+  color: var(--light-blue);
+  font-weight: 500;
+}
+
+dd {
+  margin: 0;
+  color: var(--navy);
+}
+
+/*for narrow screens*/
+@media (max-width: 700px) {
+  dl {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  dd {
+    margin-bottom: 10px;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  th,
+  td {
+    padding: 8px 10px;
+  }
 }

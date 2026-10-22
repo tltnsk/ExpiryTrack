@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { formatDate, formatDateTime} from '@/utils/format'
 
 interface Item {
     id: number
@@ -143,11 +144,11 @@ async function reassignEmployee() {
 
     <p v-if="loading">Loading...</p>
 
-    <p v-else-if="errorMessage"> {{  errorMessage }}</p>
+    <p v-else-if="errorMessage" class="error"> {{  errorMessage }}</p>
 
     <div v-else-if="item">
         <h2>{{ item.name }}</h2>
-        <span> {{ item.lifecycleState }}</span>
+        <span class="state" :class="item.lifecycleState">{{ item.lifecycleState }}</span>
 
         <h3>Details</h3>
         <dl>
@@ -170,9 +171,9 @@ async function reassignEmployee() {
             <dt>Period</dt>
             <dd>{{ item.periodNumber }}</dd>
             <dt>Start date</dt>
-            <dd>{{ item.startDate }}</dd>
+            <dd>{{ formatDate(item.startDate) }}</dd>
             <dt>Expiration Date</dt>
-            <dd>{{ item.expirationDate }}</dd>
+            <dd>{{ formatDate(item.expirationDate) }}</dd>
             <dt>Cost</dt>
             <dd>{{ item.cost ?? '-' }}</dd>
         </dl>
@@ -206,12 +207,13 @@ async function reassignEmployee() {
               <th>Status</th>
               <th>Proposed Date</th>
               <th>Submitted</th>
+              <th></th>
             </tr>
         </thead>
         <tbody>
             <tr v-for="request in requests" :key="request.id">
                 <td>{{ request.status }}</td>
-                <td>{{ request.proposedExpirationDate }}</td>
+                <td>{{ formatDateTime(request.proposedExpirationDate) }}</td>
                 <td>{{ request.submittedAt }}</td>
                 <td><RouterLink :to="`/requests/${request.id}`">Go to request</RouterLink></td>
             </tr>
@@ -222,4 +224,28 @@ async function reassignEmployee() {
 </template>
 
 <style scoped>
+.state {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+.Active {
+  background: #349a54;
+  color: white;
+}
+.ExpiringSoon {
+  background: #d54747;
+  color: white;
+}
+.Expired {
+  background: #fbaa29;
+  color: white;
+}
+.Cancelled {
+  background: #343131;
+  color: white;
+}
+.error {
+  color: #c53030;
+}
 </style>

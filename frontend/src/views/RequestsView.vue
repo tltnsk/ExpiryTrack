@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { formatDate, formatDateTime} from '@/utils/format'
 
 interface RenewalRequest {
     id: number
@@ -46,9 +47,9 @@ onMounted(async() => {
             <tr v-for="request in requests" :key="request.id">
                 <td> <RouterLink :to="`/requests/${request.id}`">{{ request.itemName }}</RouterLink></td>
                 <td>{{ request.status }}</td>
-                <td>{{request.proposedExpirationDate }}</td>
+                <td>{{formatDate(request.proposedExpirationDate )}}</td>
                 <td>{{ request.proposedCost ?? '-' }}</td>
-                <td>{{ request.submittedAt}}</td>
+                <td>{{ formatDateTime(request.submittedAt)}}</td>
             </tr>
         </tbody>
     </table>

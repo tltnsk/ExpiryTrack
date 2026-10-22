@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { formatDate, formatDateTime} from '@/utils/format'
 
 // ItemResponse 
 interface Item {
@@ -54,12 +55,38 @@ onMounted(async() => {
                     <RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
                 <td>{{ item.categoryName }}</td>
                 <td>{{ item.responsibleUserName }}</td>
-                <td>{{ item.expirationDate }}</td>
+                <td>{{ formatDate(item.expirationDate) }}</td>
                 <td>{{ item.cost ?? '-' }}</td>
                 <td>
-                <span>{{ item.lifecycleState }}</span>
+                <span class="state" :class="item.lifecycleState">{{ item.lifecycleState }}</span>
                 </td>
             </tr>
         </tbody>
     </table>
 </template>
+<style scoped>
+.state {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+.Active {
+  background: #349a54;
+  color: white;
+}
+.ExpiringSoon {
+  background: #d54747;
+  color: white;
+}
+.Expired {
+  background: #fbaa29;
+  color: white;
+}
+.Cancelled {
+  background: #343131;
+  color: white;
+}
+.error {
+  color: #c53030;
+}
+</style>

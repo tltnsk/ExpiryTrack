@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { formatDate, formatDateTime} from '@/utils/format'
 
 interface RequestAction{
     type: string
@@ -215,17 +216,17 @@ onMounted(loadRequest)
             <dt>Status</dt>
             <dd>{{ request.status}}</dd>
             <dt>Proposed Expiration Date</dt>
-            <dd>{{ request.proposedExpirationDate }}</dd>
+            <dd>{{ formatDate(request.proposedExpirationDate )}}</dd>
             <dt>Proposed Cost</dt>
             <dd>{{ request.proposedCost ?? '-' }}</dd>
             <dt>Justification</dt>
             <dd>{{ request.justification ?? '-' }}</dd>
             <dt>Submitted At</dt>
-            <dd>{{ request.submittedAt }}</dd>
+            <dd>{{ formatDateTime(request.submittedAt) }}</dd>
             <dt>Decided At</dt>
-            <dd>{{ request.decidedAt ?? '-' }}</dd>
+            <dd>{{ formatDateTime(request.decidedAt) ?? '-' }}</dd>
             <dt>Completed At</dt>
-            <dd>{{ request.completedAt ?? '-' }}</dd>
+            <dd>{{ formatDateTime(request.completedAt) ?? '-' }}</dd>
         </dl>
 
     <table>

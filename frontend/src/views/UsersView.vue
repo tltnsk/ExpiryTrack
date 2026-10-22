@@ -61,7 +61,7 @@ async function toggleActive(user: User) {
 
   <RouterLink v-if="auth.user?.role === 'Administrator'" to="/users/new">New user</RouterLink>
 
-  <p v-if="actionError">{{ actionError }}</p>
+  <p v-if="actionError" class="error">{{ actionError }}</p>
   <p v-if="loading">Loading...</p>
   <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>
   <p v-else-if="users.length === 0">No users yet.</p>
@@ -74,6 +74,8 @@ async function toggleActive(user: User) {
         <th>Role</th>
         <th>Department</th>
         <th>Active</th>
+        <th v-if="auth.user?.role === 'Administrator'"></th>
+        <th v-if="auth.user?.role === 'Administrator'"></th>
       </tr>
     </thead>
     <tbody>
@@ -87,9 +89,17 @@ async function toggleActive(user: User) {
         <td> {{ user.isActive ? "Yes" : "No"}}</td>
         <td v-if="auth.user?.role === 'Administrator'">
           <RouterLink :to="`/users/${user.id}/edit`">Edit</RouterLink>
-          <button @click="toggleActive(user)">{{ user.isActive ? 'Deactivate' : 'Activate' }}</button>
+        </td>
+        <td>
+            <button :class="{danger: user.isActive}" @click="toggleActive(user)">{{ user.isActive ? 'Deactivate' : 'Activate' }}</button>
         </td>
       </tr>
     </tbody>
   </table>
 </template>
+<style scoped>
+.error {
+  color: var(--danger);
+}
+
+</style>

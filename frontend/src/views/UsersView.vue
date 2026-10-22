@@ -79,7 +79,7 @@ async function toggleActive(user: User) {
     <tbody>
       <tr v-for="user in users" :key="user.id">
         <td>
-            <RouterLink :to="`/users/${user.id}`">{{ user.firstName }} {{ user.lastName }}</RouterLink>
+            {{ user.firstName }} {{ user.lastName }}
         </td>
         <td> {{ user.email}}</td>
         <td> {{ user.role }}</td>

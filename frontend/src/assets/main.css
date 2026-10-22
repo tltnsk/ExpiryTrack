@@ -1,0 +1,72 @@
+:root {
+  --background: #fdfdfd;
+  --navy: #03058d;
+  --primary-dark: #001b25;
+  --text: #2b3a52; 
+  --light-blue: #255caf; 
+  --danger: #c53030;
+  --border: #d9e4f5;
+}
+
+html, body {
+    background: var(--background);
+}
+
+body {
+    margin: 0 auto;
+    max-width: 1000px;
+    padding: 16px 24px;
+    font-family: Arial, Helvetica, sans-serif
+}
+
+h1, h2, h3 {
+  color: var(--navy);
+}
+
+a {
+    color: var(--navy)
+}
+
+header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'logo user'
+    'logo nav';
+  align-items: center;
+  row-gap: 8px;
+  padding: 20px 0;
+  margin-bottom: 16px;
+}
+
+header h1 {
+  grid-area: logo;
+  margin: 0;
+}
+
+/* the "name and logout */
+header > div {
+  grid-area: user;
+  justify-self: end;
+  color: var(--light-blue);
+  font-size: 0.9em;
+}
+
+header nav {
+  grid-area: nav;
+  justify-self: end;
+}
+
+nav a {
+  text-decoration: none;
+  font-weight: 500;
+}
+
+nav a.router-link-active {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.error {
+  color: var(--danger);
+}

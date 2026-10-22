@@ -34,4 +34,9 @@ async function logout() {
   </main>
 </template>
 
-<style scoped></style>
+<style scoped>
+nav {
+  display: flex;
+  gap: 20px;
+}
+</style>

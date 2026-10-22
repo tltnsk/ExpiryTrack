@@ -14,7 +14,7 @@ async function logout() {
 </script>
 
 <template>
-  <header>
+  <header v-if="auth.user">
     <h1>ExpiryTrack</h1>
     <div v-if="auth.user">
       {{ auth.user.firstName }} {{ auth.user.lastName }} ({{ auth.user.role }})

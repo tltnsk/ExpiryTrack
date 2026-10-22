@@ -69,9 +69,9 @@ async function loadRequest() {
         const data: RenewalRequest = await response.json()
         request.value = data
     } else if (response.status === 404 || response.status === 400) {
-        errorMessage.value = 'Item not found.'
+        errorMessage.value = 'Request not found.'
     } else {
-        errorMessage.value = `Could not load item (error ${response.status}).`
+        errorMessage.value = `Could not load request (error ${response.status}).`
     }
     loading.value = false
 }
@@ -209,7 +209,7 @@ onMounted(loadRequest)
 
     <p v-if="loading">Loading...</p>
 
-    <p v-else-if="errorMessage"> {{  errorMessage }}</p>
+    <p v-else-if="errorMessage" class="error"> {{  errorMessage }}</p>
     <div v-else-if="request">
         <h3>Details</h3>
         <dl>
@@ -242,7 +242,7 @@ onMounted(loadRequest)
         </thead>
         <tbody>
             <tr v-for="(action, index) in request.actions" :key="index">
-                <td>{{action.createdAt }}</td>
+                <td>{{formatDateTime(action.createdAt) }}</td>
                 <td>{{ action.actorUserName}}</td>
                 <td>{{ action.type }}</td>
                 <td>{{ action.fromStatus ?? '-' }} -> {{ action.toStatus }}</td>
@@ -272,19 +272,21 @@ onMounted(loadRequest)
     <div>
           <button type="submit" :disabled="financeSaving">Submit recommendation</button>
     </div>
-    <p v-if="financeError">{{ financeError }}</p>
+    <p v-if="financeError" class="error">{{ financeError }}</p>
     </form>
 
-    <div v-if="canManagerReview || canManagerReject">
+    <div v-if="canManagerReview || canManagerReject" id="managerReview">
         <div>
-            <label> Comment (Required for Reject and Request)
-            <textarea v-model="managerComment"></textarea>
+            <label> Comment (Required for Reject and Request Clarification)
+            <textarea v-model="managerComment" id="managerComment"></textarea>
             </label>
         </div>
-        <button type="button" @click="managerAction('approve')" v-if="canManagerReview" :disabled="managerSaving">Approve</button>
-        <button type="button" @click="managerAction('reject')" v-if="canManagerReject" :disabled="managerSaving">Reject</button>
-        <button type="button" @click="managerAction('request-clarification')" v-if="!clarificationUsed && canManagerReview" :disabled="managerSaving">Request Clarification</button>
-        <p v-if="managerError">{{ managerError }}</p>
+        <div id="managerButtons">
+            <button type="button" @click="managerAction('approve')" v-if="canManagerReview" :disabled="managerSaving">Approve</button>
+            <button type="button" @click="managerAction('reject')" v-if="canManagerReject" :disabled="managerSaving">Reject</button>
+            <button type="button" @click="managerAction('request-clarification')" v-if="!clarificationUsed && canManagerReview" :disabled="managerSaving">Request Clarification</button>
+        </div>
+        <p v-if="managerError" class="error">{{ managerError }}</p>
     </div>
       <form @submit.prevent="provideClarification" v-if="canAnswerClarification">
         <h3>Your answer</h3>
@@ -296,14 +298,35 @@ onMounted(loadRequest)
         <div>
           <button type="submit" :disabled="employeeSaving">Send clarification</button>
         </div>
-        <p v-if="employeeError">{{ employeeError }}</p>
+        <p v-if="employeeError" class="error">{{ employeeError }}</p>
     </form>
 
     <form @submit.prevent="completeRenewal" v-if="canRecordCompletion">
         <div>
           <button type="submit" :disabled="employeeCompleteSaving">Complete</button>
         </div>
-        <p v-if="employeeCompleteError">{{ employeeCompleteError }}</p>
+        <p v-if="employeeCompleteError" class="error">{{ employeeCompleteError }}</p>
     </form>
     </div>
 </template>
+<style scoped>
+
+.error {
+    color: var(--danger);
+}
+
+#managerReview {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 30px;
+    margin: 16px auto;
+    max-width: 420px;
+}
+
+#managerButtons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    padding-top: 20px;
+}
+</style>

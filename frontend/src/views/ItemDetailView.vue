@@ -140,7 +140,10 @@ async function reassignEmployee() {
 </script>
 
 <template>
-    <RouterLink to="/items">Back to Items</RouterLink>
+  <div class="page-links">
+      <RouterLink to="/items">Back to Items</RouterLink>
+      <RouterLink v-if="item && (auth.user?.role === 'DepartmentManager' || auth.user?.role === 'Employee') && (item.lifecycleState === 'Active' || item.lifecycleState === 'ExpiringSoon')" :to="`/items/${item.id}/edit`">Edit Item</RouterLink>
+  </div>
 
     <p v-if="loading">Loading...</p>
 
@@ -247,5 +250,23 @@ async function reassignEmployee() {
 }
 .error {
   color: #c53030;
+}
+
+form {
+  max-width: 420px;
+  margin-left: 0;
+}
+
+form > button {
+  padding: 4px 4px;
+  margin-right: 8px;
+  background: var(--navy);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 400;
+  cursor: pointer;
+  width: 40%;
 }
 </style>

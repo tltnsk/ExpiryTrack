@@ -40,6 +40,7 @@ async function login() {
 <template>
   <div class="login-page">
     <div class="login-card">
+      <h1>ExpiryTrack</h1>
       <p class="subtitle">Log in to your company account.</p>
       <form @submit.prevent="login">
         <div>
@@ -100,7 +101,7 @@ input {
   box-sizing: border-box;
   width: 100%;
   margin-top: 6px;
-  padding: 8px 20px;
+  padding: 8px 8px;
   border: 1px solid var(--border);
   border-radius: 10px;
   font: inherit;

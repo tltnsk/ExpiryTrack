@@ -79,6 +79,8 @@ nav a.router-link-active {
 table {
   width: 100%;
   margin: 12px 0 24px;
+  border-collapse: collapse;
+  border-style: hidden;
 }
 
 th,
@@ -89,7 +91,7 @@ td {
 }
 
 tbody tr:hover {
-  background: #ebe9f7;
+  background: #efeef3;
 }
 
 form {
@@ -132,6 +134,12 @@ label:has(input[type='checkbox']) {
   gap: 8px;
 }
 
+.page-links {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 8px;
+}
+
 /*buttons*/
 button {
   padding: 4px 4px;
@@ -146,7 +154,7 @@ button {
 }
 
 button:hover {
-  opacity: 0.9;
+  opacity: 0.75;
 }
 
 button:disabled {

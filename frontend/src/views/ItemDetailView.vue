@@ -200,7 +200,7 @@ async function reassignEmployee() {
             <button type="submit">Reassign employee</button>
             <p v-if="reassignError" class="error">{{ reassignError }}</p>
         </form>
-        <RouterLink v-if="auth.user?.role=='Employee' && item.lifecycleState=='ExpiringSoon' && !hasOpenRequest" :to="`/items/${item.id}/renew`">Submit a Renewal Request</RouterLink>
+        <RouterLink v-if="auth.user?.role=='Employee' && (item.lifecycleState=='ExpiringSoon' || item.lifecycleState === 'Expired') && !hasOpenRequest" :to="`/items/${item.id}/renew`">Submit a Renewal Request</RouterLink>
 
         <h2>Renewal Requests</h2>
         <p v-if="requests.length === 0">No renewal requests yet.</p>

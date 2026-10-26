@@ -29,9 +29,9 @@ public class RenewalService
             return new RenewalResult { NotFound = true };
         }
 
-        if (item.LifecycleState != LifecycleState.ExpiringSoon)
+        if (item.LifecycleState != LifecycleState.ExpiringSoon && item.LifecycleState != LifecycleState.Expired)
         {
-            return new RenewalResult { Error = $"{item.Name} is not expiring soon." };
+            return new RenewalResult { Error = $"{item.Name} can only be renewed when it is expiring soon or expired." };
         }
 
         bool openRequest = await _db.RenewalRequests
@@ -47,6 +47,12 @@ public class RenewalService
         if (data.ProposedExpirationDate <= item.CurrentPeriod!.ExpirationDate)
         {
             return new RenewalResult { Error = "Invalid proposed expiration date." };
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (data.ProposedExpirationDate <= today)
+        {
+            return new RenewalResult { Error = "The propsed expiration date must be later than today. " };
         }
 
         if (item.Department.ManagerId == null)

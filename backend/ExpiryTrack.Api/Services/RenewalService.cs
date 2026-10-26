@@ -54,6 +54,11 @@ public class RenewalService
             return new RenewalResult { Error = "There is no department manager to forward the request to." };
         }
 
+        if (item.Category.RequiresFinancialReview && data.ProposedCost == null)
+        {
+            return new RenewalResult { Error = "A proposed cost is required for renewals in this category." };
+        }
+
         var needsReview = data.ProposedCost != null && item.Category.RequiresFinancialReview &&
                           (item.Category.FinanceReviewThreshold == null ||
                            data.ProposedCost >= item.Category.FinanceReviewThreshold);

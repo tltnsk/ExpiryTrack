@@ -93,7 +93,7 @@ async function submitRequest() {
     </div>
     <div>
       <label>
-          Proposed Cost (optional)
+          Proposed Cost (required if the category needs financial review)
           <input v-model="proposedCost" type="number" step="0.01" min="0.01"/>
       </label>
     </div>

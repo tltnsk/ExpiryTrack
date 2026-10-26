@@ -135,28 +135,6 @@ public class RenewalServiceTests
     }
 
     [Fact]
-    public async Task NoCost()
-    {
-        using var db = TestData.CreateDb();
-        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
-        var finance = new User { FirstName = "Test", LastName = "Finance", Email = "finance@test.com", Role = new Role { Id = 4, Name = "FinanceOfficer" } };
-        db.Users.Add(finance);
-        db.SaveChanges();
-        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 20, manager: manager, requiresFinancialReview: true, threshold: 5000);
-        var service = new RenewalService(db);
-
-        var result = await service.SubmitAsync(item.Id, item.ResponsibleUserId, SubmitData());
-
-        Assert.Null(result.Error);
-        Assert.NotNull(result.Request);
-        Assert.Equal(RequestStatus.PendingManagerApproval, result.Request.Status);
-        Assert.False(result.Request.NeedsFinancialReview);
-
-        var notification = Assert.Single(db.Notifications);
-        Assert.Equal(manager.Id, notification.RecipientUserId);
-    }
-
-    [Fact]
     public async Task SubmitActiveItem()
     {
         using var db = TestData.CreateDb();

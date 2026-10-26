@@ -17,6 +17,7 @@ import UsersEditView from '@/views/UsersEditView.vue'
 import RequestsView from '@/views/RequestsView.vue'
 import RequestDetailView from '@/views/RequestDetailView.vue'
 import RenewalSubmitView from '@/views/RenewalSubmitView.vue'
+import ChangePasswordView from '@/views/ChangePasswordView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -38,7 +39,8 @@ const router = createRouter({
     { path: '/users/:id/edit', component: UsersEditView },
     { path: '/requests', component: RequestsView }, 
     { path: '/requests/:id', component: RequestDetailView },
-    { path: '/items/:id/renew', component: RenewalSubmitView }
+    { path: '/items/:id/renew', component: RenewalSubmitView },
+    { path: '/change-password', component: ChangePasswordView }
   ],
 })
 

@@ -84,4 +84,27 @@ public class AuthController : ControllerBase
 
         return Ok(UserResponse.FromUser(user));
     }
+
+    // POST /api/auth/change-password
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        var user = await _db.Users
+            .SingleOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null || !user.IsActive)
+            return Unauthorized();
+
+        var result = new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.CurrentPassword);
+        if (result == PasswordVerificationResult.Failed)
+            return BadRequest("Invalid password.");
+
+        user.PasswordHash = new PasswordHasher<User>().HashPassword(user, request.NewPassword);
+
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
 }

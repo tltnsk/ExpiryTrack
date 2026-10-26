@@ -18,6 +18,7 @@ async function logout() {
     <h1>ExpiryTrack</h1>
     <div v-if="auth.user">
       {{ auth.user.firstName }} {{ auth.user.lastName }} ({{ auth.user.role }})
+      <RouterLink to="/change-password">Change Password</RouterLink>
       <button @click="logout">Log out</button>
     </div>
     <nav v-if="auth.user">

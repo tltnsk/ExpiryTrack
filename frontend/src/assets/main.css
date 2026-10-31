@@ -227,3 +227,34 @@ dd {
     padding: 8px 10px;
   }
 }
+
+
+/*labels for item states and request statuses*/
+.state {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.85em;
+  color: white;
+  white-space: nowrap;
+}
+
+/* request statuses */
+.PendingFinancialReview {
+  background: #884ce2;
+}
+.PendingManagerApproval {
+  background: #2f61e2;
+}
+.ClarificationRequired {
+  background: #f7921f;
+}
+.Approved {
+  background: #33ca63;
+}
+.Rejected {
+  background: #e53b3b;
+}
+.Completed {
+  background: #343131;
+}

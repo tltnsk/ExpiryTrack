@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { formatDate, formatDateTime} from '@/utils/format'
+import { formatDate, formatLabel} from '@/utils/format'
 
 // ItemResponse 
 interface Item {
@@ -58,7 +58,7 @@ onMounted(async() => {
                 <td>{{ formatDate(item.expirationDate) }}</td>
                 <td>{{ item.cost ?? '-' }}</td>
                 <td>
-                <span class="state" :class="item.lifecycleState">{{ item.lifecycleState }}</span>
+                <span class="state" :class="item.lifecycleState">{{ formatLabel(item.lifecycleState) }}</span>
                 </td>
             </tr>
         </tbody>

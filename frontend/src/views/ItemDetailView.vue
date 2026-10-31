@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { formatDate, formatDateTime} from '@/utils/format'
+import { formatDate, formatDateTime, formatLabel} from '@/utils/format'
 
 interface Item {
     id: number
@@ -151,7 +151,7 @@ async function reassignEmployee() {
 
     <div v-else-if="item">
         <h2>{{ item.name }}</h2>
-        <span class="state" :class="item.lifecycleState">{{ item.lifecycleState }}</span>
+        <span class="state" :class="item.lifecycleState">{{ formatLabel(item.lifecycleState) }}</span>
 
         <h3>Details</h3>
         <dl>
@@ -215,9 +215,9 @@ async function reassignEmployee() {
         </thead>
         <tbody>
             <tr v-for="request in requests" :key="request.id">
-                <td>{{ request.status }}</td>
+                <td><span class="state" :class="request.status">{{ formatLabel(request.status) }}</span></td>
                 <td>{{ formatDateTime(request.proposedExpirationDate) }}</td>
-                <td>{{ request.submittedAt }}</td>
+                <td>{{ formatDateTime(request.submittedAt)}}</td>
                 <td><RouterLink :to="`/requests/${request.id}`">Go to request</RouterLink></td>
             </tr>
         </tbody>

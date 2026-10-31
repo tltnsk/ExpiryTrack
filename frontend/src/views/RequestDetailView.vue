@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { formatDate, formatDateTime} from '@/utils/format'
+import { formatDate, formatDateTime, formatLabel} from '@/utils/format'
 
 interface RequestAction{
     type: string
@@ -214,7 +214,7 @@ onMounted(loadRequest)
         <h3>Details</h3>
         <dl>
             <dt>Status</dt>
-            <dd>{{ request.status}}</dd>
+            <dd><span class="state" :class="request.status">{{ formatLabel(request.status) }}</span></dd>
             <dt>Proposed Expiration Date</dt>
             <dd>{{ formatDate(request.proposedExpirationDate )}}</dd>
             <dt>Proposed Cost</dt>
@@ -244,8 +244,8 @@ onMounted(loadRequest)
             <tr v-for="(action, index) in request.actions" :key="index">
                 <td>{{formatDateTime(action.createdAt) }}</td>
                 <td>{{ action.actorUserName}}</td>
-                <td>{{ action.type }}</td>
-                <td>{{ action.fromStatus ?? '-' }} -> {{ action.toStatus }}</td>
+                <td>{{ formatLabel(action.type) }}</td>
+                <td>{{ formatLabel(action.fromStatus)}} -> {{ formatLabel(action.toStatus) }}</td>
                 <td>{{ action.recommendation ?? '-' }}</td>
                 <td>{{ action.comment  ?? '-'}}</td>
             </tr>

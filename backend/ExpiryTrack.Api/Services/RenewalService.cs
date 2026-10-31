@@ -107,7 +107,7 @@ public class RenewalService
                 Notification notification = new Notification()
                 {
                     Type = "RequestSubmitted",
-                    Message = $"{item.Name} is expiring soon.",
+                    Message = $"A renewal request for {item.Name} was submitted and needs financial review.",
                     Request = request,
                     RecipientUserId = financeOfficer.Id,
                     CreatedAt = now,
@@ -120,7 +120,7 @@ public class RenewalService
             Notification notification = new Notification
             {
                 Type = "RequestSubmitted",
-                Message = $"{item.Name} is expiring soon.",
+                Message = $"A renewal request for {item.Name} was submitted and needs your decision.",
                 Request = request,
                 RecipientUserId = item.Department.ManagerId.Value,
                 CreatedAt = now,
@@ -220,7 +220,7 @@ public class RenewalService
         Notification notification = new Notification()
         {
             Type = "RequestApproved",
-            Message = $"{request.Period.Item.Name} is approved for renewal.",
+            Message = $"The renewal request for {request.Period.Item.Name} was approved.",
             Request = request,
             RecipientUserId = request.Period.Item.ResponsibleUserId,
             CreatedAt = now,
@@ -275,7 +275,7 @@ public class RenewalService
         Notification notification = new Notification()
         {
             Type = "RequestRejected",
-            Message = $"{request.Period.Item.Name} is rejected by the manager.",
+            Message = $"The renewal request for {request.Period.Item.Name} was rejected by the manager.",
             Request = request,
             RecipientUserId = request.Period.Item.ResponsibleUserId,
             CreatedAt = now,
@@ -337,7 +337,7 @@ public class RenewalService
         Notification notification = new Notification()
         {
             Type = "ClarificationRequested",
-            Message = $"Manager required clarification for {request.Period.Item.Name} renewal request.",
+            Message = $"The manager requested clarification for the renewal request for {request.Period.Item.Name}.",
             Request = request,
             RecipientUserId = request.Period.Item.ResponsibleUserId,
             CreatedAt = now,
@@ -391,7 +391,7 @@ public class RenewalService
             Notification notification = new Notification()
             {
                 Type = "ClarificationProvided",
-                Message = $"Employee provided clarification for {request.Period.Item.Name}.",
+                Message = $"The employee provided clarification for {request.Period.Item.Name}.",
                 Request = request,
                 RecipientUserId = request.Period.Item.Department.ManagerId.Value,
                 CreatedAt = now,

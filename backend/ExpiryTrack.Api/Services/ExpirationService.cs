@@ -77,7 +77,7 @@ public class ExpirationService
                 _db.Notifications.Add(new Notification
                 {
                     Type = "ItemExpired",
-                    Message = $"{item.Name} expired on {item.CurrentPeriod.ExpirationDate}.",
+                    Message = $"{item.Name} expired on {item.CurrentPeriod.ExpirationDate.ToString("dd MMM yyyy")}.",
                     IsRead = false,
                     RecipientUserId = item.ResponsibleUserId,
                     RequestId = null,
@@ -90,7 +90,7 @@ public class ExpirationService
                     _db.Notifications.Add(new Notification
                     {
                         Type = "ItemExpired",
-                        Message = $"{item.Name} expired on {item.CurrentPeriod.ExpirationDate}.",
+                        Message = $"{item.Name} expired on {item.CurrentPeriod.ExpirationDate.ToString("dd MMM yyyy")}.",
                         IsRead = false,
                         RecipientUserId = item.Department.ManagerId.Value,
                         RequestId = null,
@@ -121,7 +121,7 @@ public class ExpirationService
                 _db.Notifications.Add(new Notification
                 {
                     Type = "ItemExpiringSoon",
-                    Message = $"{item.Name} expiring soon.",
+                    Message = $"{item.Name} is expiring soon.",
                     IsRead = false,
                     RecipientUserId = item.ResponsibleUserId,
                     RequestId = null,
@@ -147,7 +147,7 @@ public class ExpirationService
                     _db.Notifications.Add(new Notification
                     {
                         Type = "Escalation",
-                        Message = $"Item {item.Name} expiring soon {item.CurrentPeriod.ExpirationDate} and no renewal request has been submitted yet.",
+                        Message = $"{item.Name} expires on {item.CurrentPeriod.ExpirationDate.ToString("dd MMM yyyy")} and no renewal request has been submitted yet.",
                         IsRead = false,
                         RecipientUserId = item.Department.ManagerId.Value,
                         RequestId = null,

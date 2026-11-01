@@ -27,6 +27,7 @@ async function logout() {
       <RouterLink v-if="auth.user?.role === 'Administrator'" to="/departments">Departments</RouterLink>
       <RouterLink v-if="auth.user.role === 'Administrator'" to="/users">Users</RouterLink>
       <RouterLink to="/requests">Requests</RouterLink>
+      <RouterLink to="/notifications">Notifications</RouterLink>
     </nav>
   </header>
 

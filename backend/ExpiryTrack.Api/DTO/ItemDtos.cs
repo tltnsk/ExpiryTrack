@@ -96,3 +96,25 @@ public class ItemResponse
     public DateOnly ExpirationDate { get; set; }
     public decimal? Cost { get; set; }
 }
+
+// what the backend sends for one period
+public class PeriodResponse
+{
+    public int PeriodNumber { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly ExpirationDate { get; set; }
+    public decimal? Cost { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public int? CreatedFromRequestId { get; set; }
+}
+
+// what the backend sends for item's state history
+public class StateHistoryResponse
+{
+    public int Id { get; set; }
+    public LifecycleState? FromState { get; set; }
+    public LifecycleState ToState { get; set; }
+    public string? Reason { get; set; }
+    public DateTime ChangedAt { get; set; }
+    public string ChangedByUserName { get; set; } = "System";
+}

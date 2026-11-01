@@ -418,6 +418,62 @@ public class ItemsController : ControllerBase
         return Ok(ToResponse(item));
     }
 
+    // getting period info for an item 
+    [HttpGet("{id:int}/periods")]
+    public async Task<IActionResult> GetPeriods(int id)
+    {
+        User currentUser = await LoadCurrentUser();
+        Item? item = await LoadItem(id);
+
+        if (item == null || !CanSee(item, currentUser))
+        {
+            return NotFound();
+        }
+
+        List<LifecyclePeriod> periods = await _db.LifecyclePeriods
+            .Where(p => p.ItemId == id)
+            .OrderBy(p => p.PeriodNumber)
+            .ToListAsync();
+        
+        var responses = new List<PeriodResponse>();
+
+        foreach (var period in periods)
+        {
+            var response = ToPeriodResponse(period);
+            responses.Add(response);
+        }
+        
+        return Ok(responses);
+    }
+    
+    // getting history info for one item
+    [HttpGet("{id:int}/history")]
+    public async Task<IActionResult> GetHistory(int id)
+    {
+        User currentUser = await LoadCurrentUser();
+        Item? item = await LoadItem(id);
+        if (item == null || !CanSee(item, currentUser))
+        {
+            return NotFound();
+        }
+        
+        List<ItemStateHistory> histories = await  _db.ItemStateHistory
+            .Where(h => h.ItemId == id)
+            .Include(u => u.ChangedByUser)
+            .OrderByDescending(h => h.ChangedAt)
+            .ToListAsync();
+
+        var responses = new List<StateHistoryResponse>();
+        foreach (var history in histories)
+        {
+            var response = ToStateHistoryResponse(history);
+            responses.Add(response);
+        }
+        
+        return Ok(responses);
+    }
+    
+
     // convert an Item entity to an ItemResponse DTO 
     private static ItemResponse ToResponse(Item item)
     {
@@ -441,6 +497,32 @@ public class ItemsController : ControllerBase
             StartDate = item.CurrentPeriod.StartDate,
             ExpirationDate = item.CurrentPeriod.ExpirationDate,
             Cost = item.CurrentPeriod.Cost
+        };
+    }
+    
+    private static PeriodResponse ToPeriodResponse(LifecyclePeriod period)
+    {
+        return new PeriodResponse
+        {
+            PeriodNumber = period.PeriodNumber,
+            StartDate = period.StartDate,
+            ExpirationDate = period.ExpirationDate,
+            Cost = period.Cost,
+            CreatedAt = period.CreatedAt,
+            CreatedFromRequestId = period.CreatedFromRequestId,
+        };
+    }
+
+    private static StateHistoryResponse ToStateHistoryResponse(ItemStateHistory state)
+    {
+        return new StateHistoryResponse
+        {
+            Id = state.Id,
+            FromState = state.FromState,
+            ToState = state.ToState,
+            Reason = state.Reason,
+            ChangedAt = state.ChangedAt,
+            ChangedByUserName = state.ChangedByUser != null ? state.ChangedByUser.FirstName + " " + state.ChangedByUser.LastName : "System",
         };
     }
 

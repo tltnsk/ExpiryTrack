@@ -1,16 +1,23 @@
 <script setup lang="ts">
 
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth';
+import { useNotificationsStore } from '@/stores/notifications';
+import { watch } from 'vue'
 
 const auth = useAuthStore()
+const notificationsStore = useNotificationsStore()
 const router = useRouter()
-
+const route = useRoute()
 
 async function logout() {
   await auth.logout()
   router.push('/login')
 }
+
+watch (() => route.path, () => {
+  if (auth.user) notificationsStore.loadUnreadCount()
+}, { immediate: true })
 </script>
 
 <template>
@@ -27,7 +34,7 @@ async function logout() {
       <RouterLink v-if="auth.user?.role === 'Administrator'" to="/departments">Departments</RouterLink>
       <RouterLink v-if="auth.user.role === 'Administrator'" to="/users">Users</RouterLink>
       <RouterLink to="/requests">Requests</RouterLink>
-      <RouterLink to="/notifications">Notifications</RouterLink>
+      <RouterLink to="/notifications">Notifications {{ notificationsStore.unreadCount }}</RouterLink>
     </nav>
   </header>
 

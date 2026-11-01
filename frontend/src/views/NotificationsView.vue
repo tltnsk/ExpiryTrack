@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { formatDateTime} from '@/utils/format'
+import { useNotificationsStore } from '@/stores/notifications'
 
 // notification response
 interface Notification {
@@ -17,6 +18,7 @@ const notifications = ref<Notification[]>([]);
 const errorMessage = ref('')
 const actionError = ref('')
 const loading = ref(true)
+const notificationsStore = useNotificationsStore()
 
 async function loadNotifications() {
     const response = await fetch('/api/notifications');
@@ -37,6 +39,7 @@ async function markAsRead(id: number)  {
 
     if (response.ok) {
         await loadNotifications()
+        notificationsStore.loadUnreadCount()
     } else {
         actionError.value = `Could not mark notification as read (error ${response.status}).`
     }

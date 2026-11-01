@@ -24,7 +24,7 @@ const labels: Record<string, string> = {
 }
 
 export function formatLabel(value: string | null): string {
-    if (!value) return ' '
+    if (!value) return '-'
     return labels[value] ?? value
 }
 

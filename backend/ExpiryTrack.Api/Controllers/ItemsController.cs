@@ -434,7 +434,7 @@ public class ItemsController : ControllerBase
             .Where(p => p.ItemId == id)
             .OrderBy(p => p.PeriodNumber)
             .ToListAsync();
-        
+
         var responses = new List<PeriodResponse>();
 
         foreach (var period in periods)
@@ -442,10 +442,10 @@ public class ItemsController : ControllerBase
             var response = ToPeriodResponse(period);
             responses.Add(response);
         }
-        
+
         return Ok(responses);
     }
-    
+
     // getting history info for one item
     [HttpGet("{id:int}/history")]
     public async Task<IActionResult> GetHistory(int id)
@@ -456,8 +456,8 @@ public class ItemsController : ControllerBase
         {
             return NotFound();
         }
-        
-        List<ItemStateHistory> histories = await  _db.ItemStateHistory
+
+        List<ItemStateHistory> histories = await _db.ItemStateHistory
             .Where(h => h.ItemId == id)
             .Include(u => u.ChangedByUser)
             .OrderByDescending(h => h.ChangedAt)
@@ -469,10 +469,10 @@ public class ItemsController : ControllerBase
             var response = ToStateHistoryResponse(history);
             responses.Add(response);
         }
-        
+
         return Ok(responses);
     }
-    
+
 
     // convert an Item entity to an ItemResponse DTO 
     private static ItemResponse ToResponse(Item item)
@@ -499,7 +499,7 @@ public class ItemsController : ControllerBase
             Cost = item.CurrentPeriod.Cost
         };
     }
-    
+
     private static PeriodResponse ToPeriodResponse(LifecyclePeriod period)
     {
         return new PeriodResponse

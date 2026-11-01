@@ -15,10 +15,10 @@ interface Item {
     departmentName: string
     responsibleUserId: number
     responsibleUserName: string
-    periodNumber: string
+    periodNumber: number | null
     startDate: string 
     expirationDate: string
-    cost: number
+    cost: number | null
 }
 
 interface User {
@@ -26,7 +26,6 @@ interface User {
     firstName: string
     lastName: string
 }
-
 
 interface RenewalRequest {
     id: number
@@ -44,6 +43,24 @@ interface RenewalRequest {
     requestedByUserId: number
 }
 
+interface LifecyclePeriod {
+  periodNumber: number
+  startDate: string
+  expirationDate: string
+  cost: number | null
+  createdAt: string
+  createdFromRequestId: number | null
+}
+
+interface ItemStateHistory {
+  id: number
+  fromState: string | null
+  toState: string 
+  reason: string | null
+  changedAt: string
+  changedByUserName: string
+}
+
 const route = useRoute()
 const auth = useAuthStore()
 const id = route.params.id
@@ -59,6 +76,8 @@ const responsibleUserId = ref<number | null>(null)
 
 
 const requests = ref<RenewalRequest[]>([])
+const periods = ref<LifecyclePeriod[]>([])
+const histories = ref<ItemStateHistory[]>([])
 
 onMounted(async () => {
     const response = await fetch(`/api/items/${id}`)
@@ -84,6 +103,16 @@ onMounted(async () => {
     const requestsResponse = await fetch(`/api/items/${id}/requests`)
     if (requestsResponse.ok) {
         requests.value = await requestsResponse.json()
+    }
+
+    const periodsResponse = await fetch(`/api/items/${id}/periods`)
+    if (periodsResponse.ok) {
+        periods.value = await periodsResponse.json()
+    }
+
+    const historiesResponse = await fetch(`/api/items/${id}/history`)
+    if (historiesResponse.ok) {
+      histories.value = await historiesResponse.json()
     }
 })
 
@@ -210,48 +239,71 @@ async function reassignEmployee() {
               <th>Status</th>
               <th>Proposed Date</th>
               <th>Submitted</th>
-              <th></th>
             </tr>
         </thead>
         <tbody>
             <tr v-for="request in requests" :key="request.id">
                 <td><span class="state" :class="request.status">{{ formatLabel(request.status) }}</span></td>
-                <td>{{ formatDateTime(request.proposedExpirationDate) }}</td>
+                <td>{{ formatDate(request.proposedExpirationDate) }}</td>
                 <td>{{ formatDateTime(request.submittedAt)}}</td>
                 <td><RouterLink :to="`/requests/${request.id}`">Go to request</RouterLink></td>
             </tr>
         </tbody>
-    </table>
+        </table>
+
+        <h2>Lifecycle Periods</h2>
+        <p v-if="periods.length === 0">No lifecycle periods yet.</p>
+        <table v-else>
+        <thead>
+            <tr>
+              <th>Period Number</th>
+              <th>Start Date</th>
+              <th>Expiration Date</th>
+              <th>Cost</th>
+              <th>Created At</th>
+              <th>Created From Request</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-for="period in periods" :key="period.periodNumber">
+                <td>{{ period.periodNumber }}</td>
+                <td>{{ formatDate(period.startDate) }}</td>
+                <td>{{ formatDate(period.expirationDate)}}</td>
+                <td>{{ period.cost ?? "-" }}</td>
+                <td>{{ formatDateTime(period.createdAt) }}</td>
+                <td v-if="period.createdFromRequestId!==null"><RouterLink  :to="`/requests/${period.createdFromRequestId}`" >Go to request</RouterLink></td>
+                <td v-else>Initial Period - No request</td>
+            </tr>
+        </tbody>
+      </table>
+
+      <h2>Item State History</h2>
+        <p v-if="histories.length === 0">No item state history.</p>
+        <table v-else>
+        <thead>
+            <tr>
+              <th>From State</th>
+              <th>To State</th>
+              <th>Reason</th>
+              <th>Changed At</th>
+              <th>Changed By</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-for="history in histories" :key="history.id">
+                <td>{{ formatLabel(history.fromState)}} </td>
+                <td>{{ formatLabel(history.toState)}}</td>
+                <td>{{ history.reason}}</td>
+                <td>{{ formatDateTime(history.changedAt) }}</td>
+                <td>{{ history.changedByUserName}}</td>
+            </tr>
+        </tbody>
+      </table>
     </div>
 
 </template>
 
 <style scoped>
-.state {
-  padding: 2px 8px;
-  border-radius: 3px;
-  font-size: 0.85em;
-}
-.Active {
-  background: #349a54;
-  color: white;
-}
-.ExpiringSoon {
-  background: #d54747;
-  color: white;
-}
-.Expired {
-  background: #fbaa29;
-  color: white;
-}
-.Cancelled {
-  background: #343131;
-  color: white;
-}
-.error {
-  color: #c53030;
-}
-
 form {
   max-width: 420px;
   margin-left: 0;

@@ -224,7 +224,7 @@ public class RenewalRequestsController : ControllerBase
     }
 
     // helper method that returns whether the user has access to the item 
-    private static bool CanSeeRequest(RenewalRequest request, User currentUser)
+    public static bool CanSeeRequest(RenewalRequest request, User currentUser)
     {
         // employees can only see the requests for items they're responsible for
         if (currentUser.Role.Name == "Employee")
@@ -241,5 +241,4 @@ public class RenewalRequestsController : ControllerBase
         // admins can see all the requests 
         return true;
     }
-
 }

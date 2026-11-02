@@ -319,18 +319,16 @@ async function reassignEmployee() {
         <table v-else>
         <thead>
             <tr>
-              <th>File Name</th>
+              <th>File</th>
               <th>Uploaded At</th>
               <th>Uploaded By</th>
-              <th>Link to Documents</th>
             </tr>
         </thead>
         <tbody>
             <tr v-for="doc in documents" :key="doc.id">
-                <td>{{ doc.originalFileName}} </td>
+                <td><a :href="`/api/documents/${doc.id}/download`">{{ doc.originalFileName }}</a></td>
                 <td>{{ formatDateTime(doc.uploadedAt)}}</td>
                 <td>{{ doc.uploadedByUserName}}</td>
-                <td><a :href="`/api/documents/${doc.id}/download`">{{ doc.originalFileName }}</a></td>
             </tr>
         </tbody>
       </table>

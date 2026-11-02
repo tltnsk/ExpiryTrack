@@ -125,8 +125,8 @@ public class DocumentsController : ControllerBase
             UploadedByUserName = user.FirstName + " " + user.LastName
         });
     }
-    
-     // POST api/requests/{requestId:int}/documents 
+
+    // POST api/requests/{requestId:int}/documents 
     // upload a PDF to an request
     [HttpPost("requests/{requestId:int}/documents")]
     [Authorize(Roles = "Employee")]
@@ -137,7 +137,7 @@ public class DocumentsController : ControllerBase
             .Include(r => r.Period)
             .ThenInclude(p => p.Item)
             .FirstOrDefaultAsync(r => r.Id == requestId);
-        
+
         if (request == null || !RenewalRequestsController.CanSeeRequest(request, user))
         {
             return NotFound("Unable to find request.");
@@ -147,7 +147,7 @@ public class DocumentsController : ControllerBase
         {
             return Forbid();
         }
-        
+
         // documents can only be attached when submitting the request
         // so the number of actions for that request needs to be checked
         int actionCount = await _db.RequestActions.CountAsync(a => a.RequestId == requestId);
@@ -155,7 +155,7 @@ public class DocumentsController : ControllerBase
         if (actionCount > 1)
         {
             return BadRequest("You can only add documents when submitting the request.");
-        } 
+        }
 
         // a pdf has at least 5 bytes (%PDF-)
         if (file.Length < 5)
@@ -226,7 +226,7 @@ public class DocumentsController : ControllerBase
             UploadedByUserName = user.FirstName + " " + user.LastName
         });
     }
-    
+
     // GET api/items/{itemId:int}/documents
     // get the item's documents
     [HttpGet("items/{itemId:int}/documents")]
@@ -247,24 +247,24 @@ public class DocumentsController : ControllerBase
             .Include(d => d.UploadedByUser)
             .OrderBy(d => d.UploadedAt)
             .ToListAsync();
-        
+
         var responses = new List<DocumentResponse>();
         foreach (var document in documents)
         {
             var response = ToResponse(document);
             responses.Add(response);
         }
-        
+
         return Ok(responses);
     }
-    
+
     // GET api/requests/{requestId:int}/documents
     // get the request's documents
     [HttpGet("requests/{requestId:int}/documents")]
     public async Task<IActionResult> GetRequestDocuments(int requestId)
     {
         User user = await LoadCurrentUser();
-        RenewalRequest? request = await  _db.RenewalRequests
+        RenewalRequest? request = await _db.RenewalRequests
             .Include(r => r.Period)
             .ThenInclude(p => p.Item)
             .FirstOrDefaultAsync(r => r.Id == requestId);
@@ -279,24 +279,24 @@ public class DocumentsController : ControllerBase
             .Include(d => d.UploadedByUser)
             .OrderBy(d => d.UploadedAt)
             .ToListAsync();
-        
+
         var responses = new List<DocumentResponse>();
         foreach (var document in documents)
         {
             var response = ToResponse(document);
             responses.Add(response);
         }
-        
+
         return Ok(responses);
     }
-    
+
     // GET api/documents/{id:int}/download
     // downloading a document 
     [HttpGet("documents/{id:int}/download")]
     public async Task<IActionResult> DownloadDocument(int id)
     {
         User user = await LoadCurrentUser();
-        
+
         Document? document = await _db.Documents
             .Include(d => d.Item)
             .ThenInclude(i => i!.CurrentPeriod)
@@ -309,7 +309,7 @@ public class DocumentsController : ControllerBase
         {
             return NotFound("Unable to find document.");
         }
-        
+
         // if the document is attached to item
         if (document.ItemId != null)
         {
@@ -327,16 +327,18 @@ public class DocumentsController : ControllerBase
             }
         }
 
-        if (!System.IO.File.Exists(document.OriginalFileName))
+        string path = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", document.StoredFileName);
+
+
+        if (!System.IO.File.Exists(path))
         {
             return NotFound("Unable to find the file.");
         }
-        
-        string path = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", document.StoredFileName);
-        
+
+
         return PhysicalFile(path, "application/pdf", document.OriginalFileName);
     }
-    
+
     private static DocumentResponse ToResponse(Document document)
     {
         return new DocumentResponse

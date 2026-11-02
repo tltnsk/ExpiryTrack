@@ -50,8 +50,30 @@ onMounted(async () => {
     }
 })
 
+const selectedFile = ref<File | null>(null)
+
+function onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files.length > 0) {
+    selectedFile.value = input.files[0] ?? null
+  } else {
+    selectedFile.value = null
+  }
+}
+
 async function createItem() {
   errorMessage.value = ''
+
+  if (selectedFile.value) {
+    if (selectedFile.value.size > 10 * 1024 * 1024) {
+      errorMessage.value = 'File size should be no more than 10MB.'
+      return
+    }
+    if (selectedFile.value.type !== 'application/pdf') {
+      errorMessage.value = 'File type should be PDF.'
+      return 
+    }
+  }
   saving.value = true
 
   const response = await fetch('/api/items', {
@@ -70,8 +92,6 @@ async function createItem() {
     }),
   })
 
-  saving.value = false
-
   if (response.status === 400) {
     const contentType = response.headers.get('Content-Type') ?? ''
     if (contentType.includes('json')) {
@@ -80,14 +100,32 @@ async function createItem() {
     } else {
       errorMessage.value = await response.text()
     }
+    saving.value = false
     return
   }
   if (!response.ok) {
     errorMessage.value = `Could not create the item (error ${response.status}).`
+    saving.value = false
     return
   }
 
   const created = await response.json()
+
+  if (selectedFile.value) {
+    const formData = new FormData()
+    formData.append('file', selectedFile.value)
+
+    const documentResponse = await fetch(`/api/items/${created.id}/documents`, {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!documentResponse.ok) {
+      alert('Item created, but the document could not be uploaded: ' + await documentResponse.text())
+    }
+  }
+
+  saving.value = false
   router.push(`/items/${created.id}`)
 }
 </script>
@@ -161,6 +199,12 @@ async function createItem() {
           </option>
     
         </select>
+      </label>
+    </div>
+    <div>
+      <label>
+        Attach a file
+        <input type="file" accept="application/pdf" @change="onFileChange"/>
       </label>
     </div>
 

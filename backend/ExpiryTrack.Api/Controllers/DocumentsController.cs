@@ -290,6 +290,53 @@ public class DocumentsController : ControllerBase
         return Ok(responses);
     }
     
+    // GET api/documents/{id:int}/download
+    // downloading a document 
+    [HttpGet("documents/{id:int}/download")]
+    public async Task<IActionResult> DownloadDocument(int id)
+    {
+        User user = await LoadCurrentUser();
+        
+        Document? document = await _db.Documents
+            .Include(d => d.Item)
+            .ThenInclude(i => i!.CurrentPeriod)
+            .Include(d => d.Request)
+            .ThenInclude(r => r!.Period)
+            .ThenInclude(p => p.Item)
+            .FirstOrDefaultAsync(d => d.Id == id);
+
+        if (document == null)
+        {
+            return NotFound("Unable to find document.");
+        }
+        
+        // if the document is attached to item
+        if (document.ItemId != null)
+        {
+            if (!ItemsController.CanSee(document.Item!, user))
+            {
+                return NotFound("Unable to find document.");
+            }
+        }
+
+        if (document.RequestId != null)
+        {
+            if (!RenewalRequestsController.CanSeeRequest(document.Request!, user))
+            {
+                return NotFound("Unable to find request.");
+            }
+        }
+
+        if (!System.IO.File.Exists(document.OriginalFileName))
+        {
+            return NotFound("Unable to find the file.");
+        }
+        
+        string path = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", document.StoredFileName);
+        
+        return PhysicalFile(path, "application/pdf", document.OriginalFileName);
+    }
+    
     private static DocumentResponse ToResponse(Document document)
     {
         return new DocumentResponse

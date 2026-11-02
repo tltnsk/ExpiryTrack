@@ -32,6 +32,15 @@ interface RenewalRequest {
     actions: RequestAction[]
 }
 
+
+interface RequestDocument {
+  id: number
+  originalFileName: string
+  sizeBytes: number
+  uploadedAt: string
+  uploadedByUserName: string
+}
+
 const route = useRoute()
 const auth = useAuthStore()
 const id = route.params.id
@@ -62,6 +71,9 @@ const employeeSaving = ref(false)
 const employeeComment = ref('')
 const employeeCompleteSaving = ref(false)
 const employeeCompleteError = ref('')
+
+
+const documents = ref<RequestDocument[]>([])
 
 async function loadRequest() {
     const response = await fetch(`/api/requests/${id}`)
@@ -201,6 +213,12 @@ async function completeRenewal() {
 const clarificationUsed = computed(() => request.value?.actions.some(a => a.type === 'ClarificationRequested') ?? false)
 
 onMounted(loadRequest)
+onMounted(async () => {
+    const documentsResponse = await fetch(`/api/requests/${id}/documents`)
+    if (documentsResponse.ok) {
+      documents.value = await documentsResponse.json()
+    }
+})
 
 </script>
 
@@ -307,6 +325,25 @@ onMounted(loadRequest)
         </div>
         <p v-if="employeeCompleteError" class="error">{{ employeeCompleteError }}</p>
     </form>
+
+    <h2>Documents</h2>
+        <p v-if="documents.length === 0">No documents.</p>
+        <table v-else>
+        <thead>
+            <tr>
+              <th>File Name</th>
+              <th>Uploaded At</th>
+              <th>Uploaded By</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-for="doc in documents" :key="doc.id">
+                <td><a :href="`/api/documents/${doc.id}/download`">{{ doc.originalFileName }}</a></td>
+                <td>{{ formatDateTime(doc.uploadedAt)}}</td>
+                <td>{{ doc.uploadedByUserName}}</td>
+            </tr>
+        </tbody>
+      </table>
     </div>
 </template>
 <style scoped>

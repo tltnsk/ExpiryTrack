@@ -61,6 +61,14 @@ interface ItemStateHistory {
   changedByUserName: string
 }
 
+interface ItemDocument {
+  id: number
+  originalFileName: string
+  sizeBytes: number
+  uploadedAt: string
+  uploadedByUserName: string
+}
+
 const route = useRoute()
 const auth = useAuthStore()
 const id = route.params.id
@@ -78,6 +86,7 @@ const responsibleUserId = ref<number | null>(null)
 const requests = ref<RenewalRequest[]>([])
 const periods = ref<LifecyclePeriod[]>([])
 const histories = ref<ItemStateHistory[]>([])
+const documents = ref<ItemDocument[]>([])
 
 onMounted(async () => {
     const response = await fetch(`/api/items/${id}`)
@@ -113,6 +122,11 @@ onMounted(async () => {
     const historiesResponse = await fetch(`/api/items/${id}/history`)
     if (historiesResponse.ok) {
       histories.value = await historiesResponse.json()
+    }
+
+    const documentsResponse = await fetch(`/api/items/${id}/documents`)
+    if (documentsResponse.ok) {
+      documents.value = await documentsResponse.json()
     }
 })
 
@@ -296,6 +310,27 @@ async function reassignEmployee() {
                 <td>{{ history.reason}}</td>
                 <td>{{ formatDateTime(history.changedAt) }}</td>
                 <td>{{ history.changedByUserName}}</td>
+            </tr>
+        </tbody>
+      </table>
+
+       <h2>Documents</h2>
+        <p v-if="documents.length === 0">No documents.</p>
+        <table v-else>
+        <thead>
+            <tr>
+              <th>File Name</th>
+              <th>Uploaded At</th>
+              <th>Uploaded By</th>
+              <th>Link to Documents</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-for="doc in documents" :key="doc.id">
+                <td>{{ doc.originalFileName}} </td>
+                <td>{{ formatDateTime(doc.uploadedAt)}}</td>
+                <td>{{ doc.uploadedByUserName}}</td>
+                <td><a :href="`/api/documents/${doc.id}/download`">{{ doc.originalFileName }}</a></td>
             </tr>
         </tbody>
       </table>

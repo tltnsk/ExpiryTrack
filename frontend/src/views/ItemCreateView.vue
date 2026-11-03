@@ -112,6 +112,8 @@ async function createItem() {
   const created = await response.json()
 
   if (selectedFile.value) {
+    // form data is a built in browser object for sending data the way an HTML form does
+    // as a list of name value pairs
     const formData = new FormData()
     formData.append('file', selectedFile.value)
 

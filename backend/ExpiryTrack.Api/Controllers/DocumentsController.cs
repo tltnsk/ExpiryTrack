@@ -323,7 +323,7 @@ public class DocumentsController : ControllerBase
         {
             if (!RenewalRequestsController.CanSeeRequest(document.Request!, user))
             {
-                return NotFound("Unable to find request.");
+                return NotFound("Unable to find document.");
             }
         }
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { formatDate } from '@/utils/format'
 
 interface Item {
     name: string,
@@ -9,10 +10,6 @@ interface Item {
 }
 
 const item = ref<Item | null>(null)
-const name = ref('')
-const expirationDate = ref('')
-const lifecycleState = ref('')
-
 const route = useRoute()
 const router = useRouter()
 const id = route.params.id
@@ -25,6 +22,18 @@ const errorMessage = ref('')
 const saving = ref(false)
 const saveError = ref('')
 const loading = ref(true)
+
+
+const selectedFile = ref<File | null>(null)
+
+function onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files.length > 0) {
+    selectedFile.value = input.files[0] ?? null
+  } else {
+    selectedFile.value = null
+  }
+}
 
 onMounted(async () => {
     const response = await fetch(`/api/items/${id}`)
@@ -41,6 +50,16 @@ onMounted(async () => {
 
 async function submitRequest() {
     saveError.value = ''
+    if (selectedFile.value) {
+      if (selectedFile.value.size > 10 * 1024 * 1024) {
+        saveError.value = 'File size should be no more than 10MB.'
+        return
+      }
+      if (selectedFile.value.type !== 'application/pdf') {
+        saveError.value = 'File type should be PDF.'
+        return 
+      }
+    }
     saving.value = true
     
     const response = await fetch(`/api/items/${id}/requests`, {
@@ -53,25 +72,43 @@ async function submitRequest() {
         }),
     })
 
-    saving.value = false 
-
     if (response.status === 400) {
     const contentType = response.headers.get('Content-Type') ?? ''
     if (contentType.includes('json')) {
       const problem = await response.json()
-      errorMessage.value = Object.values(problem.errors).flat().join(' ')
+      saveError.value = Object.values(problem.errors).flat().join(' ')
     } else {
-      errorMessage.value = await response.text()
+      saveError.value = await response.text()
     }
+    saving.value = false
     return
   }
   if (!response.ok) {
-    errorMessage.value = `Could not submit the request (error ${response.status}).`
+    saveError.value = `Could not submit the request (error ${response.status}).`
+    saving.value = false
     return
   }
 
-  const data = await response.json()
-  router.push(`/requests/${data.id}`)
+    const created = await response.json()
+
+  if (selectedFile.value) {
+    // form data is a built in browser object for sending data the way an HTML form does
+    // as a list of name value pairs
+    const formData = new FormData()
+    formData.append('file', selectedFile.value)
+
+    const documentResponse = await fetch(`/api/requests/${created.id}/documents`, {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!documentResponse.ok) {
+      alert('Request created, but the document could not be uploaded: ' + await documentResponse.text())
+    }
+  }
+
+  saving.value = false
+  router.push(`/requests/${created.id}`)
 }
 
 </script>
@@ -82,13 +119,13 @@ async function submitRequest() {
 
   <div v-else-if="item">
     <h2>Submit Renewal Request</h2>
-    <p>Renewal for {{ item.name }}, currently valid until {{ item.expirationDate }}</p>
+    <p>Renewal for {{ item.name }}, currently valid until {{ formatDate(item.expirationDate) }}</p>
 
     <form @submit.prevent="submitRequest">
     <div>
       <label>
           Proposed Expiration Date
-          <input v-if="item" v-model="proposedExpirationDate" required type="date" :min="item.expirationDate"/>
+          <input v-model="proposedExpirationDate" required type="date" :min="item.expirationDate"/>
       </label>
     </div>
     <div>
@@ -101,6 +138,12 @@ async function submitRequest() {
       <label>
         Justification
           <textarea v-model="justification" required  />
+      </label>
+    </div>
+    <div>
+      <label>
+        Attach a file
+        <input type="file" accept="application/pdf" @change="onFileChange"/>
       </label>
     </div>
       <button type="submit" :disabled="saving">{{ saving ? 'Submitting...' : 'Submit' }}</button>

@@ -29,6 +29,7 @@ watch (() => route.path, () => {
       <button @click="logout">Log out</button>
     </div>
     <nav v-if="auth.user">
+      <RouterLink to="/dashboard">Home</RouterLink>
       <RouterLink to="/items">Items</RouterLink>
       <RouterLink to="/categories">Categories</RouterLink>
       <RouterLink v-if="auth.user?.role === 'Administrator'" to="/departments">Departments</RouterLink>

@@ -32,7 +32,7 @@ async function login() {
   auth.user = await response.json()
 
   // redirect user to items 
-  router.push('/items')
+  router.push('/dashboard')
 }
 
 </script>

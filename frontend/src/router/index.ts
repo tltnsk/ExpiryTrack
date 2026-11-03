@@ -19,11 +19,12 @@ import RequestDetailView from '@/views/RequestDetailView.vue'
 import RenewalSubmitView from '@/views/RenewalSubmitView.vue'
 import ChangePasswordView from '@/views/ChangePasswordView.vue'
 import NotificationsView from '@/views/NotificationsView.vue'
+import DashboardView from '@/views/DashboardView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/items' },
+    { path: '/', redirect: '/dashboard' },
     { path: '/login', component: LoginView },
     { path: '/items', component: ItemsView },
     { path: '/items/:id', component: ItemDetailView },
@@ -43,6 +44,7 @@ const router = createRouter({
     { path: '/items/:id/renew', component: RenewalSubmitView },
     { path: '/change-password', component: ChangePasswordView },
     { path: '/notifications', component: NotificationsView },
+    { path: '/dashboard', component: DashboardView }
   ],
 })
 
@@ -61,12 +63,12 @@ router.beforeEach(async (to) => {
 
   // if authenticated and try to access login page, redirect them to items
   if (auth.user !== null && to.path === '/login') {
-    return '/items'
+    return '/dashboard'
   }
 
   // if any other user besides admin tries to access departments
   if (auth.user?.role !== "Administrator" && to.path.startsWith('/departments')) {
-    return '/items'
+    return '/dashboard'
   }
 
   // if any other user tries to edit or create categories
@@ -76,7 +78,7 @@ router.beforeEach(async (to) => {
 
   // only admins can access users
   if (auth.user?.role !== "Administrator" && to.path.startsWith('/users')) {
-    return '/items'
+    return '/dashboard'
   }
 })
 

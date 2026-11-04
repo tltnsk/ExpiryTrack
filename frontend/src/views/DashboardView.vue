@@ -47,10 +47,24 @@ interface ManagerDashboard {
     upcomingExpirations: DashboardItem[]
 }
 
+interface EmployeeDashboard {
+    totalItems: number
+    activeItems: number
+    expiringSoonItems: number
+    expiredItems: number
+    cancelledItems: number
+    itemsNeedingRenewal: DashboardItem[]
+    requestsNeedingClarification: DashboardRequest[]
+    requestsAwaitingCompletion: DashboardRequest[]
+    myOpenRequests: DashboardRequest[]
+    upcomingExpirations: DashboardItem[]
+}
+
 const auth = useAuthStore()
 
 const adminDashboard = ref<AdminDashboard | null>(null)
 const managerDashboard = ref<ManagerDashboard | null>(null)
+const employeeDashboard = ref<EmployeeDashboard | null>(null)
 const loading = ref(true)
 const errorMessage = ref('')
 
@@ -67,6 +81,14 @@ onMounted(async () => {
         const response = await fetch('/api/dashboard/manager')
         if (response.ok) {
             managerDashboard.value = await response.json()
+        } else {
+            errorMessage.value = 'Could not load the dashboard.'
+        }
+    }
+    if (auth.user?.role === 'Employee') {
+        const response = await fetch('/api/dashboard/employee')
+        if (response.ok) {
+            employeeDashboard.value = await response.json()
         } else {
             errorMessage.value = 'Could not load the dashboard.'
         }
@@ -221,6 +243,134 @@ onMounted(async () => {
             </thead>
             <tbody>
                 <tr v-for="item in managerDashboard.upcomingExpirations" :key="item.id">
+                    <td><RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
+                    <td>{{ formatDate(item.expirationDate) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- EMPLOYEE -->
+    <div v-else-if="employeeDashboard">
+        <div class="cards">
+            <div class="card">
+                <span class="number">{{ employeeDashboard.totalItems }}</span>
+                <span>Total Items</span>
+            </div>
+            <div class="card">
+                <span class="number">{{ employeeDashboard.activeItems }}</span>
+                <span>Active Items</span>
+            </div>
+            <div class="card">
+                <span class="number">{{ employeeDashboard.expiringSoonItems }}</span>
+                <span>Expiring Soon Items</span>
+            </div>
+            <div class="card">
+                <span class="number">{{ employeeDashboard.expiredItems }}</span>
+                <span>Expired Items</span>
+            </div>
+            <div class="card">
+                <span class="number">{{ employeeDashboard.cancelledItems }}</span>
+                <span>Cancelled Items</span>
+            </div>
+        </div>
+
+        <h3>Items Needing Renewal</h3>
+        <p v-if="employeeDashboard.itemsNeedingRenewal.length === 0">No items needing renewal.</p>
+        <table v-else>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Expiration Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="item in employeeDashboard.itemsNeedingRenewal" :key="item.id">
+                    <td><RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
+                    <td>{{ formatDate(item.expirationDate) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Requests Needing Clarification</h3>
+        <p v-if="employeeDashboard.requestsNeedingClarification.length === 0">No requests needing clarification.</p>
+        <table v-else>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Proposed Expiration Date</th>
+                    <th>Submitted At</th>
+                    <th>Proposed Cost</th>
+                    <th>Requested By</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="request in employeeDashboard.requestsNeedingClarification" :key="request.id">
+                    <td><RouterLink :to="`/requests/${request.id}`">{{ request.itemName }}</RouterLink></td>
+                    <td>{{ formatDate(request.proposedExpirationDate) }}</td>
+                    <td>{{ formatDateTime(request.submittedAt) }}</td>
+                    <td>{{ request.proposedCost ?? '-'}}</td>
+                    <td>{{ request.requestedByUserName }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+
+        <h3>Requests Awaiting Completion</h3>
+        <p v-if="employeeDashboard.requestsAwaitingCompletion.length === 0">No requests awaiting completion.</p>
+        <table v-else>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Proposed Expiration Date</th>
+                    <th>Submitted At</th>
+                    <th>Proposed Cost</th>
+                    <th>Requested By</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="request in employeeDashboard.requestsAwaitingCompletion" :key="request.id">
+                    <td><RouterLink :to="`/requests/${request.id}`">{{ request.itemName }}</RouterLink></td>
+                    <td>{{ formatDate(request.proposedExpirationDate) }}</td>
+                    <td>{{ formatDateTime(request.submittedAt) }}</td>
+                    <td>{{ request.proposedCost ?? '-'}}</td>
+                    <td>{{ request.requestedByUserName }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>My Open Requests</h3>
+        <p v-if="employeeDashboard.myOpenRequests.length === 0">No open requests.</p>
+        <table v-else>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Proposed Expiration Date</th>
+                    <th>Submitted At</th>
+                    <th>Proposed Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="request in employeeDashboard.myOpenRequests" :key="request.id">
+                    <td><RouterLink :to="`/requests/${request.id}`">{{ request.itemName }}</RouterLink></td>
+                    <td>{{ formatDate(request.proposedExpirationDate) }}</td>
+                    <td>{{ formatDateTime(request.submittedAt) }}</td>
+                    <td>{{ request.proposedCost ?? '-'}}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Upcoming expirations</h3>
+        <p v-if="employeeDashboard.upcomingExpirations.length === 0">No items are expiring soon.</p>
+        <table v-else>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Expires</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="item in employeeDashboard.upcomingExpirations" :key="item.id">
                     <td><RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
                     <td>{{ formatDate(item.expirationDate) }}</td>
                 </tr>

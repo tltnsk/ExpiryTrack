@@ -265,8 +265,8 @@ public class DashboardController : ControllerBase
                 ExpirationDate = item.CurrentPeriod!.ExpirationDate,
             });
         }
-        
-        
+
+
         // open requests
         List<RenewalRequest> openRequests = await _db.RenewalRequests
             .Include(r => r.Period)

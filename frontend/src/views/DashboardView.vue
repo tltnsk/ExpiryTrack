@@ -412,43 +412,26 @@ onMounted(async () => {
                 <span>Approved Cost</span>
             </div>
         </div>
-    </div>
-<!-- 
-        <h3>Items per department</h3>
+        <h3>Requests Needing Financial Review</h3>
         <table>
             <thead>
                 <tr>
-                    <th>Department</th>
-                    <th>Items</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="row in adminDashboard.itemsByDepartment" :key="row.departmentName">
-                    <td>{{ row.departmentName }}</td>
-                    <td>{{ row.itemCount }}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h3>Upcoming expirations</h3>
-        <p v-if="adminDashboard.upcomingExpirations.length === 0">No items are expiring soon.</p>
-        <table v-else>
-            <thead>
-                <tr>
                     <th>Item</th>
-                    <th>Department</th>
-                    <th>Expires</th>
+                    <th>Proposed Cost</th>
+                    <th>Proposed Expiration Date</th>
+                    <th>Requested By</th>
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="item in adminDashboard.upcomingExpirations" :key="item.id">
-                    <td><RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
-                    <td>{{ item.departmentName }}</td>
-                    <td>{{ formatDate(item.expirationDate) }}</td>
+                <tr v-for="request in financeDashboard.requestsNeedingFinancialReview" :key="request.id">
+                    <td>{{ request.itemName}}</td>
+                    <td>{{ request.proposedCost}}</td>
+                    <td>{{ formatDate(request.proposedExpirationDate) }}</td>
+                    <td>{{ request.requestedByUserName }}</td>
                 </tr>
             </tbody>
         </table>
-    </div> -->
+    </div>
 </template>
 <style scoped>
 .cards{

@@ -124,7 +124,7 @@ public class DashboardController : ControllerBase
         }
 
         // requests to approve
-        List<RenewalRequest> approveRequests = await _db.RenewalRequests
+        List<RenewalRequest> awaitingCompletion = await _db.RenewalRequests
             .Include(r => r.Period)
             .ThenInclude(p => p.Item)
             .Include(r => r.RequestedByUser)
@@ -132,10 +132,10 @@ public class DashboardController : ControllerBase
             .OrderBy(r => r.SubmittedAt)
             .ToListAsync();
 
-        List<DashboardRequest> requestsToApprove = new List<DashboardRequest>();
-        foreach (RenewalRequest approveRequest in approveRequests)
+        List<DashboardRequest> requestsAwaitingCompletion = new List<DashboardRequest>();
+        foreach (RenewalRequest request in awaitingCompletion)
         {
-            requestsToApprove.Add(ToDashboardRequest(approveRequest));
+            requestsAwaitingCompletion.Add(ToDashboardRequest(request));
         }
 
         // upcoming expirations

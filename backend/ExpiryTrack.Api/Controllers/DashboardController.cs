@@ -124,7 +124,7 @@ public class DashboardController : ControllerBase
         }
 
         // requests to approve
-        List<RenewalRequest> awaitingCompletion = await _db.RenewalRequests
+        List<RenewalRequest> approveRequests = await _db.RenewalRequests
             .Include(r => r.Period)
             .ThenInclude(p => p.Item)
             .Include(r => r.RequestedByUser)
@@ -132,10 +132,10 @@ public class DashboardController : ControllerBase
             .OrderBy(r => r.SubmittedAt)
             .ToListAsync();
 
-        List<DashboardRequest> requestsAwaitingCompletion = new List<DashboardRequest>();
-        foreach (RenewalRequest request in awaitingCompletion)
+        List<DashboardRequest> requestsToApprove = new List<DashboardRequest>();
+        foreach (RenewalRequest approveRequest in approveRequests)
         {
-            requestsAwaitingCompletion.Add(ToDashboardRequest(request));
+            requestsToApprove.Add(ToDashboardRequest(approveRequest));
         }
 
         // upcoming expirations
@@ -167,6 +167,132 @@ public class DashboardController : ControllerBase
             CancelledItems = cancelled,
             RequestsToReview = requestsToReview,
             RequestsAwaitingCompletion = requestsToApprove,
+            UpcomingExpirations = upcomingExpirations
+        });
+    }
+
+    [HttpGet("employee")]
+    [Authorize(Roles = "Employee")]
+    public async Task<IActionResult> GetEmployeeDashboard()
+    {
+        User user = await LoadCurrentUser();
+
+        int active = await _db.Items
+            .Where(i => i.ResponsibleUserId == GetCurrentUserId())
+            .CountAsync(i => i.LifecycleState == LifecycleState.Active);
+        int expiringSoon = await _db.Items
+            .Where(i => i.ResponsibleUserId == GetCurrentUserId())
+            .CountAsync(i => i.LifecycleState == LifecycleState.ExpiringSoon);
+        int expired = await _db.Items
+            .Where(i => i.ResponsibleUserId == GetCurrentUserId())
+            .CountAsync(i => i.LifecycleState == LifecycleState.Expired);
+        int cancelled = await _db.Items
+            .Where(i => i.ResponsibleUserId == GetCurrentUserId())
+            .CountAsync(i => i.LifecycleState == LifecycleState.Cancelled);
+
+        int totalItems = active + expiringSoon + expired + cancelled;
+
+        // items needing renewal
+        List<Item> needRenewal = await _db.Items
+            .Where(i => (i.LifecycleState == LifecycleState.ExpiringSoon || i.LifecycleState == LifecycleState.Expired)
+                        && i.ResponsibleUserId == user.Id
+                        && !_db.RenewalRequests.Any(r => r.PeriodId == i.CurrentPeriodId
+                            && r.Status != RequestStatus.Completed
+                            && r.Status != RequestStatus.Rejected))
+            .Include(i => i.Department)
+            .Include(i => i.CurrentPeriod)
+            .ToListAsync();
+
+        List<DashboardItem> itemsNeedingRenewal = new List<DashboardItem>();
+        foreach (Item item in needRenewal)
+        {
+            itemsNeedingRenewal.Add(new DashboardItem
+            {
+                Id = item.Id,
+                Name = item.Name,
+                DepartmentName = item.Department.Name,
+                ExpirationDate = item.CurrentPeriod!.ExpirationDate,
+            });
+        }
+
+        // requests needing clarification
+        List<RenewalRequest> needClarification = await _db.RenewalRequests
+            .Include(r => r.Period)
+            .ThenInclude(p => p.Item)
+            .Include(r => r.RequestedByUser)
+            .Where(r => r.Status == RequestStatus.ClarificationRequired && r.RequestedByUserId == GetCurrentUserId())
+            .OrderBy(r => r.SubmittedAt)
+            .ToListAsync();
+
+        List<DashboardRequest> requestsNeedingClarification = new List<DashboardRequest>();
+        foreach (RenewalRequest reviewRequest in needClarification)
+        {
+            requestsNeedingClarification.Add(ToDashboardRequest(reviewRequest));
+        }
+
+        // requests awaiting completion
+        List<RenewalRequest> awaitingCompletion = await _db.RenewalRequests
+            .Include(r => r.Period)
+            .ThenInclude(p => p.Item)
+            .Include(r => r.RequestedByUser)
+            .Where(r => r.Status == RequestStatus.Approved && r.RequestedByUserId == GetCurrentUserId())
+            .OrderBy(r => r.SubmittedAt)
+            .ToListAsync();
+
+        List<DashboardRequest> requestsAwaitingCompletion = new List<DashboardRequest>();
+        foreach (RenewalRequest request in awaitingCompletion)
+        {
+            requestsAwaitingCompletion.Add(ToDashboardRequest(request));
+        }
+
+        // upcoming expirations
+        List<Item> expiringItems = await _db.Items
+            .Where(i => i.LifecycleState == LifecycleState.ExpiringSoon && i.ResponsibleUserId == GetCurrentUserId())
+            .Include(i => i.Department)
+            .Include(i => i.CurrentPeriod)
+            .OrderBy(i => i.CurrentPeriod!.ExpirationDate)
+            .Take(5)
+            .ToListAsync();
+
+        List<DashboardItem> upcomingExpirations = new List<DashboardItem>();
+        foreach (Item item in expiringItems)
+        {
+            upcomingExpirations.Add(new DashboardItem
+            {
+                Id = item.Id,
+                Name = item.Name,
+                DepartmentName = item.Department.Name,
+                ExpirationDate = item.CurrentPeriod!.ExpirationDate,
+            });
+        }
+        
+        
+        // open requests
+        List<RenewalRequest> openRequests = await _db.RenewalRequests
+            .Include(r => r.Period)
+            .ThenInclude(p => p.Item)
+            .Include(r => r.RequestedByUser)
+            .Where(r => r.Status != RequestStatus.Completed && r.Status != RequestStatus.Rejected && r.RequestedByUserId == GetCurrentUserId())
+            .OrderBy(r => r.SubmittedAt)
+            .ToListAsync();
+
+        List<DashboardRequest> requestsOpen = new List<DashboardRequest>();
+        foreach (RenewalRequest request in openRequests)
+        {
+            requestsOpen.Add(ToDashboardRequest(request));
+        }
+
+        return Ok(new EmployeeDashboardResponse
+        {
+            TotalItems = totalItems,
+            ActiveItems = active,
+            ExpiringSoonItems = expiringSoon,
+            ExpiredItems = expired,
+            CancelledItems = cancelled,
+            ItemsNeedingRenewal = itemsNeedingRenewal,
+            RequestsNeedingClarification = requestsNeedingClarification,
+            RequestsAwaitingCompletion = requestsAwaitingCompletion,
+            MyOpenRequests = requestsOpen,
             UpcomingExpirations = upcomingExpirations
         });
     }

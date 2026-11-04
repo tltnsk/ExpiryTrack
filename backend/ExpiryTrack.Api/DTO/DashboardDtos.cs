@@ -13,6 +13,7 @@ public class DashboardItem
     public int Id { get; set; }
     public string Name { get; set; } = "";
     public string DepartmentName { get; set; } = "";
+    public decimal? Cost { get; set; }
     public DateOnly ExpirationDate { get; set; }
 }
 
@@ -66,4 +67,13 @@ public class EmployeeDashboardResponse
     public List<DashboardRequest> RequestsAwaitingCompletion { get; set; } = new();
     public List<DashboardRequest> MyOpenRequests { get; set; } = new();
     public List<DashboardItem> UpcomingExpirations { get; set; } = new();
+}
+
+public class FinanceDashboardResponse
+{
+    public int RequestsToReviewCount { get; set; }
+    public decimal TotalCostWaitingForReview { get; set; }
+    public decimal ExpectedUpcomingCosts { get; set; }
+    public decimal ApprovedCost { get; set; }
+    public List<DashboardRequest> RequestsNeedingFinancialReview { get; set; } = new();
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { formatDate, formatDateTime} from '@/utils/format'
+import { formatDate, formatDateTime, formatLabel} from '@/utils/format'
 
 interface DepartmentItemCount {
     departmentName: string
@@ -60,11 +60,19 @@ interface EmployeeDashboard {
     upcomingExpirations: DashboardItem[]
 }
 
+interface FinanceDashboard {
+    requestsToReviewCount: number
+    totalCostWaitingForReview: number
+    expectedUpcomingCosts: number
+    approvedCost: number
+    requestsNeedingFinancialReview: DashboardRequest[]
+}
 const auth = useAuthStore()
 
 const adminDashboard = ref<AdminDashboard | null>(null)
 const managerDashboard = ref<ManagerDashboard | null>(null)
 const employeeDashboard = ref<EmployeeDashboard | null>(null)
+const financeDashboard = ref<FinanceDashboard | null>(null)
 const loading = ref(true)
 const errorMessage = ref('')
 
@@ -89,6 +97,14 @@ onMounted(async () => {
         const response = await fetch('/api/dashboard/employee')
         if (response.ok) {
             employeeDashboard.value = await response.json()
+        } else {
+            errorMessage.value = 'Could not load the dashboard.'
+        }
+    }
+    if (auth.user?.role === 'FinanceOfficer') {
+        const response = await fetch('/api/dashboard/finance')
+        if (response.ok) {
+            financeDashboard.value = await response.json()
         } else {
             errorMessage.value = 'Could not load the dashboard.'
         }
@@ -301,7 +317,6 @@ onMounted(async () => {
                     <th>Proposed Expiration Date</th>
                     <th>Submitted At</th>
                     <th>Proposed Cost</th>
-                    <th>Requested By</th>
                 </tr>
             </thead>
             <tbody>
@@ -310,7 +325,6 @@ onMounted(async () => {
                     <td>{{ formatDate(request.proposedExpirationDate) }}</td>
                     <td>{{ formatDateTime(request.submittedAt) }}</td>
                     <td>{{ request.proposedCost ?? '-'}}</td>
-                    <td>{{ request.requestedByUserName }}</td>
                 </tr>
             </tbody>
         </table>
@@ -325,7 +339,6 @@ onMounted(async () => {
                     <th>Proposed Expiration Date</th>
                     <th>Submitted At</th>
                     <th>Proposed Cost</th>
-                    <th>Requested By</th>
                 </tr>
             </thead>
             <tbody>
@@ -334,7 +347,6 @@ onMounted(async () => {
                     <td>{{ formatDate(request.proposedExpirationDate) }}</td>
                     <td>{{ formatDateTime(request.submittedAt) }}</td>
                     <td>{{ request.proposedCost ?? '-'}}</td>
-                    <td>{{ request.requestedByUserName }}</td>
                 </tr>
             </tbody>
         </table>
@@ -348,6 +360,7 @@ onMounted(async () => {
                     <th>Proposed Expiration Date</th>
                     <th>Submitted At</th>
                     <th>Proposed Cost</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -356,6 +369,7 @@ onMounted(async () => {
                     <td>{{ formatDate(request.proposedExpirationDate) }}</td>
                     <td>{{ formatDateTime(request.submittedAt) }}</td>
                     <td>{{ request.proposedCost ?? '-'}}</td>
+                    <td>{{ formatLabel(request.status) }}</td>
                 </tr>
             </tbody>
         </table>
@@ -377,6 +391,64 @@ onMounted(async () => {
             </tbody>
         </table>
     </div>
+
+    <!-- FINANCE OFFICER -->
+    <div v-else-if="financeDashboard">
+        <div class="cards">
+            <div class="card">
+                <span class="number">{{ financeDashboard.requestsToReviewCount }}</span>
+                <span>Number of Requests to Review</span>
+            </div>
+            <div class="card">
+                <span class="number">{{ financeDashboard.totalCostWaitingForReview }}</span>
+                <span>Total Cost Waiting for Review</span>
+            </div>
+            <div class="card">
+                <span class="number">{{ financeDashboard.expectedUpcomingCosts }}</span>
+                <span>Expected Upcoming Cost</span>
+            </div>
+            <div class="card">
+                <span class="number">{{ financeDashboard.approvedCost }}</span>
+                <span>Approved Cost</span>
+            </div>
+        </div>
+    </div>
+<!-- 
+        <h3>Items per department</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Department</th>
+                    <th>Items</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="row in adminDashboard.itemsByDepartment" :key="row.departmentName">
+                    <td>{{ row.departmentName }}</td>
+                    <td>{{ row.itemCount }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Upcoming expirations</h3>
+        <p v-if="adminDashboard.upcomingExpirations.length === 0">No items are expiring soon.</p>
+        <table v-else>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Department</th>
+                    <th>Expires</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="item in adminDashboard.upcomingExpirations" :key="item.id">
+                    <td><RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
+                    <td>{{ item.departmentName }}</td>
+                    <td>{{ formatDate(item.expirationDate) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div> -->
 </template>
 <style scoped>
 .cards{

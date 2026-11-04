@@ -266,7 +266,6 @@ public class DashboardController : ControllerBase
             });
         }
 
-
         // open requests
         List<RenewalRequest> openRequests = await _db.RenewalRequests
             .Include(r => r.Period)
@@ -294,6 +293,53 @@ public class DashboardController : ControllerBase
             RequestsAwaitingCompletion = requestsAwaitingCompletion,
             MyOpenRequests = requestsOpen,
             UpcomingExpirations = upcomingExpirations
+        });
+    }
+
+    [HttpGet("finance")]
+    [Authorize(Roles = "FinanceOfficer")]
+    public async Task<IActionResult> GetFinanceDashboard()
+    {
+        User user = await LoadCurrentUser();
+
+        int requestsToReview = await _db.RenewalRequests
+            .Where(r => r.Status == RequestStatus.PendingFinancialReview)
+            .CountAsync();
+
+        decimal totalCostWaitingForReview = await _db.RenewalRequests
+            .Where(r => r.Status == RequestStatus.PendingFinancialReview && r.ProposedCost != null)
+            .SumAsync(p => p.ProposedCost) ?? 0;
+
+        decimal expectedUpcomingCosts = await _db.Items
+            .Where(i => i.LifecycleState == LifecycleState.ExpiringSoon && i.CurrentPeriod!.Cost != null)
+            .SumAsync(i => i.CurrentPeriod!.Cost) ?? 0;
+
+        decimal approvedCost = await _db.RenewalRequests
+            .Where(r => r.Status == RequestStatus.Approved && r.ProposedCost != null && r.NeedsFinancialReview)
+            .SumAsync(r => r.ProposedCost) ?? 0;
+
+        // requests needing financial review
+        List<RenewalRequest> requestsNeedingFinancialReview = await _db.RenewalRequests
+            .Include(r => r.Period)
+            .ThenInclude(p => p.Item)
+            .Include(r => r.RequestedByUser)
+            .Where(r => r.Status == RequestStatus.PendingFinancialReview)
+            .OrderBy(r => r.SubmittedAt)
+            .ToListAsync();
+
+        List<DashboardRequest> financialRequests = new List<DashboardRequest>();
+        foreach (RenewalRequest request in requestsNeedingFinancialReview)
+        {
+            financialRequests.Add(ToDashboardRequest(request));
+        }
+
+        return Ok(new FinanceDashboardResponse
+        {
+            RequestsToReviewCount = requestsToReview,
+            TotalCostWaitingForReview = totalCostWaitingForReview,
+            ExpectedUpcomingCosts = expectedUpcomingCosts,
+            ApprovedCost = approvedCost,
+            RequestsNeedingFinancialReview = financialRequests,
         });
     }
 

@@ -21,6 +21,11 @@ const labels: Record<string, string> = {
   ClarificationRequested: 'Clarification requested',
   ClarificationProvided: 'Clarification provided',
   ClosedByExpiry: 'Closed by expiry',
+  // user roles
+  Administrator: 'Administrator',
+  DepartmentManager: 'Department manager',
+  FinanceOfficer: 'Finance officer',
+  Employee: 'Employee',
 }
 
 export function formatLabel(value: string | null): string {
@@ -39,6 +44,11 @@ export function formatDateTime(value: string | null): string {
         hour: '2-digit',
         minute: '2-digit',
     })
+}
+
+export function formatMoney(value: number | null): string {
+    if (value === null) return '-'
+    return value.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})
 }
 
 export function formatDate(value: string | null): string {

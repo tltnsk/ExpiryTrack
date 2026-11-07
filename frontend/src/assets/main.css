@@ -1,11 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Sixtyfour&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 :root {
   --background: #fffeff;
-  --navy: #03058d;
-  --primary-dark: #001b25;
+  --navy: #08156aea;
+  --primary-dark: #011425;
   --text: #2b3a52; 
-  --light-blue: #255caf; 
+  --light-blue: #040b37e7; 
   --danger: #c53030;
   --border: #d9e4f5;
 }
@@ -15,10 +14,8 @@ html, body {
 }
 
 body {
-    margin: 0 auto;
-    max-width: 1000px;
-    padding: 16px 24px;
-    font-family: "Montserrat", sans-serif;
+  margin: 0;
+  font-family: system-ui, -apple-system, "Inter", sans-serif;
 }
 
 h1, h2, h3 {
@@ -29,47 +26,137 @@ a {
     color: var(--navy)
 }
 
-header {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas:
-    'logo user'
-    'logo nav';
-  align-items: center;
-  row-gap: 8px;
-  padding: 20px 0;
-  margin-bottom: 16px;
+/*page layout with sidebar on the left and page content on right*/
+.layout {
+  display: flex;
+  min-height: 100vh;
 }
 
-header h1 {
-  grid-area: logo;
-  margin: 0;
+main {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 32px;
 }
 
-/* the "name and logout */
-header > div {
-  grid-area: user;
-  justify-self: end;
-  color: var(--light-blue);
+.content {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* sidebar */
+.sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 230px;
+  height: 100vh;
+  padding: 24px 16px;
+  background: var(--navy);
+  color: white;
   font-size: 0.9em;
 }
 
-header nav {
-  grid-area: nav;
-  justify-self: end;
+.sidebar .logo {
+  margin: 0 12px 32px;
+  color: white;
+  font-size: 1.5em;
 }
 
-nav a {
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar a {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 6px;
+  color: white;
   text-decoration: none;
   font-weight: 500;
 }
 
-nav a.router-link-active {
-  background-color: var(--navy);
-  color: var(--background);
-  padding: 2px;
-  border-radius: 10px;
-  text-underline-offset: 4px;
+.sidebar a:hover {
+  opacity: 0.7;
+}
+
+.sidebar a.router-link-active {
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+}
+
+/* number of unread notifications */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: white;
+  font-size: 0.75em;
+}
+
+/* the logged-in user*/
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.account-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 8px;
+}
+
+/* initials */
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: white;
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.account-name {
+  font-weight: 600;
+}
+
+.account-role {
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.account button {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: transparent;
+  color: white;
+  font-size: 1em;
+  font-weight: 500;
+  text-align: left;
+}
+
+.account button:hover {
+  opacity: 0.7;
 }
 
 .error {
@@ -98,7 +185,7 @@ form {
   max-width: 420px;
   margin: 16px auto;
   padding: 24px;
-  background: white;
+  background: #f5f7fb;
 }
 
 form > div {
@@ -207,6 +294,33 @@ dd {
 
 /*for narrow screens*/
 @media (max-width: 700px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 16px;
+  }
+
+  .sidebar .logo {
+    margin-bottom: 12px;
+  }
+
+  .sidebar nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .account {
+    margin-top: 12px;
+  }
+
+  main {
+    padding: 16px;
+  }
   dl {
     grid-template-columns: 1fr;
     gap: 2px;

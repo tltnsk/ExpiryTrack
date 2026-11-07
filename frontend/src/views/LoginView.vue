@@ -9,15 +9,19 @@ const router = useRouter()
 const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
+const loggingIn = ref(false)
 
 async function login() {
   errorMessage.value = ''
+  loggingIn.value = true
 
   const response = await fetch('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json'},
     body: JSON.stringify({email: email.value, password: password.value}),
   })
+
+  loggingIn.value = false
 
   if (response.status == 401) {
     errorMessage.value = 'Invalid email or password.'
@@ -39,97 +43,72 @@ async function login() {
 
 <template>
   <div class="login-page">
-    <div class="login-card">
-      <h1>ExpiryTrack</h1>
+    <h1>ExpiryTrack</h1>
+    <form class="login-card" @submit.prevent="login">
+
       <p class="subtitle">Log in to your company account.</p>
-      <form @submit.prevent="login">
-        <div>
-          <label>Email <input v-model="email" type="email" required /></label>
-        </div>
-        <div>
-          <label>Password <input v-model="password" type="password" required /></label>
-        </div>
-        <button type="submit">Log in</button>
-        <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+      <label>Email <input v-model="email" type="email" required /></label>
+      <label>Password <input v-model="password" type="password" required /></label>
+      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+        <button type="submit" :disabled="loggingIn"> {{ loggingIn ? 'Logging in...' : 'Log in' }}</button>
       </form>
     </div>
-  </div>
 </template>
 
 <style scoped>
 .login-page {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  min-height: 80vh;
+  min-height: calc(100vh - 48px);
+  background: white;
+  position: fixed;
+  inset: 0;
 }
 
 .login-card {
   width: 100%;
   max-width: 340px;
+  margin: 0;
   padding: 32px;
   background: white;
   border: 0.5px solid var(--border);
   border-radius: 15px;
 }
 
+h1 {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto;
+  font-size: 1.6em;
+  padding: 0 auto;
+}
+
 .subtitle {
-  text-align: center;
-  color: var(--navy);
-  font-weight: 600;
-  font-size: 18px;
+  margin: 0 0 24px;
+  color: var(--text);
+  font-size: 0.9em;
 }
 
 h1 {
-  margin: 0;
+  margin: 0 0 24px;
+  font-size: 1.8em;
   text-align: center;
 }
 
-form > div {
-  margin-bottom: 16px;
-}
 
 label {
   display: block;
+  margin-bottom: 16px;
   font-size: 0.9em;
   font-weight: 500;
   color: var(--navy);
 }
 
-input {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  margin-top: 6px;
-  padding: 8px 8px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font: inherit;
-  color: var(--text);
-}
-
-input:focus {
-  border-color: var(--navy);
-}
-
-button {
-  width: 100%;
-  margin-top: 8px;
-  padding: 10px;
-  background: var(--navy);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.85;
-}
 
 .error {
-  margin: 10px 0 0;
-  text-align: center;
+  margin: 0 0 12px;
+  font-size: 0.9em;
 }
 </style>

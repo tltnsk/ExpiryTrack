@@ -1,31 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-:root {
-  --background: #ffffff;
-  --navy: #000d5fea;
-  --primary-dark: #011425;
-  --text: #2b3a52; 
-  --light-blue: #040b37e7; 
-  --danger: #c53030;
-  --border: #d9e4f5;
-}
-
-html, body {
-    background: var(--background);
-}
-
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, "Inter", sans-serif;
-}
-
-h1, h2, h3 {
-  color: var(--navy);
-}
-
-a {
-    color: var(--navy)
-}
-
+@import './base.css';
 /*page layout with sidebar on the left and page content on right*/
 .layout {
   display: flex;
@@ -53,30 +26,53 @@ main {
   box-sizing: border-box;
   width: 230px;
   height: 100vh;
-  padding: 24px 16px;
-  background: var(--navy);
-  color: white;
+  padding: 20px 12px;
+  background: var(--sidebar);
+  color: var(--text);
   font-size: 0.9em;
 }
 
 .sidebar .logo {
-  margin: 0 12px 32px;
-  color: white;
-  font-size: 1.5em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 12px 38px;
+}
+
+.logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid var(--border);
+}
+
+.logo-icon img {
+  width: 34px;
+  height: 34px;
+}
+
+.logo-text {
+  color: var(--primary);
+  font-size: 1.2em;
+  font-weight: 400;
 }
 
 .sidebar nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .sidebar a {
   display: flex;
   align-items: center;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: 6px;
-  color: white;
+  color: var(--text);
   text-decoration: none;
   font-weight: 500;
 }
@@ -86,8 +82,7 @@ main {
 }
 
 .sidebar a.router-link-active {
-  opacity: 0.8;
-  color: white;
+  opacity: 0.6;
 }
 
 /* number of unread notifications */
@@ -156,12 +151,10 @@ main {
 }
 
 .account button:hover {
-  opacity: 0.7;
+  opacity: 1;
+  background: var(--hover);
 }
 
-.error {
-  color: var(--danger);
-}
 
 table {
   width: 100%;
@@ -178,7 +171,7 @@ td {
 }
 
 tbody tr:hover {
-  background: #efeef3;
+  background: var(--sidebar);
 }
 
 form {
@@ -211,7 +204,7 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--navy);
+  border-color: var(--primary);
 }
 
 /* a label with a checkbox: the box next to the text */
@@ -231,7 +224,7 @@ label:has(input[type='checkbox']) {
 button {
   padding: 4px 4px;
   margin-right: 8px;
-  background: var(--navy);
+  background: var(--primary);
   color: white;
   border: none;
   border-radius: 10px;
@@ -264,11 +257,12 @@ header button {
   margin: 0 0 0 8px;
   padding: 4px 10px;
   color: white;
-  background-color: var(--navy);
+  background-color: var(--primary);
 }
 
-textarea {
-  resize: none;
+#logout-btn {
+  opacity: 0.6;
+  color: black;
 }
 
 /*details*/
@@ -283,13 +277,13 @@ dl {
 }
 
 dt {
-  color: var(--light-blue);
+  color: var(--muted);
   font-weight: 500;
 }
 
 dd {
   margin: 0;
-  color: var(--navy);
+  color: var(--text);
 }
 
 /*for narrow screens*/
@@ -360,15 +354,15 @@ dd {
 .PendingManagerApproval {
   background: #2f61e2;
 }
-.ClarificationRequired {
+.ClarificationRequired, .Expired {
   background: #f7921f;
 }
-.Approved {
+.Approved, .Active{
   background: #33ca63;
 }
-.Rejected {
+.Rejected, .ExpiringSoon {
   background: #e53b3b;
 }
-.Completed {
+.Completed, .Cancelled {
   background: #343131;
 }

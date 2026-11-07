@@ -55,7 +55,7 @@ async function importFile() {
     <RouterLink to="/items">Back to items</RouterLink>
     <p>Fill in the template and upload it. If any row has an error, nothing is imported.</p>
     <p>Download the <a href="/import-template.xlsx" download>Template</a></p>
-    <div>
+    <div class="attachment">
       <label>
         Attach a file
         <input type="file" accept=".xlsx" @change="onFileChange"/>
@@ -70,3 +70,16 @@ async function importFile() {
       <p v-if="createdCount !== null">{{ createdCount }} items imported </p>
     </div>
 </template>
+<style scoped>
+.attachment {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+button {
+    max-width: 120px;
+    align-self: center;
+    padding: 8px;
+}
+</style>

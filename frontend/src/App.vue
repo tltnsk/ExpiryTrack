@@ -4,6 +4,7 @@ import { useAuthStore } from './stores/auth';
 import { useNotificationsStore } from '@/stores/notifications';
 import { computed, watch } from 'vue'
 import { formatLabel } from '@/utils/format'
+import logo from '@/assets/expiry-track-logo.png'
 
 const auth = useAuthStore()
 const notificationsStore = useNotificationsStore()
@@ -31,7 +32,10 @@ watch (() => route.path, () => {
 <template>
   <div class="layout">
     <aside v-if="auth.user" class="sidebar">
-      <h1 class="logo">ExpiryTrack</h1>
+      <div class="logo">
+        <span class="logo-icon"><img :src="logo" alt=""/></span>
+        <span class="logo-text">ExpiryTrack</span>
+      </div>
       <nav>
         <RouterLink to="/dashboard">Home</RouterLink>
         <RouterLink to="/items">Items</RouterLink>
@@ -54,7 +58,7 @@ watch (() => route.path, () => {
           </div>
         </div>
         <RouterLink to="/change-password">Change Password</RouterLink>
-        <button @click="logout">Log out</button>
+        <button @click="logout" id="logout-btn">Log out</button>
       </div>
     </aside>
 

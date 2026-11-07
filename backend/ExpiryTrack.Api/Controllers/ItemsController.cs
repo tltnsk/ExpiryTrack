@@ -150,6 +150,27 @@ public class ItemsController : ControllerBase
         Item? created = await LoadItem(itemResult.Item!.Id);
         return Created($"/api/items/{created!.Id}", ToResponse(created));
     }
+    
+    // POST /api/items/import
+    [HttpPost("import")]
+    [Authorize(Roles = "DepartmentManager")]
+    public async Task<IActionResult> Import(IFormFile file)
+    {
+        if (file == null || file.Length == 0) return BadRequest(new {errors = new[] {"Choose a file to import."}});
+        
+        if (file.Length > 2 * 1024 * 1024) return BadRequest(new {errors = new[] { "The file must be 2MB or smaller." }});
+
+        if (Path.GetExtension(file.FileName).ToLower() != ".xlsx")
+        {
+            return BadRequest(new { errors = new[] {"You can only upload an XLSX file."}});
+        }
+        using var stream = file.OpenReadStream();
+        ItemResult result = await _itemService.ImportAsync(GetCurrentUserId(), stream);
+        
+        if (result.Error != null) return BadRequest(new {errors = new[] {result.Error}});
+        if (result.RowErrors.Count > 0) return BadRequest(new {errors = result.RowErrors});
+        return Ok(new {createdCount = result.CreatedCount});
+    }
 
     // updating an item
     // only employee and department manager can update the items that are accessible for them 

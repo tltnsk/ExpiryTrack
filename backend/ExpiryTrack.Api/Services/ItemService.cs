@@ -28,7 +28,7 @@ public class ItemService
         {
             if (request.ResponsibleUserId == null)
             {
-                return "Select the responsible employee.";
+                return "Responsible user not found.";
             }
             
             var responsibleUser = await _db.Users
@@ -84,7 +84,7 @@ public class ItemService
     {
         int responsibleUserId = currentUser.Role.Name == "Employee" ? currentUser.Id : request.ResponsibleUserId!.Value;
         int departmentId = currentUser.DepartmentId!.Value;
-        var category = await _db.Categories.FindAsync(request.CategoryId);
+        var category = (await _db.Categories.FindAsync(request.CategoryId))!;
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
  
         // calculate how many days are left until expiration
@@ -278,7 +278,7 @@ public class ItemService
                 var referenceNumber = sheet.Cell(row,8).GetString().Trim();
                 if (referenceNumber.Length > 100)
                 {
-                    result.RowErrors.Add($"Row {row}: Reference Number can be up to 150 characters long.");
+                    result.RowErrors.Add($"Row {row}: Reference Number can be up to 100 characters long.");
                     continue;
                 }
                 var description = sheet.Cell(row,9).GetString().Trim();
@@ -296,6 +296,31 @@ public class ItemService
                     Description = description == "" ? null : description,
                 }));
             }
+            
+            foreach (var (row,request) in requests)
+            {
+                string? error = await CheckNewItem(currentUser, request);
+                if (error != null)
+                {
+                    result.RowErrors.Add($"Row {row}: {error}");
+                }
+            }
+            
+            // if some rows couldn't be read nothing is impored
+            if (result.RowErrors.Count > 0)
+            {
+                return result;
+            }
+            
+            // if all rows are valid save the items in one transaction
+            await using var transaction = await _db.Database.BeginTransactionAsync();
+            foreach (var (row, request) in requests)
+            {
+                await AddNewItem(currentUser, request);
+            }
+            await transaction.CommitAsync();
+
+            result.CreatedCount  = requests.Count;
         }
         return result;
     }

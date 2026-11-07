@@ -1,3 +1,4 @@
+using ClosedXML.Excel;
 using ExpiryTrack.Api.Data;
 using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
@@ -166,7 +167,136 @@ public class ItemService
     
     public async Task<ItemResult> ImportAsync(int userId, Stream file)
     {
-        throw new NotImplementedException();
+        var result = new ItemResult();
+        var currentUser = await _db.Users
+            .Include(u => u.Role)
+            .SingleAsync(u => u.Id == userId);
+        
+        // open the Excel file
+        XLWorkbook workbook;
+        try
+        {
+            // open the .xlsx
+            workbook = new XLWorkbook(file);
+        }
+        catch
+        {
+            return new ItemResult { Error = "The file is not a valid Excel file." };
+        }
+
+        using (workbook)
+        {
+            var sheet = workbook.Worksheet(1); // the first sheet
+
+            string[] headers =
+            {
+                "Name", "Category", "Responsible email", "Start date", "Expiration date", "Cost", "Provider",
+                "Reference number", "Description"
+            };
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                if (sheet.Cell(1, i + 1).GetString().Trim() != headers[i])
+                {
+                    return new ItemResult { Error = "The file doesn't match the template." };
+                }
+            }
+
+            var lastUsedRow = sheet.LastRowUsed();
+            if (lastUsedRow == null || lastUsedRow.RowNumber() < 2)
+            {
+                return new ItemResult {Error = "The file is empty."};
+            }
+            int lastRow = lastUsedRow.RowNumber();
+            
+            // the rows that could be read
+            var requests = new List<(int Row, CreateItemRequest Request)>();
+
+            for (int row = 2; row <= lastRow; row++)
+            {
+                if (sheet.Row(row).IsEmpty()) continue;
+                
+                var name = sheet.Cell(row,1).GetString().Trim();
+                if (name == "")
+                {
+                    result.RowErrors.Add($"Row {row}: Name is required.");
+                    continue;
+                }
+
+                if (name.Length > 150)
+                {
+                    result.RowErrors.Add($"Row {row}: Name can be up to 150 characters long.");
+                    continue;
+                }
+                
+                var categoryName = sheet.Cell(row,2).GetString().Trim();
+                var category = await _db.Categories.FirstOrDefaultAsync(c => c.Name == categoryName);
+                if (category == null)
+                {
+                    result.RowErrors.Add($"Row {row}: Category doesn't exist.");
+                    continue;
+                }
+                
+                var responsibleEmail = sheet.Cell(row,3).GetString().Trim();
+                var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == responsibleEmail);
+                if (user == null)
+                {
+                    result.RowErrors.Add($"Row {row}: No user with this email.");
+                    continue;
+                }
+
+                if (!sheet.Cell(row, 4).TryGetValue(out DateTime startDate))
+                {
+                    result.RowErrors.Add($"Row {row}: Start date is invalid.");
+                    continue;
+                }
+                
+                if (!sheet.Cell(row, 5).TryGetValue(out DateTime expirationDate))
+                {
+                    result.RowErrors.Add($"Row {row}: Expiration date is invalid.");
+                    continue;
+                }
+
+                decimal? cost = null;
+                if (!sheet.Cell(row, 6).IsEmpty())
+                {
+                    if (!sheet.Cell(row, 6).TryGetValue(out decimal costValue) || costValue <= 0)
+                    {
+                        result.RowErrors.Add($"Row {row}: Cost must be greater than zero.");
+                        continue;
+                    }
+                    cost = costValue;
+                }
+           
+                var provider = sheet.Cell(row,7).GetString().Trim();
+                if (provider.Length > 150)
+                {
+                    result.RowErrors.Add($"Row {row}: Provider can be up to 150 characters long.");
+                    continue;
+                }
+                
+                var referenceNumber = sheet.Cell(row,8).GetString().Trim();
+                if (referenceNumber.Length > 100)
+                {
+                    result.RowErrors.Add($"Row {row}: Reference Number can be up to 150 characters long.");
+                    continue;
+                }
+                var description = sheet.Cell(row,9).GetString().Trim();
+                
+                requests.Add((row, new CreateItemRequest
+                {
+                    Name = name,
+                    CategoryId = category.Id,
+                    ResponsibleUserId = user.Id,
+                    StartDate = DateOnly.FromDateTime(startDate),
+                    ExpirationDate = DateOnly.FromDateTime(expirationDate),
+                    Cost = cost,
+                    Provider = provider == "" ? null : provider,
+                    ReferenceNumber = referenceNumber == "" ? null : referenceNumber,
+                    Description = description == "" ? null : description,
+                }));
+            }
+        }
+        return result;
     }
-    
 }

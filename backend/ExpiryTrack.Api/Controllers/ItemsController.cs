@@ -6,6 +6,7 @@ using ExpiryTrack.Api.Data;
 using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
 using ExpiryTrack.Api.Models.Enums;
+using ExpiryTrack.Api.Services;
 
 
 namespace ExpiryTrack.Api.Controllers;
@@ -16,6 +17,7 @@ namespace ExpiryTrack.Api.Controllers;
 public class ItemsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly ItemService _itemService;
 
     // helper method for getting the user id from the authentication claims
     private int GetCurrentUserId()
@@ -50,9 +52,10 @@ public class ItemsController : ControllerBase
         return true;
     }
 
-    public ItemsController(AppDbContext db)
+    public ItemsController(AppDbContext db, ItemService itemService)
     {
         _db = db;
+        _itemService = itemService;
     }
 
     // get an item by its id 
@@ -141,139 +144,11 @@ public class ItemsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateItemRequest request)
     {
-        // getting the current user
-        var currentUser = await _db.Users
-            .Include(u => u.Role)
-            .SingleAsync(u => u.Id == GetCurrentUserId());
-
-        int responsibleUserId;
-        int departmentId;
-
-        // Determine the responsible employee and department
-        // if the current user is an employee, they're automatically responsible for the item they're creating 
-        if (currentUser.Role.Name == "Employee")
-        {
-            responsibleUserId = currentUser.Id;
-            departmentId = currentUser.DepartmentId.Value;
-        }
-        else
-        {
-            departmentId = currentUser.DepartmentId.Value;
-            // return bad request if responsible employee isn't specified
-            if (request.ResponsibleUserId == null)
-            {
-                return BadRequest("Select the responsible employee.");
-            }
-
-            // load the responsible user from the database
-            var responsibleUser = await _db.Users
-                .Include(u => u.Role)
-                .SingleOrDefaultAsync(u => u.Id == request.ResponsibleUserId);
-
-            if (responsibleUser == null)
-            {
-                return BadRequest("Responsible user not found.");
-            }
-
-            if (!responsibleUser.IsActive)
-            {
-                return BadRequest("Responsible user is not active.");
-            }
-
-            if (responsibleUser.Role.Name != "Employee")
-            {
-                return BadRequest("Responsible user must be an employee.");
-            }
-
-            if (responsibleUser.DepartmentId != currentUser.DepartmentId)
-            {
-                return BadRequest("The employee does not belong to your department.");
-            }
-            responsibleUserId = responsibleUser.Id;
-        }
-
-        var category = await _db.Categories.FindAsync(request.CategoryId);
-
-        // check that the category actually exists and is active
-        if (category == null || !category.IsActive)
-        {
-            return BadRequest("The category does not exist or it is not active.");
-        }
-
-        // get today's date 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
-        if (request.ExpirationDate <= today)
-        {
-            return BadRequest("The expiration date must be a future date.");
-        }
-
-        if (request.StartDate >= request.ExpirationDate)
-        {
-            return BadRequest("The start date must be before the expiration date.");
-        }
-
-        // calculate how many days are left until expiration
-        int daysLeft = request.ExpirationDate.DayNumber - today.DayNumber;
-
-        // set the state based on how many days the item has left to the warning period
-
-        var state = daysLeft <= category.WarningPeriodDays ? LifecycleState.ExpiringSoon : LifecycleState.Active;
-
-        // for data consistency, we need to save everything in one transaction
-        using var transaction = _db.Database.BeginTransaction();
-
-        var now = DateTime.UtcNow;
-
-        // create the item 
-        var item = new Item
-        {
-            ResponsibleUserId = responsibleUserId,
-            Name = request.Name.Trim(),
-            Description = request.Description,
-            Provider = request.Provider,
-            ReferenceNumber = request.ReferenceNumber,
-            CategoryId = category.Id,
-            DepartmentId = departmentId,
-            LifecycleState = state,
-            StateChangedAt = now,
-            CreatedAt = now,
-        };
-
-        _db.Items.Add(item);
-        await _db.SaveChangesAsync();
-
-        // create the first lifecycle period
-        var period = new LifecyclePeriod
-        {
-            ItemId = item.Id,
-            PeriodNumber = 1,
-            StartDate = request.StartDate,
-            ExpirationDate = request.ExpirationDate,
-            Cost = request.Cost,
-            CreatedAt = now,
-        };
-
-        _db.LifecyclePeriods.Add(period);
-        await _db.SaveChangesAsync();
-
-        // set the current period 
-        item.CurrentPeriodId = period.Id;
-
-        _db.ItemStateHistory.Add(new ItemStateHistory
-        {
-            ItemId = item.Id,
-            FromState = null,
-            ToState = state,
-            ChangedByUserId = currentUser.Id,
-            Reason = "Item created",
-            ChangedAt = now,
-        });
-        await _db.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        var created = await LoadItem(item.Id);
-        return Created($"/api/items/{item.Id}", ToResponse(created!));
+        int userId = GetCurrentUserId();
+        ItemResult itemResult = await _itemService.CreateAsync(userId, request);
+        if (itemResult.Error != null) return BadRequest(itemResult.Error);
+        Item? created = await LoadItem(itemResult.Item!.Id);
+        return Created($"/api/items/{created!.Id}", ToResponse(created));
     }
 
     // updating an item

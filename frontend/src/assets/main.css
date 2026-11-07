@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 :root {
-  --background: #fffeff;
-  --navy: #08156aea;
+  --background: #ffffff;
+  --navy: #09145aea;
   --primary-dark: #011425;
   --text: #2b3a52; 
   --light-blue: #040b37e7; 
@@ -86,7 +86,7 @@ main {
 }
 
 .sidebar a.router-link-active {
-  background: rgba(255, 255, 255, 0.18);
+  opacity: 0.8;
   color: white;
 }
 
@@ -185,7 +185,7 @@ form {
   max-width: 420px;
   margin: 16px auto;
   padding: 24px;
-  background: #f5f7fb;
+  background: #ffffff;
 }
 
 form > div {

@@ -47,6 +47,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<ExpirationService>();
 builder.Services.AddScoped<RenewalService>();
+builder.Services.AddScoped<ItemService>();
 builder.Services.AddHostedService<ExpirationJob>();
 
 var app = builder.Build();

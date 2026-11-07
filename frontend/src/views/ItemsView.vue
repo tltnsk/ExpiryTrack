@@ -33,6 +33,7 @@ onMounted(async() => {
 <template>
     <h2>Items</h2>
     <RouterLink v-if="auth.user?.role === 'Employee' || auth.user?.role === 'DepartmentManager'" to="/items/new">New Item</RouterLink>
+    <RouterLink v-if="auth.user?.role === 'DepartmentManager'" to="/items/import">Import Items from Excel</RouterLink>
 
     <p v-if="loading">Loading...</p>
     <p v-else-if="errorMessage"> {{ errorMessage }}</p>

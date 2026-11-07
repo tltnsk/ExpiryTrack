@@ -20,6 +20,7 @@ import RenewalSubmitView from '@/views/RenewalSubmitView.vue'
 import ChangePasswordView from '@/views/ChangePasswordView.vue'
 import NotificationsView from '@/views/NotificationsView.vue'
 import DashboardView from '@/views/DashboardView.vue'
+import ItemImportView from '@/views/ItemImportView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -44,7 +45,8 @@ const router = createRouter({
     { path: '/items/:id/renew', component: RenewalSubmitView },
     { path: '/change-password', component: ChangePasswordView },
     { path: '/notifications', component: NotificationsView },
-    { path: '/dashboard', component: DashboardView }
+    { path: '/dashboard', component: DashboardView },
+    { path: '/items/import', component: ItemImportView }
   ],
 })
 
@@ -79,6 +81,10 @@ router.beforeEach(async (to) => {
   // only admins can access users
   if (auth.user?.role !== "Administrator" && to.path.startsWith('/users')) {
     return '/dashboard'
+  }
+
+  if (auth.user?.role !== "DepartmentManager" && to.path.startsWith('/items/import')) {
+    return '/items'
   }
 })
 

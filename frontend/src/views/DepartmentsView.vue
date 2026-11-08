@@ -31,8 +31,7 @@ onMounted(async () => {
 
 <template>
 <h2>Departments</h2>
-
-  <RouterLink v-if="auth.user?.role === 'Administrator'" to="/departments/new">New Department</RouterLink>
+  <button v-if="auth.user?.role === 'Administrator'" class="add-btn"><RouterLink to="/departments/new" class="add-link">+ New Department</RouterLink></button>
 
   <p v-if="loading">Loading...</p>
   <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>

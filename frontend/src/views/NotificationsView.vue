@@ -62,7 +62,7 @@ async function markAsRead(id: number)  {
             <p>{{ formatDateTime(notification.createdAt )}}</p>
             <RouterLink v-if="notification.itemId !== null" :to="`/items/${notification.itemId}`">Open Item</RouterLink>
             <RouterLink v-else-if="notification.requestId !== null" :to="`/requests/${notification.requestId}`">Open Request</RouterLink>
-            <button v-if="!notification.isRead" class="read-button" title="Mark as read" aria-label="Mark as read" @click="markAsRead(notification.id)">✔️</button>
+            <button v-if="!notification.isRead" class="read-button" title="Mark as read" aria-label="Mark as read" @click="markAsRead(notification.id)">✓</button>
 
         </div>
     </div>

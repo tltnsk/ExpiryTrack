@@ -59,7 +59,7 @@ async function toggleActive(user: User) {
 <template>
   <h2>Users</h2>
 
-  <RouterLink v-if="auth.user?.role === 'Administrator'" to="/users/new">New user</RouterLink>
+  <button v-if="auth.user?.role === 'Administrator'" class="add-btn"><RouterLink to="/users/new" class="add-link">+ New User</RouterLink></button>
 
   <p v-if="actionError" class="error">{{ actionError }}</p>
   <p v-if="loading">Loading...</p>

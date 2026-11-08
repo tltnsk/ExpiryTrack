@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { formatDate, formatLabel} from '@/utils/format'
+import { formatDate, formatLabel, formatMoney} from '@/utils/format'
 
 // ItemResponse 
 interface Item {
@@ -12,6 +12,7 @@ interface Item {
     lifecycleState: string
     expirationDate: string
     cost: number | null
+    provider: string | null
 }
 
 const items = ref<Item[]>([])
@@ -28,6 +29,17 @@ onMounted(async() => {
     }
     loading.value = false
 })
+
+const search = ref('')
+const filteredItems = computed(() => {
+  const text = search.value.trim().toLowerCase()
+
+  return items.value.filter((item) => 
+    item.name.toLowerCase().includes(text) ||
+    (item.provider ?? '').toLowerCase().includes(text) 
+  )
+})
+
 </script>
 
 <template>
@@ -35,29 +47,34 @@ onMounted(async() => {
     <RouterLink v-if="auth.user?.role === 'Employee' || auth.user?.role === 'DepartmentManager'" to="/items/new">New Item</RouterLink>
     <RouterLink v-if="auth.user?.role === 'DepartmentManager'" to="/items/import">Import Items from Excel</RouterLink>
 
+    <input v-model="search" type="search" placeholder="Search by name or provider" />
     <p v-if="loading">Loading...</p>
-    <p v-else-if="errorMessage"> {{ errorMessage }}</p>
+    <p v-else-if="errorMessage" class="error"> {{ errorMessage }}</p>
     <p v-else-if="items.length===0">No items.</p>
+    <p v-else-if="filteredItems.length===0">No items match your search.</p>
+
 
     <table v-else>
         <thead>
             <tr>
               <th>Name</th>
               <th>Category</th>
-              <th>Responsible</th>
+              <th>Responsible Employee</th>
               <th>Expires</th>
+              <th>Provider</th>
               <th>Cost</th>
               <th>State</th>
             </tr>
         </thead>
         <tbody>
-            <tr v-for="item in items" :key="item.id">
+            <tr v-for="item in filteredItems" :key="item.id">
                 <td>
                     <RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
                 <td>{{ item.categoryName }}</td>
                 <td>{{ item.responsibleUserName }}</td>
                 <td>{{ formatDate(item.expirationDate) }}</td>
-                <td>{{ item.cost ?? '-' }}</td>
+                <td>{{ item.provider ?? '-'}}</td>
+                <td>{{ formatMoney(item.cost) }}</td>
                 <td>
                 <span class="state" :class="item.lifecycleState">{{ formatLabel(item.lifecycleState) }}</span>
                 </td>
@@ -66,28 +83,5 @@ onMounted(async() => {
     </table>
 </template>
 <style scoped>
-.state {
-  padding: 2px 8px;
-  border-radius: 3px;
-  font-size: 0.85em;
-}
-.Active {
-  background: #349a54;
-  color: white;
-}
-.ExpiringSoon {
-  background: #d54747;
-  color: white;
-}
-.Expired {
-  background: #fbaa29;
-  color: white;
-}
-.Cancelled {
-  background: #343131;
-  color: white;
-}
-.error {
-  color: #c53030;
-}
+
 </style>

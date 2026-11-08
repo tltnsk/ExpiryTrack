@@ -1,0 +1,184 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+main {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 32px;
+}
+
+.content {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* sidebar */
+.sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 230px;
+  height: 100vh;
+  padding: 20px 12px;
+  background: var(--sidebar);
+  color: var(--text);
+  font-size: 0.9em;
+}
+
+.sidebar .logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 12px 38px;
+}
+
+.logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid var(--border);
+}
+
+.logo-icon img {
+  width: 34px;
+  height: 34px;
+}
+
+.logo-text {
+  color: var(--primary);
+  font-size: 1.2em;
+  font-weight: 400;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar a {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.sidebar a:hover {
+  opacity: 0.7;
+}
+
+.sidebar a.router-link-active {
+  opacity: 0.6;
+}
+
+/* number of unread notifications */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: white;
+  font-size: 0.75em;
+}
+
+/* the logged-in user*/
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.account-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 8px;
+}
+
+/* initials */
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: white;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.account-name {
+  font-weight: 600;
+}
+
+.account-role {
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.account button {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: transparent;
+  color: white;
+  font-size: 1em;
+  font-weight: 500;
+  text-align: left;
+}
+
+.account button:hover {
+  opacity: 1;
+  background: var(--hover);
+}
+/*for narrow screens*/
+@media (max-width: 700px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 16px;
+  }
+
+  .sidebar .logo {
+    margin-bottom: 12px;
+  }
+
+  .sidebar nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .account {
+    margin-top: 12px;
+  }
+  
+  main {
+    padding: 16px;
+  }
+}

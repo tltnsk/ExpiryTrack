@@ -1,3 +1,4 @@
+using System.Security.AccessControl;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -46,7 +47,7 @@ public class RenewalRequestsController : ControllerBase
 
         User currentUser = await LoadCurrentUser();
 
-        if (renewalRequest == null || !CanSeeRequest(renewalRequest, currentUser)) return NotFound();
+        if (renewalRequest == null || !AccessRules.CanSeeRequest(renewalRequest, currentUser)) return NotFound();
 
         return Ok(RenewalRequestResponse.FromRequest(renewalRequest));
     }
@@ -64,7 +65,7 @@ public class RenewalRequestsController : ControllerBase
 
         if (item == null) return NotFound();
 
-        if (ItemsController.CanSee(item, currentUser))
+        if (AccessRules.CanSeeItem(item, currentUser))
         {
             List<RenewalRequest> renewalRequests;
 
@@ -79,7 +80,7 @@ public class RenewalRequestsController : ControllerBase
             var responses = new List<RenewalRequestResponse>();
             foreach (var renewalRequest in renewalRequests)
             {
-                if (CanSeeRequest(renewalRequest, currentUser))
+                if (AccessRules.CanSeeRequest(renewalRequest, currentUser))
                 {
                     responses.Add(RenewalRequestResponse.FromRequest(renewalRequest));
                 }
@@ -221,24 +222,5 @@ public class RenewalRequestsController : ControllerBase
         return await _db.Users
             .Include(u => u.Role)
             .SingleAsync(u => u.Id == GetCurrentUserId());
-    }
-
-    // helper method that returns whether the user has access to the item 
-    public static bool CanSeeRequest(RenewalRequest request, User currentUser)
-    {
-        // employees can only see the requests for items they're responsible for
-        if (currentUser.Role.Name == "Employee")
-            return request.Period.Item.ResponsibleUserId == currentUser.Id;
-
-        // department managers can see the requests for the items in their department
-        if (currentUser.Role.Name == "DepartmentManager")
-            return request.Period.Item.DepartmentId == currentUser.DepartmentId;
-
-        // finance officers can only see the requests for items that need financial review
-        if (currentUser.Role.Name == "FinanceOfficer")
-            return request.NeedsFinancialReview;
-
-        // admins can see all the requests 
-        return true;
     }
 }

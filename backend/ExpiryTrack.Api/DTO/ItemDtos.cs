@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ExpiryTrack.Api.Models;
 using ExpiryTrack.Api.Models.Enums;
 
 namespace ExpiryTrack.Api.DTO;
@@ -95,6 +96,32 @@ public class ItemResponse
     public DateOnly StartDate { get; set; }
     public DateOnly ExpirationDate { get; set; }
     public decimal? Cost { get; set; }
+    
+    // convert an Item entity to an ItemResponse DTO 
+    public static ItemResponse ToResponse(Item item)
+    {
+        return new ItemResponse
+        {
+            Id = item.Id,
+            Name = item.Name,
+            Description = item.Description,
+            Provider = item.Provider,
+            ReferenceNumber = item.ReferenceNumber,
+            LifecycleState = item.LifecycleState,
+            StateChangedAt = item.StateChangedAt,
+            CreatedAt = item.CreatedAt,
+            CategoryId = item.CategoryId,
+            CategoryName = item.Category.Name,
+            DepartmentId = item.DepartmentId,
+            DepartmentName = item.Department.Name,
+            ResponsibleUserId = item.ResponsibleUserId,
+            ResponsibleUserName = item.ResponsibleUser.FirstName + " " + item.ResponsibleUser.LastName,
+            PeriodNumber = item.CurrentPeriod!.PeriodNumber,
+            StartDate = item.CurrentPeriod.StartDate,
+            ExpirationDate = item.CurrentPeriod.ExpirationDate,
+            Cost = item.CurrentPeriod.Cost
+        };
+    }
 }
 
 // what the backend sends for one period
@@ -106,6 +133,19 @@ public class PeriodResponse
     public decimal? Cost { get; set; }
     public DateTime CreatedAt { get; set; }
     public int? CreatedFromRequestId { get; set; }
+    public static PeriodResponse ToPeriodResponse(LifecyclePeriod period)
+    {
+        return new PeriodResponse
+        {
+            PeriodNumber = period.PeriodNumber,
+            StartDate = period.StartDate,
+            ExpirationDate = period.ExpirationDate,
+            Cost = period.Cost,
+            CreatedAt = period.CreatedAt,
+            CreatedFromRequestId = period.CreatedFromRequestId,
+        };
+    }
+
 }
 
 // what the backend sends for item's state history
@@ -117,4 +157,16 @@ public class StateHistoryResponse
     public string? Reason { get; set; }
     public DateTime ChangedAt { get; set; }
     public string ChangedByUserName { get; set; } = "System";
+    public static StateHistoryResponse ToStateHistoryResponse(ItemStateHistory state)
+    {
+        return new StateHistoryResponse
+        {
+            Id = state.Id,
+            FromState = state.FromState,
+            ToState = state.ToState,
+            Reason = state.Reason,
+            ChangedAt = state.ChangedAt,
+            ChangedByUserName = state.ChangedByUser != null ? state.ChangedByUser.FirstName + " " + state.ChangedByUser.LastName : "System",
+        };
+    }
 }

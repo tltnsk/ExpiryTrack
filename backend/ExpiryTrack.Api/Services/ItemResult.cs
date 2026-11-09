@@ -11,4 +11,5 @@ public class ItemResult
     public List<string> RowErrors { get; set; } = new();
     // how many items were imported
     public int CreatedCount { get; set; }
+    public bool NotFound { get; set; }
 }

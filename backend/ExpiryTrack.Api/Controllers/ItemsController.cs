@@ -33,25 +33,6 @@ public class ItemsController : ControllerBase
             .SingleAsync(u => u.Id == GetCurrentUserId());
     }
 
-    // helper method that returns whether the user has access to the item 
-    public static bool CanSee(Item item, User currentUser)
-    {
-        // employees can only see the items they're responsible for
-        if (currentUser.Role.Name == "Employee")
-            return item.ResponsibleUserId == currentUser.Id;
-
-        // department managers can see the items in their department
-        if (currentUser.Role.Name == "DepartmentManager")
-            return item.DepartmentId == currentUser.DepartmentId;
-
-        // finance officers can only see items that have cost
-        if (currentUser.Role.Name == "FinanceOfficer")
-            return item.CurrentPeriod!.Cost != null;
-
-        // admins can see all the items 
-        return true;
-    }
-
     public ItemsController(AppDbContext db, ItemService itemService)
     {
         _db = db;
@@ -67,11 +48,11 @@ public class ItemsController : ControllerBase
         User currentUser = await LoadCurrentUser();
 
         // if the item does not exist or the user is not allowed to access the item return NotFound 
-        if (item == null || !CanSee(item, currentUser))
+        if (item == null || !AccessRules.CanSeeItem(item, currentUser))
         {
             return NotFound();
         }
-        return Ok(ToResponse(item));
+        return Ok(ItemResponse.ToResponse(item));
     }
 
     // get all the items (role based), the ones expiring soonest first
@@ -130,7 +111,7 @@ public class ItemsController : ControllerBase
         var responses = new List<ItemResponse>();
         foreach (var item in items)
         {
-            responses.Add(ToResponse(item));
+            responses.Add(ItemResponse.ToResponse(item));
         }
 
         return Ok(responses);
@@ -148,7 +129,7 @@ public class ItemsController : ControllerBase
         ItemResult itemResult = await _itemService.CreateAsync(userId, request);
         if (itemResult.Error != null) return BadRequest(itemResult.Error);
         Item? created = await LoadItem(itemResult.Item!.Id);
-        return Created($"/api/items/{created!.Id}", ToResponse(created));
+        return Created($"/api/items/{created!.Id}", ItemResponse.ToResponse(created));
     }
     
     // POST /api/items/import
@@ -180,30 +161,10 @@ public class ItemsController : ControllerBase
     [Authorize(Roles = "Employee,DepartmentManager")]
     public async Task<IActionResult> Update(int id, UpdateItemRequest request)
     {
-        // load the item and the current user
-        Item? item = await LoadItem(id);
-        User currentUser = await LoadCurrentUser();
-
-        // if the item doesn't belong to the user's department 
-        if (item == null || !CanSee(item, currentUser))
-        {
-            return NotFound();
-        }
-
-        // users can only update expiring soon or active items 
-        if (item.LifecycleState != LifecycleState.ExpiringSoon && item.LifecycleState != LifecycleState.Active)
-        {
-            return BadRequest("Lifecycle state must be expiring or active.");
-        }
-
-        item.Name = request.Name.Trim();
-        item.Description = request.Description;
-        item.Provider = request.Provider;
-        item.ReferenceNumber = request.ReferenceNumber;
-
-        await _db.SaveChangesAsync();
-
-        return Ok(ToResponse(item));
+        ItemResult result = await _itemService.UpdateAsync(id, GetCurrentUserId(), request);
+        if (result.NotFound) return NotFound();
+        if (result.Error != null) return BadRequest(result.Error);
+        return Ok(ItemResponse.ToResponse(result.Item!));
     }
 
     // reassigning an item
@@ -213,53 +174,10 @@ public class ItemsController : ControllerBase
     [HttpPut("{id}/reassign")]
     public async Task<IActionResult> Reassign(int id, ReassignItemRequest request)
     {
-        // the manager who reassigns the item 
-        User assignerUser = await LoadCurrentUser();
-
-        // employee the item is being reassigned to 
-        User? assignedUser = await _db.Users
-            .Include(u => u.Role)
-            .SingleOrDefaultAsync(u => u.Id == request.ResponsibleUserId);
-
-        Item? item = await LoadItem(id);
-
-        // the manager can only reassign items from their department
-        if (item == null || !CanSee(item, assignerUser))
-        {
-            return NotFound();
-        }
-
-        // only active and expiring soon items can be reassigned
-        if (item.LifecycleState != LifecycleState.ExpiringSoon && item.LifecycleState != LifecycleState.Active)
-        {
-            return BadRequest("Lifecycle state must be expiring or active.");
-        }
-
-        if (assignedUser == null)
-        {
-            return BadRequest("User not found.");
-        }
-
-        if (!assignedUser.IsActive)
-        {
-            return BadRequest("User is not active.");
-        }
-
-        if (assignedUser.Role.Name != "Employee")
-        {
-            return BadRequest("The user is not an employee.");
-        }
-
-        if (assignedUser.DepartmentId != assignerUser.DepartmentId)
-        {
-            return BadRequest("The user does not belong to your department.");
-        }
-
-        item.ResponsibleUserId = assignedUser.Id;
-        item.ResponsibleUser = assignedUser;
-
-        await _db.SaveChangesAsync();
-        return Ok(ToResponse(item));
+        ItemResult result = await _itemService.ReassignAsync(id, GetCurrentUserId(), request);
+        if (result.NotFound) return NotFound();
+        if (result.Error != null) return BadRequest(result.Error);
+        return Ok(ItemResponse.ToResponse(result.Item!));
     }
 
     // cancelling an item
@@ -270,48 +188,10 @@ public class ItemsController : ControllerBase
     [HttpPut("{id}/cancel")]
     public async Task<IActionResult> Cancel(int id)
     {
-        User currentUser = await LoadCurrentUser();
-        Item? item = await LoadItem(id);
-
-        if (item == null || !CanSee(item, currentUser))
-        {
-            return NotFound();
-        }
-
-        if (item.LifecycleState != LifecycleState.ExpiringSoon && item.LifecycleState != LifecycleState.Active)
-        {
-            return BadRequest("Only Active and Expiring Soon items can be cancelled.");
-        }
-
-        bool hasOpenRequest = await _db.RenewalRequests.AnyAsync(r =>
-            r.PeriodId == item.CurrentPeriodId && r.Status != RequestStatus.Rejected && r.Status != RequestStatus.Completed);
-        if (hasOpenRequest)
-        {
-            return BadRequest("You cannot cancel the item because it has a renewal request open.");
-        }
-
-        var now = DateTime.UtcNow;
-
-        await using var transaction = await _db.Database.BeginTransactionAsync();
-
-        // keeping the previous state for the history record
-        LifecycleState oldState = item.LifecycleState;
-        item.LifecycleState = LifecycleState.Cancelled;
-        item.StateChangedAt = now;
-
-        _db.ItemStateHistory.Add(new ItemStateHistory
-        {
-            ItemId = item.Id,
-            FromState = oldState,
-            ToState = LifecycleState.Cancelled,
-            ChangedByUserId = currentUser.Id,
-            Reason = "Item cancelled",
-            ChangedAt = now,
-        });
-
-        await _db.SaveChangesAsync();
-        await transaction.CommitAsync();
-        return Ok(ToResponse(item));
+        ItemResult result = await _itemService.CancelAsync(id, GetCurrentUserId());
+        if (result.NotFound) return NotFound();
+        if (result.Error != null) return BadRequest(result.Error);
+        return Ok(ItemResponse.ToResponse(result.Item!));
     }
 
     // getting period info for an item 
@@ -321,7 +201,7 @@ public class ItemsController : ControllerBase
         User currentUser = await LoadCurrentUser();
         Item? item = await LoadItem(id);
 
-        if (item == null || !CanSee(item, currentUser))
+        if (item == null || !AccessRules.CanSeeItem(item, currentUser))
         {
             return NotFound();
         }
@@ -335,7 +215,7 @@ public class ItemsController : ControllerBase
 
         foreach (var period in periods)
         {
-            var response = ToPeriodResponse(period);
+            var response = PeriodResponse.ToPeriodResponse(period);
             responses.Add(response);
         }
 
@@ -348,7 +228,7 @@ public class ItemsController : ControllerBase
     {
         User currentUser = await LoadCurrentUser();
         Item? item = await LoadItem(id);
-        if (item == null || !CanSee(item, currentUser))
+        if (item == null || !AccessRules.CanSeeItem(item, currentUser))
         {
             return NotFound();
         }
@@ -362,66 +242,13 @@ public class ItemsController : ControllerBase
         var responses = new List<StateHistoryResponse>();
         foreach (var history in histories)
         {
-            var response = ToStateHistoryResponse(history);
+            var response = StateHistoryResponse.ToStateHistoryResponse(history);
             responses.Add(response);
         }
 
         return Ok(responses);
     }
-
-
-    // convert an Item entity to an ItemResponse DTO 
-    private static ItemResponse ToResponse(Item item)
-    {
-        return new ItemResponse
-        {
-            Id = item.Id,
-            Name = item.Name,
-            Description = item.Description,
-            Provider = item.Provider,
-            ReferenceNumber = item.ReferenceNumber,
-            LifecycleState = item.LifecycleState,
-            StateChangedAt = item.StateChangedAt,
-            CreatedAt = item.CreatedAt,
-            CategoryId = item.CategoryId,
-            CategoryName = item.Category.Name,
-            DepartmentId = item.DepartmentId,
-            DepartmentName = item.Department.Name,
-            ResponsibleUserId = item.ResponsibleUserId,
-            ResponsibleUserName = item.ResponsibleUser.FirstName + " " + item.ResponsibleUser.LastName,
-            PeriodNumber = item.CurrentPeriod!.PeriodNumber,
-            StartDate = item.CurrentPeriod.StartDate,
-            ExpirationDate = item.CurrentPeriod.ExpirationDate,
-            Cost = item.CurrentPeriod.Cost
-        };
-    }
-
-    private static PeriodResponse ToPeriodResponse(LifecyclePeriod period)
-    {
-        return new PeriodResponse
-        {
-            PeriodNumber = period.PeriodNumber,
-            StartDate = period.StartDate,
-            ExpirationDate = period.ExpirationDate,
-            Cost = period.Cost,
-            CreatedAt = period.CreatedAt,
-            CreatedFromRequestId = period.CreatedFromRequestId,
-        };
-    }
-
-    private static StateHistoryResponse ToStateHistoryResponse(ItemStateHistory state)
-    {
-        return new StateHistoryResponse
-        {
-            Id = state.Id,
-            FromState = state.FromState,
-            ToState = state.ToState,
-            Reason = state.Reason,
-            ChangedAt = state.ChangedAt,
-            ChangedByUserName = state.ChangedByUser != null ? state.ChangedByUser.FirstName + " " + state.ChangedByUser.LastName : "System",
-        };
-    }
-
+    
     // helper method for loading an item
     private async Task<Item?> LoadItem(int id)
     {

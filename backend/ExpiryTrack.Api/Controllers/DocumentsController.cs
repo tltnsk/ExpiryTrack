@@ -2,6 +2,7 @@ using System.Security.Claims;
 using ExpiryTrack.Api.Data;
 using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
+using ExpiryTrack.Api.Services;
 using ExpiryTrack.Api.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -45,7 +46,7 @@ public class DocumentsController : ControllerBase
             .Include(i => i.CurrentPeriod)
             .FirstOrDefaultAsync(i => i.Id == itemId);
 
-        if (item == null || !ItemsController.CanSee(item, user))
+        if (item == null || !AccessRules.CanSeeItem(item, user))
         {
             return NotFound("Unable to find item.");
         }
@@ -138,7 +139,7 @@ public class DocumentsController : ControllerBase
             .ThenInclude(p => p.Item)
             .FirstOrDefaultAsync(r => r.Id == requestId);
 
-        if (request == null || !RenewalRequestsController.CanSeeRequest(request, user))
+        if (request == null || !AccessRules.CanSeeRequest(request, user))
         {
             return NotFound("Unable to find request.");
         }
@@ -237,7 +238,7 @@ public class DocumentsController : ControllerBase
             .Include(i => i.CurrentPeriod)
             .FirstOrDefaultAsync(i => i.Id == itemId);
 
-        if (item == null || !ItemsController.CanSee(item, user))
+        if (item == null || !AccessRules.CanSeeItem(item, user))
         {
             return NotFound("Unable to find item.");
         }
@@ -269,7 +270,7 @@ public class DocumentsController : ControllerBase
             .ThenInclude(p => p.Item)
             .FirstOrDefaultAsync(r => r.Id == requestId);
 
-        if (request == null || !RenewalRequestsController.CanSeeRequest(request, user))
+        if (request == null || !AccessRules.CanSeeRequest(request, user))
         {
             return NotFound("Unable to find request.");
         }
@@ -313,7 +314,7 @@ public class DocumentsController : ControllerBase
         // if the document is attached to item
         if (document.ItemId != null)
         {
-            if (!ItemsController.CanSee(document.Item!, user))
+            if (!AccessRules.CanSeeItem(document.Item!, user))
             {
                 return NotFound("Unable to find document.");
             }
@@ -321,7 +322,7 @@ public class DocumentsController : ControllerBase
 
         if (document.RequestId != null)
         {
-            if (!RenewalRequestsController.CanSeeRequest(document.Request!, user))
+            if (!AccessRules.CanSeeRequest(document.Request!, user))
             {
                 return NotFound("Unable to find document.");
             }

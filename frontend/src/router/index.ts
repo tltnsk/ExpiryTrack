@@ -21,6 +21,7 @@ import ChangePasswordView from '@/views/ChangePasswordView.vue'
 import NotificationsView from '@/views/NotificationsView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import ItemImportView from '@/views/ItemImportView.vue'
+import ReportsView from '@/views/ReportsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -46,7 +47,8 @@ const router = createRouter({
     { path: '/change-password', component: ChangePasswordView },
     { path: '/notifications', component: NotificationsView },
     { path: '/dashboard', component: DashboardView },
-    { path: '/items/import', component: ItemImportView }
+    { path: '/items/import', component: ItemImportView }, 
+    { path: '/reports', component: ReportsView }
   ],
 })
 

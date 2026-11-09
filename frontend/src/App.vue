@@ -47,6 +47,9 @@ watch (() => route.path, () => {
           Notifications 
           <span v-if="notificationsStore.unreadCount > 0" class="badge">{{ notificationsStore.unreadCount }}</span>
         </RouterLink> 
+        <RouterLink v-if="auth.user?.role !== 'Employee'" to="/reports">
+          Reports
+        </RouterLink>
       </nav>
 
       <div class="account">

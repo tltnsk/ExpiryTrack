@@ -337,21 +337,4 @@ async function reassignEmployee() {
 </template>
 
 <style scoped>
-form {
-  max-width: 420px;
-  margin-left: 0;
-}
-
-form > button {
-  padding: 4px 4px;
-  margin-right: 8px;
-  background: var(--navy);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font: inherit;
-  font-weight: 400;
-  cursor: pointer;
-  width: 40%;
-}
 </style>

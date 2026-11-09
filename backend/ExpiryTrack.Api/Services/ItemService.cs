@@ -27,7 +27,7 @@ public class ItemService
             .Include(i => i.CurrentPeriod)
             .SingleOrDefaultAsync(i => i.Id == id);
     }
-    
+
     // load the logged-in user along with their role
     private async Task<User> LoadCurrentUser(int userId)
     {
@@ -194,7 +194,7 @@ public class ItemService
         // if the item doesn't belong to the user's department 
         if (item == null || !AccessRules.CanSeeItem(item, currentUser))
         {
-            return new ItemResult { NotFound = true};
+            return new ItemResult { NotFound = true };
         }
 
         // users can only update expiring soon or active items 
@@ -212,7 +212,7 @@ public class ItemService
 
         return new ItemResult { Item = item };
     }
-    
+
     public async Task<ItemResult> ReassignAsync(int id, int userId, ReassignItemRequest request)
     {
         // the manager who reassigns the item 
@@ -228,7 +228,7 @@ public class ItemService
         // the manager can only reassign items from their department
         if (item == null || !AccessRules.CanSeeItem(item, assignerUser))
         {
-            return new ItemResult { NotFound = true};
+            return new ItemResult { NotFound = true };
         }
 
         // only active and expiring soon items can be reassigned
@@ -257,8 +257,33 @@ public class ItemService
             return new ItemResult { Error = "The user does not belong to your department." };
         }
 
+        if (assignedUser.Id == item.ResponsibleUserId)
+        {
+            return new ItemResult { Error = "The item is already assigned to this employee." };
+        }
+
+        var now = DateTime.UtcNow;
+        _db.Notifications.Add(new Notification
+        {
+            Type = "ItemReassigned",
+            Message = $"{item.Name} was reassigned to another employee.",
+            ItemId = item.Id,
+            RecipientUserId = item.ResponsibleUserId,
+            CreatedAt = now
+        });
+
         item.ResponsibleUserId = assignedUser.Id;
         item.ResponsibleUser = assignedUser;
+
+
+        _db.Notifications.Add(new Notification
+        {
+            Type = "ItemReassigned",
+            Message = $"{item.Name} was reassigned to you.",
+            ItemId = item.Id,
+            RecipientUserId = item.ResponsibleUserId,
+            CreatedAt = now
+        });
 
         await _db.SaveChangesAsync();
         return new ItemResult { Item = item };
@@ -271,7 +296,7 @@ public class ItemService
 
         if (item == null || !AccessRules.CanSeeItem(item, currentUser))
         {
-            return new ItemResult { NotFound = true};
+            return new ItemResult { NotFound = true };
         }
 
         if (item.LifecycleState != LifecycleState.ExpiringSoon && item.LifecycleState != LifecycleState.Active)
@@ -301,6 +326,15 @@ public class ItemService
             ChangedByUserId = currentUser.Id,
             Reason = "Item cancelled",
             ChangedAt = now,
+        });
+
+        _db.Notifications.Add(new Notification
+        {
+            Type = "ItemCancelled",
+            Message = $"{item.Name} was cancelled by your manager.",
+            ItemId = item.Id,
+            RecipientUserId = item.ResponsibleUserId,
+            CreatedAt = now
         });
 
         await _db.SaveChangesAsync();

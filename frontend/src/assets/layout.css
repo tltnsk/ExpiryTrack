@@ -182,3 +182,13 @@ main {
     padding: 16px;
   }
 }
+
+.back-link {
+  font-size: 0.9em;
+  color: rgb(59, 57, 57);
+  text-decoration: none;
+}
+
+.back-link:hover {
+  opacity: 0.8;
+}

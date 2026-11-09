@@ -223,7 +223,7 @@ onMounted(async () => {
 </script>
 
 <template>
-    <RouterLink to="/requests">Back to Renewal Requests</RouterLink>
+    <RouterLink to="/requests" class="back-link">Back to Renewal Requests</RouterLink>
 
     <p v-if="loading">Loading...</p>
 

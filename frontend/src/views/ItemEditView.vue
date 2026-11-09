@@ -89,7 +89,7 @@ async function editItem() {
 </script>
 
 <template>
-    <RouterLink to="/items">Back to items</RouterLink>
+    <RouterLink to="/items" class="back-link">Back to items</RouterLink>
 
     <p v-if="loading">Loading...</p>
 

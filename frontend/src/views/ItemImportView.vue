@@ -51,8 +51,8 @@ async function importFile() {
 </script>
 
 <template>
+    <RouterLink to="/items" class="back-link">Back to items</RouterLink>
     <h2>Import items</h2>
-    <RouterLink to="/items">Back to items</RouterLink>
     <p>Fill in the template and upload it. If any row has an error, nothing is imported.</p>
     <p>Download the <a href="/import-template.xlsx" download>Template</a></p>
     <div class="attachment">
@@ -75,6 +75,7 @@ async function importFile() {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    padding-top: 60px;
 }
 
 button {

@@ -133,7 +133,7 @@ async function createItem() {
 </script>
 
 <template>
-    <RouterLink to="/items">Back to items</RouterLink>
+    <RouterLink to="/items" class="back-link">Back to items</RouterLink>
     <h2>New item</h2>
 
     <form @submit.prevent="createItem">

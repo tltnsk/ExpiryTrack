@@ -184,7 +184,7 @@ async function reassignEmployee() {
 
 <template>
   <div class="page-links">
-      <RouterLink to="/items">Back to Items</RouterLink>
+      <RouterLink to="/items" class="back-link">Back to Items</RouterLink>
       <RouterLink v-if="item && (auth.user?.role === 'DepartmentManager' || auth.user?.role === 'Employee') && (item.lifecycleState === 'Active' || item.lifecycleState === 'ExpiringSoon')" :to="`/items/${item.id}/edit`">Edit Item</RouterLink>
   </div>
 

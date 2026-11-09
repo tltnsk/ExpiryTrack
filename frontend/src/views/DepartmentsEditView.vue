@@ -121,7 +121,7 @@ async function editDepartment() {
 </script>
 
 <template>
-  <RouterLink :to="`/departments`">Back to departments</RouterLink>
+  <RouterLink :to="`/departments`" class="back-link">Back to departments</RouterLink>
   <h2>Edit department</h2>
   <p v-if="loading">Loading...</p>
   <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>

@@ -1,3 +1,4 @@
+using ExpiryTrack.Api.Models;
 using ExpiryTrack.Api.Models.Enums;
 
 namespace ExpiryTrack.Api.DTO;
@@ -40,6 +41,22 @@ public class DashboardRequest
     public DateTime SubmittedAt { get; set; }
     public decimal? ProposedCost { get; set; }
     public string RequestedByUserName { get; set; } = "";
+
+    public static DashboardRequest ToDashboardRequest(RenewalRequest renewalRequest)
+    {
+        return new DashboardRequest
+        {
+            Id = renewalRequest.Id,
+            ItemName = renewalRequest.Period.Item.Name,
+            Status = renewalRequest.Status,
+            NeedsFinancialReview = renewalRequest.NeedsFinancialReview,
+            ProposedExpirationDate = renewalRequest.ProposedExpirationDate,
+            SubmittedAt = renewalRequest.SubmittedAt,
+            ProposedCost = renewalRequest.ProposedCost,
+            RequestedByUserName =
+                renewalRequest.RequestedByUser.FirstName + " " + renewalRequest.RequestedByUser.LastName,
+        };
+    }
 }
 
 public class ManagerDashboardResponse

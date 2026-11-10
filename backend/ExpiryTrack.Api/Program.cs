@@ -49,6 +49,7 @@ builder.Services.AddScoped<ExpirationService>();
 builder.Services.AddScoped<RenewalService>();
 builder.Services.AddScoped<ItemService>();
 builder.Services.AddScoped<ReportService>();
+builder.Services.AddScoped<DashboardService>();
 builder.Services.AddHostedService<ExpirationJob>();
 
 var app = builder.Build();

@@ -3,6 +3,7 @@ using ExpiryTrack.Api.Data;
 using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
 using ExpiryTrack.Api.Models.Enums;
+using ExpiryTrack.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -16,10 +17,12 @@ namespace ExpiryTrack.Api.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly UserService _us;
 
-    public UsersController(AppDbContext db)
+    public UsersController(AppDbContext db, UserService us)
     {
         _db = db;
+        _us = us;
     }
 
     // helper method for getting the user id from the authentication claims
@@ -82,37 +85,10 @@ public class UsersController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Create(CreateUserRequest request)
     {
-        var email = request.Email.Trim();
-
-        if (await _db.Users.AnyAsync(u => u.Email == email))
-            return Conflict("A user with this email exists already.");
-
-        var role = await _db.Roles.SingleOrDefaultAsync(r => r.Name == request.Role);
-        if (role == null)
-            return BadRequest("Unknown role.");
-
-        var departmentError = await CheckDepartment(role.Name, request.DepartmentId);
-        if (departmentError != null)
-            return BadRequest(departmentError);
-
-        var user = new User
-        {
-            FirstName = request.FirstName.Trim(),
-            LastName = request.LastName.Trim(),
-            Email = email,
-            RoleId = role.Id,
-            DepartmentId = request.DepartmentId,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        user.PasswordHash = new PasswordHasher<User>().HashPassword(user, request.Password);
-
-        _db.Users.Add(user);
-        await _db.SaveChangesAsync();
-
-        var created = await LoadUser(user.Id);
-        return Created($"/api/users/{user.Id}", UserResponse.FromUser(created!));
+        UserResult result = await _us.CreateAsync(request);
+        if (result.Conflict != null) return Conflict(result.Conflict);
+        if (result.Error != null) return BadRequest(result.Error);
+        return Created($"/api/users/{result.User!.Id}", UserResponse.FromUser(result.User));
     }
 
     // PUT /api/users/{id} 
@@ -122,22 +98,11 @@ public class UsersController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Update(int id, UpdateUserRequest request)
     {
-        var user = await LoadUser(id);
-
-        if (user == null)
-            return NotFound();
-
-        var email = request.Email.Trim();
-        if (await _db.Users.AnyAsync(u => u.Email == email && u.Id != id))
-            return Conflict("A user with this email already exists.");
-
-        user.FirstName = request.FirstName.Trim();
-        user.LastName = request.LastName.Trim();
-        user.Email = email;
-        await _db.SaveChangesAsync();
-
-        var updated = await LoadUser(id);
-        return Ok(UserResponse.FromUser(updated!));
+        UserResult result = await _us.UpdateAsync(id, request);
+        if (result.NotFound) return NotFound();
+        if (result.Conflict != null) return Conflict(result.Conflict);
+        if (result.Error != null) return BadRequest(result.Error);
+        return Ok(UserResponse.FromUser(result.User!));
     }
 
     // PUT /api/users/{id}/active 
@@ -146,36 +111,11 @@ public class UsersController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> SetActive(int id, SetUserActiveRequest request)
     {
-        var user = await LoadUser(id);
-        if (user == null)
-            return NotFound();
-
-        if (!request.IsActive)
-        {
-            var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            if (id == currentUserId)
-                return Conflict("You cannot deactivate your own account.");
-
-            // A user who still owns items or open requests can't be deactivated (U1)
-            bool ownsItems = await _db.Items.AnyAsync(i => i.ResponsibleUserId == id
-                && (i.LifecycleState == LifecycleState.Active || i.LifecycleState == LifecycleState.ExpiringSoon));
-            if (ownsItems)
-                return Conflict("This user is still responsible for items. Reassign the items first.");
-
-            bool hasOpenRequests = await _db.RenewalRequests.AnyAsync(r => r.RequestedByUserId == id
-                && r.Status != RequestStatus.Rejected && r.Status != RequestStatus.Completed);
-
-            if (hasOpenRequests)
-                return Conflict("This user has open renewal requests.");
-
-            if (await _db.Departments.AnyAsync(d => d.ManagerId == id))
-                return Conflict("This user manages a department. Assign another manager first.");
-        }
-
-        user.IsActive = request.IsActive;
-        await _db.SaveChangesAsync();
-
-        return Ok(UserResponse.FromUser(user));
+        UserResult result = await _us.SetActiveAsync(id, GetCurrentUserId(), request);
+        if (result.NotFound) return NotFound();
+        if (result.Conflict != null) return Conflict(result.Conflict);
+        if (result.Error != null) return BadRequest(result.Error);
+        return Ok(UserResponse.FromUser(result.User!));
     }
 
     // get the employees from the current manager's department
@@ -200,34 +140,5 @@ public class UsersController : ControllerBase
             responses.Add(UserResponse.FromUser(user));
         }
         return Ok(responses);
-    }
-
-    // helper method for loading user by id
-    private async Task<User?> LoadUser(int id)
-    {
-        return await _db.Users
-            .Include(u => u.Role)
-            .Include(u => u.Department)
-            .SingleOrDefaultAsync(u => u.Id == id);
-    }
-
-    // validator for departments
-    // employees and managers need an active department
-    // administrators and finance officers don't belong to a department
-    // the method returns null if everything is fine
-    private async Task<string?> CheckDepartment(string roleName, int? departmentId)
-    {
-        bool needsDepartment = roleName == "Employee" || roleName == "DepartmentManager";
-
-        if (needsDepartment && departmentId == null)
-            return "Employees and department managers must belong to a department.";
-
-        if (!needsDepartment && departmentId != null)
-            return "Administrators and finance officers do not belong to a department.";
-
-        if (departmentId != null && !await _db.Departments.AnyAsync(d => d.Id == departmentId && d.isActive))
-            return "The department does not exist or is inactive.";
-
-        return null;
     }
 }

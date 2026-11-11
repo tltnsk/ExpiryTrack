@@ -65,10 +65,8 @@ if (app.Environment.IsDevelopment())
     // fill an empty database with roles and test users
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await DbSeeder.SeedRolesAsync(db);
-    await DbSeeder.SeedTestUsersAsync(db);
-    await DbSeeder.SeedTestCategoriesAsync(db);
-    await DbSeeder.SeedItemsAsync(db);
+    int generatedItems = app.Configuration.GetValue<int>("Seeder:GeneratedItems", 200);
+    await DbSeeder.SeedAsync(db, generatedItems);
 }
 
 app.UseHttpsRedirection();

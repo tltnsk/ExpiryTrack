@@ -4,7 +4,7 @@ public class Department
 {
     public int Id { get; set; }
     public string Name { get; set; } = "";
-    public bool isActive { get; set; }
+    public bool isActive { get; set; } = true;
 
     // A department has one manager
     public int? ManagerId { get; set; }

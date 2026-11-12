@@ -73,7 +73,7 @@ public class RenewalServiceTests
     {
         using var db = TestData.CreateDb();
         var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
-        var finance = new User { FirstName = "Test", LastName = "Finance", Email = "finance@test.com", Role = new Role { Id = 4, Name = "FinanceOfficer" } };
+        var finance = new User { FirstName = "Test", LastName = "Finance", Email = "finance@test.com", RoleId = 4 };
         db.Users.Add(finance);
         db.SaveChanges();
         var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 20, manager: manager, requiresFinancialReview: true);
@@ -95,7 +95,7 @@ public class RenewalServiceTests
     {
         using var db = TestData.CreateDb();
         var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
-        var finance = new User { FirstName = "Test", LastName = "Finance", Email = "finance@test.com", Role = new Role { Id = 4, Name = "FinanceOfficer" } };
+        var finance = new User { FirstName = "Test", LastName = "Finance", Email = "finance@test.com", RoleId = 4};
         db.Users.Add(finance);
         db.SaveChanges();
         var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 20, manager: manager, requiresFinancialReview: true, threshold: 5000);
@@ -117,7 +117,7 @@ public class RenewalServiceTests
     {
         using var db = TestData.CreateDb();
         var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
-        var finance = new User { FirstName = "Test", LastName = "Finance", Email = "finance@test.com", Role = new Role { Id = 4, Name = "FinanceOfficer" } };
+        var finance = new User { FirstName = "Test", LastName = "Finance", Email = "finance@test.com", RoleId = 4 };
         db.Users.Add(finance);
         db.SaveChanges();
         var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 20, manager: manager, requiresFinancialReview: true, threshold: 5000);
@@ -183,12 +183,16 @@ public class RenewalServiceTests
         var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
         var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 21, manager: manager);
 
+        var finance = new User { FirstName = "Test", LastName = "Finance", Email = "finance@test.com", RoleId = 4 };
+        db.Users.Add(finance);
+        db.SaveChanges();
+        
         var request = TestData.AddRequest(db, item, RequestStatus.PendingFinancialReview);
         request.NeedsFinancialReview = true;
         db.SaveChanges();
         var service = new RenewalService(db);
 
-        var result = await service.FinanceReviewAsync(request.Id, 99, FinanceData(FinancialRecommendation.Approve));
+        var result = await service.FinanceReviewAsync(request.Id, finance.Id, FinanceData(FinancialRecommendation.Approve));
 
         Assert.Null(result.Error);
         Assert.NotNull(result.Request);
@@ -284,8 +288,8 @@ public class RenewalServiceTests
     public async Task ManagerReview_WrongDepartment()
     {
         using var db = TestData.CreateDb();
-        var managerA = new User { FirstName = "Test", LastName = "Manager A", RoleId = 3 };
-        var managerB = new User { FirstName = "Test", LastName = "Manager B", RoleId = 3 };
+        var managerA = new User { FirstName = "Test", LastName = "Manager A", Email = "managera@test.com", RoleId = 3 };
+        var managerB = new User { FirstName = "Test", LastName = "Manager B", Email = "managerb@test.com", RoleId = 3 };
         var itemA = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 15, manager: managerA);
         var itemB = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 15, manager: managerB);
 

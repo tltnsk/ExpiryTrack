@@ -191,4 +191,123 @@ public class ItemServiceTests
         Assert.Equal(item.ResponsibleUserId, oldEmployeeId);
         Assert.Empty(db.Notifications);
     }
+    
+    // Creating an item
+    // creating a valid item
+    [Fact]
+    public async Task Create_ValidItem_Created()
+    {
+        using var db = TestData.CreateDb();
+        var existing = TestData.AddItem(db, LifecycleState.Active, daysLeft: 100);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var request = new CreateItemRequest
+        {
+            Name = "Test Item",
+            CategoryId = existing.CategoryId,
+            StartDate = today,
+            ExpirationDate = today.AddDays(100),
+        };
+        var service = new ItemService(db);
+        var result = await service.CreateAsync(existing.ResponsibleUserId, request);
+        
+        Assert.Null(result.Error);
+        Assert.Equal(LifecycleState.Active, result.Item!.LifecycleState);
+        Assert.Equal(result.Item.ResponsibleUserId, existing.ResponsibleUserId);
+        Assert.NotNull(result.Item.CurrentPeriodId);
+        var history = db.ItemStateHistory.Single(h => h.ItemId == result.Item.Id);
+        Assert.Equal("Item created", history.Reason);
+    }
+    
+    // creating a valid item with 10 days left to expiration
+    // lifecycle state must be expiring soon 
+    [Fact]
+    public async Task Create_WithinWarningPeriod_ExpiringSoon()
+    {
+        using var db = TestData.CreateDb();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var existing = TestData.AddItem(db, LifecycleState.Active, daysLeft: 10);
+
+        var request = new CreateItemRequest
+        {
+            Name = "Test Item",
+            CategoryId = existing.CategoryId,
+            StartDate = today,
+            ExpirationDate = today.AddDays(10),
+        };
+        var service = new ItemService(db);
+        var result = await service.CreateAsync(existing.ResponsibleUserId, request);
+        
+        Assert.Null(result.Error);
+        Assert.Equal(LifecycleState.ExpiringSoon, result.Item!.LifecycleState);
+        Assert.Equal(existing.ResponsibleUserId, result.Item.ResponsibleUserId);
+        Assert.NotNull(result.Item.CurrentPeriodId);
+        var history = db.ItemStateHistory.Single(h => h.ItemId == result.Item.Id);
+        Assert.Equal("Item created", history.Reason);
+    }
+
+    // creating an item with an invalid expiration date is refused
+    [Fact]
+    public async Task Create_PastExpirationDate_Refused()
+    {
+        using var db = TestData.CreateDb();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var existing = TestData.AddItem(db, LifecycleState.Active, daysLeft: 10);
+
+        var request = new CreateItemRequest
+        {
+            Name = "Test Item",
+            CategoryId = existing.CategoryId,
+            StartDate = today,
+            ExpirationDate = today.AddDays(-10),
+        };
+        var service = new ItemService(db);
+        var result = await service.CreateAsync(existing.ResponsibleUserId, request);
+
+        Assert.NotNull(result.Error);
+        Assert.Contains("must be a future date", result.Error);
+        Assert.Equal(1, db.Items.Count());
+    }
+
+    [Fact]
+    public async Task Update_ActiveItem_Updated()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.Active, daysLeft: 70, manager: manager);
+        
+
+        var request = new UpdateItemRequest
+        {
+            Name = "  New name ",
+            Provider = "New provider"
+        };
+        
+        var service = new ItemService(db);
+        var result = await service.UpdateAsync(item.Id, manager.Id, request);
+
+        Assert.Null(result.Error);
+        Assert.Equal("New name", item.Name);
+        Assert.Equal("New provider", item.Provider);
+    }
+    
+    
+    [Fact]
+    public async Task Update_ExpiredItem_Refused()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.Expired, daysLeft: -20, manager: manager);
+
+        var request = new UpdateItemRequest
+        {
+            Name = "  Test Item  ",
+        };
+        
+        var service = new ItemService(db);
+        var result = await service.UpdateAsync(item.Id, manager.Id, request);
+
+        Assert.NotNull(result.Error);
+        Assert.Contains("Only Active and Expiring Soon items can be updated.", result.Error);
+    }
 }

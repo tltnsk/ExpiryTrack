@@ -17,9 +17,12 @@ public static class AccessRules
         // finance officers can only see items that have cost
         if (currentUser.Role.Name == "FinanceOfficer")
             return item.CurrentPeriod!.Cost != null;
-
+        
         // admins can see all the items 
-        return true;
+        if (currentUser.Role.Name == "Administrator")
+            return true;
+        // any other role sees nothing 
+        return false;
     }
 
     public static bool CanSeeRequest(RenewalRequest request, User currentUser)
@@ -35,8 +38,11 @@ public static class AccessRules
         // finance officers can only see the requests for items that need financial review
         if (currentUser.Role.Name == "FinanceOfficer")
             return request.NeedsFinancialReview;
-
+        
         // admins can see all the requests 
-        return true;
+        if (currentUser.Role.Name == "Administrator")
+            return true;
+        // any other role sees nothing 
+        return false;
     }
 }

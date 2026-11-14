@@ -97,4 +97,193 @@ public class UserServiceTests
         Assert.NotNull(result.Conflict);
         Assert.Contains("is still responsible for items", result.Conflict);
     }
+    
+    // unknown role
+    [Fact]
+    public async Task Create_UnknownRole_Error()
+    {
+        using var db = TestData.CreateDb();
+        var request = new CreateUserRequest
+        {
+            FirstName = "New",
+            LastName = "User",
+            Email = "new@test.com",
+            Password = "User123!",
+            Role = "User",
+            DepartmentId = null
+        };
+        
+        var service = new UserService(db);
+        var result = await service.CreateAsync(request);
+        
+        Assert.NotNull(result.Error);
+        Assert.Contains("Unknown role", result.Error);
+        Assert.Null(result.User);
+    }
+    
+    // employee without department
+    [Fact]
+    public async Task Create_Employee_WithoutDepartment_Error()
+    {
+        using var db = TestData.CreateDb();
+        var request = new CreateUserRequest
+        {
+            FirstName = "New",
+            LastName = "User",
+            Email = "new@test.com",
+            Password = "User123!",
+            Role = "Employee",
+            DepartmentId = null
+        };
+        
+        var service = new UserService(db);
+        var result = await service.CreateAsync(request);
+        
+        Assert.NotNull(result.Error);
+        Assert.Contains("must belong to a department", result.Error);
+        Assert.Null(result.User);
+    }
+    
+    // admin with a department 
+    // unknown role
+    [Fact]
+    public async Task Create_AdminWithDepartment_Error()
+    {
+        using var db = TestData.CreateDb();
+        var item = TestData.AddItem(db, LifecycleState.Active, daysLeft: 100);
+        var request = new CreateUserRequest
+        {
+            FirstName = "New",
+            LastName = "User",
+            Email = "new@test.com",
+            Password = "User123!",
+            Role = "Administrator",
+            DepartmentId = item.DepartmentId,
+        };
+        
+        var service = new UserService(db);
+        var result = await service.CreateAsync(request);
+        
+        Assert.NotNull(result.Error);
+        Assert.Contains("do not belong to a department", result.Error);
+        Assert.Null(result.User);
+    }
+    
+    // admin without department
+    [Fact]
+    public async Task Create_AdminWithoutDepartment()
+    {
+        using var db = TestData.CreateDb();
+        var item = TestData.AddItem(db, LifecycleState.Active, daysLeft: 100);
+        var request = new CreateUserRequest
+        {
+            FirstName = "New",
+            LastName = "User",
+            Email = "new@test.com",
+            Password = "User123!",
+            Role = "Administrator",
+            DepartmentId = null,
+        };
+        
+        var service = new UserService(db);
+        var result = await service.CreateAsync(request);
+        
+        Assert.Null(result.Error);
+        Assert.NotNull(result.User);
+    }
+    
+    // update async tests
+    [Fact]
+    public async Task Update_Valid_ChangesNames()
+    {
+        using var db = TestData.CreateDb();
+        var item = TestData.AddItem(db, LifecycleState.Active, daysLeft: 100);
+        var request = new UpdateUserRequest()
+        {
+            FirstName = "  Ana   ",
+            LastName = "Employee",
+            Email = item.ResponsibleUser.Email,
+        };
+        
+        var service = new UserService(db);
+        var result = await service.UpdateAsync(item.ResponsibleUserId, request);
+        
+        Assert.Null(result.Conflict);
+        Assert.Equal("Ana", result.User!.FirstName);
+    }
+    
+    // emails conflict
+    [Fact]
+    public async Task Update_EmailOfAnotherUser_Conflict()
+    {
+        using var db = TestData.CreateDb();
+        var item1 = TestData.AddItem(db, LifecycleState.Active, daysLeft: 100);
+        var item2 = TestData.AddItem(db, LifecycleState.Active, daysLeft: 800);
+        var admin = new User { FirstName = "Test", LastName = "Admin", Email = "admin@test.com", RoleId = 1 };
+        var admin2 = new User { FirstName = "Test", LastName = "Admin2", Email = "admin2@test.com", RoleId = 1 };
+        
+        db.Users.Add(admin);
+        db.Users.Add(admin2);
+        
+        db.SaveChanges();
+
+        var request = new UpdateUserRequest
+        {
+            Email = "admin@test.com"
+        };
+            
+        var service = new UserService(db);
+        var result = await service.UpdateAsync(item2.ResponsibleUserId, request);
+        
+                
+        Assert.NotNull(result.Conflict);
+        Assert.Contains("already exists", result.Conflict);
+    }
+
+    [Fact]
+    public async Task SetActive_UserWithOpenRequest_Conflict()
+    {
+        using var db = TestData.CreateDb();
+        var admin = new User { FirstName = "Test", LastName = "Admin", Email = "admin@test.com", RoleId = 1 };
+        db.Users.Add(admin);
+        db.SaveChanges();
+
+        var item = TestData.AddItem(db, LifecycleState.Expired, daysLeft: -5);
+        TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
+
+        var request = new SetUserActiveRequest
+        {
+            IsActive = false
+        };
+        
+        var service = new UserService(db);
+        var result = await service.SetActiveAsync(item.ResponsibleUserId, admin.Id, request);
+        
+        Assert.NotNull(result.Conflict);
+        Assert.Contains("open renewal requests", result.Conflict);
+    }
+    
+    [Fact]
+    public async Task SetActive_DepartmentManager_Conflict()
+    {
+        using var db = TestData.CreateDb();
+        var admin = new User { FirstName = "Test", LastName = "Admin", Email = "admin@test.com", RoleId = 1 };
+        db.Users.Add(admin);
+        
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        
+        var item = TestData.AddItem(db, LifecycleState.Active, daysLeft: 100, manager: manager);
+        var employee = item.ResponsibleUser;
+        
+        var request = new SetUserActiveRequest
+        {
+            IsActive = false,
+        };
+        
+        var service = new UserService(db);
+        var result = await service.SetActiveAsync(manager.Id, admin.Id, request);
+        
+        Assert.NotNull(result.Conflict);
+        Assert.Contains("manages a department", result.Conflict);
+    }
 }

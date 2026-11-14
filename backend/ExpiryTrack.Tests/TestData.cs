@@ -11,8 +11,8 @@ public static class TestData
     // fixed today so that tests don't depend on the real date
     public static readonly DateOnly Today = new DateOnly(2026, 11, 1);
 
-    // every test gets its own new and empty SQLite database in memory
-    public static AppDbContext CreateDb()
+    // a new empty SQLite database in memory 
+    public static AppDbContext CreateEmptyDb()
     {
         var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();
@@ -24,7 +24,11 @@ public static class TestData
         var db = new AppDbContext(options);
         // creates the tables with all the keys and constraints
         db.Database.EnsureCreated();
-        
+        return db;
+    }
+    public static AppDbContext CreateDb()
+    {
+        var db = CreateEmptyDb();
         // users need an existing role
         // because SQLite checks foreign keys
         db.Roles.AddRange(

@@ -83,6 +83,13 @@ main {
   opacity: 0.6;
 }
 
+.sidebar a svg {
+  width: 18px;
+  height: 18px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
 /* number of unread notifications */
 .badge {
   display: inline-flex;

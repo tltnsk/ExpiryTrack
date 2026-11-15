@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate, formatLabel, formatMoney} from '@/utils/format'
 import { useRoute } from 'vue-router'
@@ -78,6 +78,22 @@ function resetFilters() {
   expiresTo.value = ''
 }
 
+// show 15 items per page
+const pageSize = 10
+const page = ref(1)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / pageSize)))
+
+// show only the itemsof the current page
+const pageItems = computed(() => {
+  const start = (page.value - 1) * pageSize
+  return filteredItems.value.slice(start, start + pageSize)
+})
+
+// go back to the first page when a filter changes
+watch([search, stateFilter, categoryFilter, responsibleFilter, expiresFrom, expiresTo], () => {
+  page.value = 1
+})
 </script>
 
 <template>
@@ -127,7 +143,7 @@ function resetFilters() {
             </tr>
         </thead>
         <tbody>
-            <tr v-for="item in filteredItems" :key="item.id">
+            <tr v-for="item in pageItems" :key="item.id">
                 <td>
                     <RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
                 <td>{{ item.categoryName }}</td>
@@ -141,6 +157,12 @@ function resetFilters() {
             </tr>
         </tbody>
     </table>
+
+    <div v-if="totalPages > 1" class="pagination">
+      <button type="button" :disabled="page === 1" @click="page--" aria-label="Previous page"><</button>
+      <span>Page {{ page }} of {{ totalPages }}</span>
+      <button type="button" :disabled="page === totalPages" @click="page++" aria-label="Next page">></button>
+    </div>
 </template>
 <style scoped>
 

@@ -199,6 +199,26 @@ dd {
     border-radius: 10px;
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.pagination button {
+  padding: 4px 12px;
+  font-size: 18px;
+}
+
+.chart {
+  max-width: 400px;
+  border: 1px solid var(--border);
+  padding: 10px;
+  border-radius: 20px;
+}
+
 @media (max-width: 900px) {
     .filters {
         grid-template-columns: 1fr;

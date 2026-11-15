@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate, formatDateTime, formatLabel} from '@/utils/format'
+import Chart from 'chart.js/auto'
 
 interface DepartmentItemCount {
     departmentName: string
@@ -76,6 +77,21 @@ const financeDashboard = ref<FinanceDashboard | null>(null)
 const loading = ref(true)
 const errorMessage = ref('')
 
+const stateChart = ref<HTMLCanvasElement | null>(null)
+
+async function drawStateChart(data: AdminDashboard | ManagerDashboard | EmployeeDashboard) {
+    await nextTick() // wait until Vue has put the <canvas> on the page
+    new Chart(stateChart.value!, {
+        type: 'doughnut',
+        data: {
+            labels: ['Active', 'Expiring soon', 'Expired', 'Cancelled'],
+            datasets: [{
+                data: [data.activeItems, data.expiringSoonItems, data.expiredItems, data.cancelledItems],
+                backgroundColor: ['#1e8e47', '#e0a100', '#d64545', '#000000'],
+            }],
+        },
+    })
+}
 onMounted(async () => {
     if (auth.user?.role === 'Administrator') {
         const response = await fetch('/api/dashboard/admin')
@@ -110,7 +126,15 @@ onMounted(async () => {
         }
     }
     loading.value = false
+
+    const data = adminDashboard.value ?? employeeDashboard.value ?? managerDashboard.value
+
+    if (data) {
+        await drawStateChart(data)
+    }
 })
+
+
 </script>
 <template>
     <p v-if="loading">Loading...</p>
@@ -144,6 +168,11 @@ onMounted(async () => {
                 <span>Cancelled Items</span>
                 <RouterLink :to="{ path: '/items', query: { state: 'Cancelled'}}">View</RouterLink>
             </div>
+        </div>
+
+        <div class="chart" id="items-chart">
+            <h3>Items by state</h3>
+            <canvas ref="stateChart"></canvas>
         </div>
 
         <h3>Items per department</h3>
@@ -210,6 +239,11 @@ onMounted(async () => {
                 <span>Cancelled Items</span>
                 <RouterLink :to="{ path: '/items', query: { state: 'Cancelled'}}">View</RouterLink>
             </div>
+        </div>
+
+        <div class="chart" id="items-chart">
+            <h3>Items by state</h3>
+            <canvas ref="stateChart"></canvas>
         </div>
 
         <h3>Requests to Review</h3>
@@ -304,6 +338,11 @@ onMounted(async () => {
                 <span>Cancelled Items</span>
                  <RouterLink :to="{ path: '/items', query: { state: 'Cancelled'}}">View</RouterLink>
             </div>
+        </div>
+
+        <div class="chart" id="items-chart">
+            <h3>Items by state</h3>
+            <canvas ref="stateChart"></canvas>
         </div>
 
         <h3>Items Needing Renewal</h3>
@@ -427,6 +466,7 @@ onMounted(async () => {
                 <span>Approved Cost</span>
             </div>
         </div>
+
         <h3>Requests Needing Financial Review</h3>
         <table>
             <thead>
@@ -470,5 +510,9 @@ onMounted(async () => {
 .number {
     font-size: 20px;
     font-weight: bold;
+}
+
+#items-chart {
+    background-color: rgb(234, 231, 230);
 }
 </style>

@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-
 const auth = useAuthStore()
 const router = useRouter()
 
@@ -93,7 +92,7 @@ async function login() {
 
 .login-card {
   width: 100%;
-  max-width: 340px;
+  max-width: 400px;
   margin: 0;
   padding: 32px;
   background: white;

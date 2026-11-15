@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate, formatLabel, formatMoney} from '@/utils/format'
+import { useRoute } from 'vue-router'
 
 // ItemResponse 
 interface Item {
@@ -19,8 +20,9 @@ const items = ref<Item[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 const auth = useAuthStore()
+const route = useRoute()
 
-const stateFilter = ref('')
+const stateFilter = ref(String(route.query.state ?? ''))
 const categoryFilter = ref('')
 const responsibleFilter = ref('')
 const expiresFrom = ref('')

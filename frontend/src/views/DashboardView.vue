@@ -122,22 +122,27 @@ onMounted(async () => {
             <div class="card">
                 <span class="number">{{ adminDashboard.totalItems }}</span>
                 <span>Total Items</span>
+                <RouterLink :to="{ path: '/items'}">View</RouterLink>
             </div>
             <div class="card">
                 <span class="number">{{ adminDashboard.activeItems }}</span>
                 <span>Active Items</span>
+                <RouterLink :to="{ path: '/items', query: { state: 'Active'}}">View</RouterLink>
             </div>
             <div class="card">
                 <span class="number">{{ adminDashboard.expiringSoonItems }}</span>
                 <span>Expiring Soon Items</span>
+                <RouterLink :to="{ path: '/items', query: { state: 'ExpiringSoon'}}">View</RouterLink>
             </div>
             <div class="card">
                 <span class="number">{{ adminDashboard.expiredItems }}</span>
                 <span>Expired Items</span>
+                <RouterLink :to="{ path: '/items', query: { state: 'Expired'}}">View</RouterLink>
             </div>
             <div class="card">
                 <span class="number">{{ adminDashboard.cancelledItems }}</span>
                 <span>Cancelled Items</span>
+                <RouterLink :to="{ path: '/items', query: { state: 'Cancelled'}}">View</RouterLink>
             </div>
         </div>
 
@@ -183,22 +188,27 @@ onMounted(async () => {
             <div class="card">
                 <span class="number">{{ managerDashboard.totalItems }}</span>
                 <span>Total Items</span>
+                <RouterLink :to="{ path: '/items'}">View</RouterLink>
             </div>
             <div class="card">
                 <span class="number">{{ managerDashboard.activeItems }}</span>
                 <span>Active Items</span>
+                <RouterLink :to="{ path: '/items', query: { state: 'Active'}}">View</RouterLink>
             </div>
             <div class="card">
                 <span class="number">{{ managerDashboard.expiringSoonItems }}</span>
                 <span>Expiring Soon Items</span>
+                <RouterLink :to="{ path: '/items', query: { state: 'ExpiringSoon'}}">View</RouterLink>
             </div>
             <div class="card">
                 <span class="number">{{ managerDashboard.expiredItems }}</span>
                 <span>Expired Items</span>
+                <RouterLink :to="{ path: '/items', query: { state: 'Expired'}}">View</RouterLink>
             </div>
             <div class="card">
                 <span class="number">{{ managerDashboard.cancelledItems }}</span>
                 <span>Cancelled Items</span>
+                <RouterLink :to="{ path: '/items', query: { state: 'Cancelled'}}">View</RouterLink>
             </div>
         </div>
 
@@ -272,22 +282,27 @@ onMounted(async () => {
             <div class="card">
                 <span class="number">{{ employeeDashboard.totalItems }}</span>
                 <span>Total Items</span>
+                 <RouterLink :to="{ path: '/items'}">View</RouterLink>
             </div>
             <div class="card">
                 <span class="number">{{ employeeDashboard.activeItems }}</span>
                 <span>Active Items</span>
+                 <RouterLink :to="{ path: '/items', query: { state: 'Active'}}">View</RouterLink>
             </div>
             <div class="card">
                 <span class="number">{{ employeeDashboard.expiringSoonItems }}</span>
                 <span>Expiring Soon Items</span>
+                 <RouterLink :to="{ path: '/items', query: { state: 'ExpiringSoon'}}">View</RouterLink>
             </div>
             <div class="card">
                 <span class="number">{{ employeeDashboard.expiredItems }}</span>
                 <span>Expired Items</span>
+                 <RouterLink :to="{ path: '/items', query: { state: 'Expired'}}">View</RouterLink>
             </div>
             <div class="card">
                 <span class="number">{{ employeeDashboard.cancelledItems }}</span>
                 <span>Cancelled Items</span>
+                 <RouterLink :to="{ path: '/items', query: { state: 'Cancelled'}}">View</RouterLink>
             </div>
         </div>
 
@@ -436,20 +451,24 @@ onMounted(async () => {
 <style scoped>
 .cards{
     display: flex;
+    flex-direction: column;
     gap: 16px;
-    flex-wrap: wrap;
     margin-bottom: 24px;
 }
 
 .card{
     display: flex;
-    flex-direction: column;
-    padding: 16px;
-    min-width: 140px;
+    align-items: center;
+    padding: 10px 16px;
+    gap: 10px;
+}
+
+.card a {
+    margin-left: auto;
 }
 
 .number {
-    font-size: 28px;
+    font-size: 20px;
     font-weight: bold;
 }
 </style>

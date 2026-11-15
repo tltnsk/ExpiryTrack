@@ -62,7 +62,7 @@ async function login() {
 .login-page {
   display: flex;
   flex-direction: row;
-  background: white;
+  background: var(--background);
   position: fixed;
   inset: 0;
 }
@@ -88,6 +88,7 @@ async function login() {
   font-size: 1.5rem;
   text-align: left;
   line-height: 1.3;
+  color: var(--sidebar-text);
 }
 
 .login-card {
@@ -119,7 +120,7 @@ label {
   font-size: 0.9em;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 900px) {
   .login-left {display: none;}
   .login-right {width: 100%;}
 }

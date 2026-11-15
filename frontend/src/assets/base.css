@@ -1,13 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 :root {
-  --background: #ffffff;
+  --background: rgb(255, 255, 255);
   --primary: #111111;
-  --sidebar: #fafafa;
-  --hover: #ececec;
+  --sidebar: #1e1e1c;
+  --sidebar-text: #f5f1ea;
+  --sidebar-hover: #2e2e2b;
+  --hover: #f6f5f5;
   --text: #111827;
   --light-blue: #2f61e2;
   --danger: #c53030;
-  --border: #e5e7eb;
+  --border: #d3cabb;
 }
 
 html, body {

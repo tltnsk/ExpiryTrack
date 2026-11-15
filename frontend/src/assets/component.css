@@ -2,7 +2,7 @@ table {
   width: 100%;
   margin: 12px 0 24px;
   border-collapse: collapse;
-  border-style: hidden;
+  border: 1px solid var(--border);
 }
 
 th,
@@ -13,13 +13,13 @@ td {
 }
 
 tbody tr:hover {
-  background: var(--sidebar);
+  background: var(--hover);
 }
 
 form {
   max-width: 420px;
   margin: 16px auto;
-  padding: 24px;
+  padding: 16px;
   background: #ffffff;
 }
 
@@ -97,7 +97,6 @@ form button[type='submit'] {
 
 #logout-btn {
   opacity: 0.6;
-  color: black;
 }
 
 .add-btn {
@@ -116,7 +115,7 @@ form button[type='submit'] {
 /*details*/
 dl {
   display: grid;
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: 200px 1fr;
   gap: 10px 16px;
   max-width: 640px;
   margin: 12px 0 24px;
@@ -146,25 +145,25 @@ dd {
 
 /* request statuses */
 .PendingFinancialReview {
-  background: #884ce2;
+  background: #9b7acc;
 }
 .PendingManagerApproval {
-  background: #2f61e2;
+  background: #2d58c5;
 }
 .ClarificationRequired, .Expired {
-  background: #f7921f;
+  background: #efa34d;
 }
 .Approved, .Active{
-  background: #33ca63;
+  background: #177735;
 }
 .Rejected, .ExpiringSoon {
-  background: #e53b3b;
+  background: #ab2323;
 }
 .Completed, .Cancelled {
   background: #343131;
 }
 
-@media (max-width: 700px){
+@media (max-width: 900px){
   dl {
     grid-template-columns: 1fr;
     gap: 2px;
@@ -172,12 +171,6 @@ dd {
 
   dd {
     margin-bottom: 10px;
-  }
-
-  table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
   }
 
   th,
@@ -206,8 +199,14 @@ dd {
     border-radius: 10px;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 900px) {
     .filters {
         grid-template-columns: 1fr;
     }
+}
+
+@media (max-width: 1200px) {
+  .filters {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
 }

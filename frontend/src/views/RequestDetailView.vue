@@ -365,5 +365,7 @@ onMounted(async () => {
     flex-direction: row;
     justify-content: space-between;
     padding-top: 20px;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 </style>

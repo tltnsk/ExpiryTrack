@@ -26,7 +26,7 @@ main {
   height: 100vh;
   padding: 20px 12px;
   background: var(--sidebar);
-  color: var(--text);
+  color: var(--sidebar-text);
   font-size: 0.9em;
 }
 
@@ -54,7 +54,7 @@ main {
 }
 
 .logo-text {
-  color: var(--primary);
+  color: var(--sidebar-text);
   font-size: 1.2em;
   font-weight: 400;
 }
@@ -70,7 +70,7 @@ main {
   align-items: center;
   padding: 8px 12px;
   border-radius: 6px;
-  color: var(--text);
+  color: var(--sidebar-text);
   text-decoration: none;
   font-weight: 500;
 }
@@ -142,7 +142,7 @@ main {
   padding: 10px 12px;
   border-radius: 6px;
   background: transparent;
-  color: white;
+  color: var(--sidebar-text);
   font-size: 1em;
   font-weight: 500;
   text-align: left;
@@ -150,10 +150,10 @@ main {
 
 .account button:hover {
   opacity: 1;
-  background: var(--hover);
+  background: var(--sidebar-hover);
 }
 /*for narrow screens*/
-@media (max-width: 700px) {
+@media (max-width: 900px) {
   .layout {
     flex-direction: column;
   }

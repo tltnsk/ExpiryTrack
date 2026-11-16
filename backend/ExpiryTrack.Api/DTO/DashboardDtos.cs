@@ -27,6 +27,7 @@ public class AdminDashboardResponse
     public int CancelledItems { get; set; }
     public List<DepartmentItemCount> ItemsByDepartment { get; set; } = new();
     public List<DashboardItem> UpcomingExpirations { get; set; } = new();
+    public List<MonthCount> ExpirationsByMonth { get; set; } = new();
 }
 
 // one row in a list of requests 
@@ -70,6 +71,7 @@ public class ManagerDashboardResponse
     public List<DashboardRequest> RequestsToReview { get; set; } = new();
     public List<DashboardRequest> RequestsAwaitingCompletion { get; set; } = new();
     public List<DashboardItem> UpcomingExpirations { get; set; } = new();
+    public List<MonthCount> ExpirationsByMonth { get; set; } = new();
 }
 
 public class EmployeeDashboardResponse
@@ -84,13 +86,27 @@ public class EmployeeDashboardResponse
     public List<DashboardRequest> RequestsAwaitingCompletion { get; set; } = new();
     public List<DashboardRequest> MyOpenRequests { get; set; } = new();
     public List<DashboardItem> UpcomingExpirations { get; set; } = new();
+    public List<MonthCount> ExpirationsByMonth { get; set; } = new();
 }
 
 public class FinanceDashboardResponse
 {
+    public int ActiveItems { get; set; }
+    public int ExpiringSoonItems { get; set; }
+    public int ExpiredItems { get; set; }
+    public int CancelledItems { get; set; }
     public int RequestsToReviewCount { get; set; }
     public decimal TotalCostWaitingForReview { get; set; }
     public decimal ExpectedUpcomingCosts { get; set; }
     public decimal ApprovedCost { get; set; }
     public List<DashboardRequest> RequestsNeedingFinancialReview { get; set; } = new();
+    public List<MonthCount> ExpirationsByMonth { get; set; } = new();
+}
+
+// to return number of items expiring in each month
+public class MonthCount
+{
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public int Count { get; set; }
 }

@@ -1,3 +1,5 @@
+using DocumentFormat.OpenXml.Wordprocessing;
+using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
 using ExpiryTrack.Api.Models.Enums;
 using ExpiryTrack.Api.Services;
@@ -124,6 +126,9 @@ public class DashboardServiceTests
 
         // it's active, so the cost is not an upcoming cost
         var activeItem = TestData.AddItem(db, LifecycleState.Active, daysLeft: 100);
+        
+        // no cost, so finance can't see it
+        TestData.AddItem(db, LifecycleState.Active, daysLeft: 200);
 
         // the current costs of the items
         first.CurrentPeriod!.Cost = 1000;
@@ -151,5 +156,32 @@ public class DashboardServiceTests
         Assert.Equal(1800, result.ExpectedUpcomingCosts);
         Assert.Equal(400, result.ApprovedCost);
         Assert.Equal(2, result.RequestsNeedingFinancialReview.Count);
+        Assert.Equal(3, result.ExpiringSoonItems);
+        Assert.Equal(1, result.ActiveItems);
+    }
+    
+    // test the helper method for counting items expiring in next 12 months
+    [Fact]
+    public async Task CountExpirationsByMonth_Test()
+    {
+        using var db = TestData.CreateDb();
+        TestData.AddItem(db, LifecycleState.Active, daysLeft: 10);
+        TestData.AddItem(db, LifecycleState.Active, daysLeft: 40);
+        TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 45);
+        TestData.AddItem(db, LifecycleState.Cancelled, daysLeft: 40);
+        TestData.AddItem(db, LifecycleState.Active, daysLeft: 400);
+        
+        var service = new DashboardService(db);
+        var result = await service.CountExpirationsByMonth(db.Items, TestData.Today);
+        
+        Assert.Equal(12, result.Count);
+        Assert.Equal(2026, result[0].Year);
+        Assert.Equal(11, result[0].Month);
+        
+        Assert.Equal(1, result[0].Count);
+        
+        Assert.Equal(2, result[1].Count);
+        
+        Assert.Equal(3, result.Sum(m => m.Count));
     }
 }

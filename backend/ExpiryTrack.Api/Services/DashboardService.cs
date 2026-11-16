@@ -14,7 +14,7 @@ public class DashboardService
     {
         _db = db;
     }
-    
+
     // load the logged-in user along with their role
     private async Task<User> LoadCurrentUser(int userId)
     {
@@ -22,9 +22,32 @@ public class DashboardService
             .Include(u => u.Role)
             .SingleAsync(u => u.Id == userId);
     }
-    
+
+    // helper method for counting how many items expire in each of the 12 months
+    public async Task<List<MonthCount>> CountExpirationsByMonth(IQueryable<Item> items, DateOnly today)
+    {
+        List<MonthCount> result = new List<MonthCount>();
+        DateOnly firstMonth = new DateOnly(today.Year, today.Month, 1);
+
+        // runs 12 times and finds how many items expire between 1st of this month and 1st of next month
+        for (int m = 0; m < 12; m++)
+        {
+            DateOnly monthStart = firstMonth.AddMonths(m);
+            DateOnly monthEnd = monthStart.AddMonths(1);
+
+            // cancelled items are not counted
+            int count = await items.CountAsync(i => i.LifecycleState != LifecycleState.Cancelled
+                && i.CurrentPeriod!.ExpirationDate >= monthStart
+                && i.CurrentPeriod!.ExpirationDate < monthEnd);
+
+            result.Add(new MonthCount { Year = monthStart.Year, Month = monthStart.Month, Count = count });
+        }
+        return result;
+    }
+
     public async Task<AdminDashboardResponse> GetAdminDashboardAsync()
     {
+        DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
         int active = await _db.Items.CountAsync(i => i.LifecycleState == LifecycleState.Active);
         int expiringSoon = await _db.Items.CountAsync(i => i.LifecycleState == LifecycleState.ExpiringSoon);
         int expired = await _db.Items.CountAsync(i => i.LifecycleState == LifecycleState.Expired);
@@ -68,12 +91,14 @@ public class DashboardService
             ExpiredItems = expired,
             CancelledItems = cancelled,
             ItemsByDepartment = byDepartment,
-            UpcomingExpirations = upcomingExpirations
+            UpcomingExpirations = upcomingExpirations,
+            ExpirationsByMonth = await CountExpirationsByMonth(_db.Items, today)
         };
     }
-    
+
     public async Task<ManagerDashboardResponse> GetManagerDashboardAsync(int userId)
     {
+        DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
         User user = await LoadCurrentUser(userId);
 
         int active = await _db.Items
@@ -150,12 +175,14 @@ public class DashboardService
             CancelledItems = cancelled,
             RequestsToReview = requestsToReview,
             RequestsAwaitingCompletion = requestsToApprove,
-            UpcomingExpirations = upcomingExpirations
+            UpcomingExpirations = upcomingExpirations,
+            ExpirationsByMonth = await CountExpirationsByMonth(_db.Items.Where(i => i.DepartmentId == user.DepartmentId), today)
         };
     }
-    
-    public async Task<EmployeeDashboardResponse> GetEmployeeDashboardAsync(int  userId)
+
+    public async Task<EmployeeDashboardResponse> GetEmployeeDashboardAsync(int userId)
     {
+        DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
         User user = await LoadCurrentUser(userId);
 
         int active = await _db.Items
@@ -273,12 +300,27 @@ public class DashboardService
             RequestsNeedingClarification = requestsNeedingClarification,
             RequestsAwaitingCompletion = requestsAwaitingCompletion,
             MyOpenRequests = requestsOpen,
-            UpcomingExpirations = upcomingExpirations
+            UpcomingExpirations = upcomingExpirations,
+            ExpirationsByMonth = await CountExpirationsByMonth(_db.Items.Where(i => i.ResponsibleUserId == userId), today)
         };
     }
-    
+
     public async Task<FinanceDashboardResponse> GetFinanceDashboardAsync()
     {
+        DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
+        int active = await _db.Items
+            .Where(i => i.CurrentPeriod!.Cost != null)
+            .CountAsync(i => i.LifecycleState == LifecycleState.Active);
+        int expiringSoon = await _db.Items
+            .Where(i => i.CurrentPeriod!.Cost != null)
+            .CountAsync(i => i.LifecycleState == LifecycleState.ExpiringSoon);
+        int expired = await _db.Items
+            .Where(i => i.CurrentPeriod!.Cost != null)
+            .CountAsync(i => i.LifecycleState == LifecycleState.Expired);
+        int cancelled = await _db.Items
+            .Where(i => i.CurrentPeriod!.Cost != null)
+            .CountAsync(i => i.LifecycleState == LifecycleState.Cancelled);
+
         int requestsToReview = await _db.RenewalRequests
             .Where(r => r.Status == RequestStatus.PendingFinancialReview)
             .CountAsync();
@@ -312,11 +354,16 @@ public class DashboardService
 
         return new FinanceDashboardResponse
         {
+            ActiveItems = active,
+            ExpiringSoonItems = expiringSoon,
+            ExpiredItems = expired,
+            CancelledItems = cancelled,
             RequestsToReviewCount = requestsToReview,
             TotalCostWaitingForReview = totalCostWaitingForReview,
             ExpectedUpcomingCosts = expectedUpcomingCosts,
             ApprovedCost = approvedCost,
             RequestsNeedingFinancialReview = financialRequests,
+            ExpirationsByMonth = await CountExpirationsByMonth(_db.Items.Where(i => i.CurrentPeriod!.Cost != null), today)
         };
     }
 }

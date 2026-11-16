@@ -16,6 +16,12 @@ interface DashboardItem {
     expirationDate: string
 }
 
+interface MonthCount {
+    year: number
+    month: number
+    count: number
+}
+
 interface AdminDashboard {
     totalItems: number
     activeItems: number
@@ -24,6 +30,7 @@ interface AdminDashboard {
     cancelledItems: number
     itemsByDepartment: DepartmentItemCount[]
     upcomingExpirations: DashboardItem[]
+    expirationsByMonth: MonthCount[]
 }
 
 interface DashboardRequest {
@@ -46,6 +53,7 @@ interface ManagerDashboard {
     requestsToReview: DashboardRequest[]
     requestsAwaitingCompletion: DashboardRequest[]
     upcomingExpirations: DashboardItem[]
+    expirationsByMonth: MonthCount[]
 }
 
 interface EmployeeDashboard {
@@ -59,15 +67,22 @@ interface EmployeeDashboard {
     requestsAwaitingCompletion: DashboardRequest[]
     myOpenRequests: DashboardRequest[]
     upcomingExpirations: DashboardItem[]
+    expirationsByMonth: MonthCount[]
 }
 
 interface FinanceDashboard {
+    activeItems: number
+    expiringSoonItems: number
+    expiredItems: number
+    cancelledItems: number
     requestsToReviewCount: number
     totalCostWaitingForReview: number
     expectedUpcomingCosts: number
     approvedCost: number
     requestsNeedingFinancialReview: DashboardRequest[]
+    expirationsByMonth: MonthCount[]
 }
+
 const auth = useAuthStore()
 
 const adminDashboard = ref<AdminDashboard | null>(null)
@@ -78,8 +93,9 @@ const loading = ref(true)
 const errorMessage = ref('')
 
 const stateChart = ref<HTMLCanvasElement | null>(null)
+const monthChart = ref<HTMLCanvasElement | null>(null)
 
-async function drawStateChart(data: AdminDashboard | ManagerDashboard | EmployeeDashboard) {
+async function drawStateChart(data: AdminDashboard | ManagerDashboard | EmployeeDashboard | FinanceDashboard) {
     await nextTick() // wait until Vue has put the <canvas> on the page
     new Chart(stateChart.value!, {
         type: 'doughnut',
@@ -92,6 +108,32 @@ async function drawStateChart(data: AdminDashboard | ManagerDashboard | Employee
         },
     })
 }
+
+const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+async function drawMonthChart(data: AdminDashboard | ManagerDashboard | EmployeeDashboard | FinanceDashboard) {
+    await nextTick() 
+    new Chart(monthChart.value!, {
+        type: 'bar',
+        data: {
+            labels: data.expirationsByMonth.map((m) => `${monthNames[m.month - 1]} ${m.year}`),
+            datasets: [{
+                label: 'Items expiring',
+                data: data.expirationsByMonth.map((m) => m.count),
+                backgroundColor: '#ffffff',
+            }],
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: { 
+                x: {
+                    ticks: { color: '#ffffff'}
+                },
+                y: { beginAtZero: true, ticks: { precision: 0, color: '#ffffff' }}},
+        },
+    
+    })
+}
+
 onMounted(async () => {
     if (auth.user?.role === 'Administrator') {
         const response = await fetch('/api/dashboard/admin')
@@ -127,10 +169,11 @@ onMounted(async () => {
     }
     loading.value = false
 
-    const data = adminDashboard.value ?? employeeDashboard.value ?? managerDashboard.value
+    const data = adminDashboard.value ?? employeeDashboard.value ?? managerDashboard.value ?? financeDashboard.value
 
     if (data) {
         await drawStateChart(data)
+        await drawMonthChart(data)
     }
 })
 
@@ -173,6 +216,11 @@ onMounted(async () => {
         <div class="chart" id="items-chart">
             <h3>Items by state</h3>
             <canvas ref="stateChart"></canvas>
+        </div>
+
+        <div class="chart" id="months-chart">
+            <h3>Expirations in the next 12 months</h3>
+            <canvas ref="monthChart"></canvas>
         </div>
 
         <h3>Items per department</h3>
@@ -244,6 +292,11 @@ onMounted(async () => {
         <div class="chart" id="items-chart">
             <h3>Items by state</h3>
             <canvas ref="stateChart"></canvas>
+        </div>
+
+        <div class="chart" id="months-chart">
+            <h3>Expirations in the next 12 months</h3>
+            <canvas ref="monthChart"></canvas>
         </div>
 
         <h3>Requests to Review</h3>
@@ -343,6 +396,11 @@ onMounted(async () => {
         <div class="chart" id="items-chart">
             <h3>Items by state</h3>
             <canvas ref="stateChart"></canvas>
+        </div>
+
+        <div class="chart" id="months-chart">
+            <h3>Expirations in the next 12 months</h3>
+            <canvas ref="monthChart"></canvas>
         </div>
 
         <h3>Items Needing Renewal</h3>
@@ -467,6 +525,16 @@ onMounted(async () => {
             </div>
         </div>
 
+        <div class="chart" id="items-chart">
+            <h3>Items by state</h3>
+            <canvas ref="stateChart"></canvas>
+        </div>
+
+        <div class="chart" id="months-chart">
+            <h3>Expirations in the next 12 months</h3>
+            <canvas ref="monthChart"></canvas>
+        </div>
+
         <h3>Requests Needing Financial Review</h3>
         <table>
             <thead>
@@ -513,6 +581,14 @@ onMounted(async () => {
 }
 
 #items-chart {
-    background-color: rgb(234, 231, 230);
+    background-color: rgb(243, 232, 232);
+}
+
+#months-chart {
+    background-color: rgb(190, 37, 37);
+}
+
+#months-chart h3 {
+    color: white;
 }
 </style>

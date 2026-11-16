@@ -1,7 +1,10 @@
+using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using ExpiryTrack.Api.Data;
 using ExpiryTrack.Api.Models;
 using ExpiryTrack.Api.Models.Enums;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 
 namespace ExpiryTrack.Tests;
@@ -114,5 +117,14 @@ public static class TestData
         db.RenewalRequests.Add(request);
         db.SaveChanges();
         return request;
+    }
+
+    public static void SetUser(ControllerBase controller, int userId)
+    {
+        var identity = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) }, "Test");
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) }
+        };
     }
 }

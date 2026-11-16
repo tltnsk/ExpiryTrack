@@ -41,7 +41,7 @@ public class DepartmentsController : ControllerBase
 
     // GET /api/departments/{id}
     [HttpGet("{id}")]
-    public async Task<IActionResult> Get(int id)
+    public async Task<IActionResult> GetById(int id)
     {
         var department = await _db.Departments
             .Include(d => d.Manager)
@@ -60,7 +60,7 @@ public class DepartmentsController : ControllerBase
         var name = departmentRequest.Name.Trim();
 
         if (await _db.Departments.AnyAsync(d => d.Name == name))
-            return Conflict("Name already exists.");
+            return Conflict("A department with this name already exists.");
 
         var department = new Department();
         CopyFromRequest(departmentRequest, department);
@@ -83,7 +83,7 @@ public class DepartmentsController : ControllerBase
 
         var name = departmentRequest.Name.Trim();
         if (await _db.Departments.AnyAsync(d => d.Name == name && d.Id != id))
-            return Conflict("Department already exists.");
+            return Conflict("Name already exists.");
 
         CopyFromRequest(departmentRequest, department);
         await _db.SaveChangesAsync();

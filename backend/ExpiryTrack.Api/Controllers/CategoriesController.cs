@@ -83,7 +83,7 @@ public class CategoriesController : ControllerBase
         if (category == null)
             return NotFound();
         
-        var name =  category.Name.Trim();
+        var name =  request.Name.Trim();
         
         if (await _db.Categories.AnyAsync(c => c.Name == name && c.Id != id))
             return Conflict("A category with that name already exists.");

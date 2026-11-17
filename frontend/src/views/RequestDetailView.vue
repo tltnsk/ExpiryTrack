@@ -59,7 +59,7 @@ const canFinanceReview = computed(() => auth.user?.role === 'FinanceOfficer' && 
 
 // manager
 const canManagerReview = computed(() => auth.user?.role === 'DepartmentManager' && request.value?.status === 'PendingManagerApproval')
-const canManagerReject = computed(() => auth.user?.role === 'DepartmentManager' && (request.value?.status === 'PendingManagerApproval' || request.value?.status === 'ClarificationRequired'))
+const canManagerReject = computed(() => auth.user?.role === 'DepartmentManager' && (request.value?.status === 'PendingManagerApproval' || request.value?.status === 'ClarificationRequired' || request.value?.status === 'Approved'))
 const managerError = ref('')
 const managerSaving = ref(false)
 

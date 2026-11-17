@@ -69,6 +69,17 @@ public class RenewalService
                           (item.Category.FinanceReviewThreshold == null ||
                            data.ProposedCost >= item.Category.FinanceReviewThreshold);
 
+        if (needsReview)
+        {
+            bool hasFinanceOfficer = await _db.Users
+                .AnyAsync(u => u.Role.Name == "FinanceOfficer" && u.IsActive);
+
+            if (!hasFinanceOfficer)
+            {
+                return new RenewalResult { Error = "There is no active finance officer to review this request." };
+            }
+        }
+
         DateTime now = DateTime.UtcNow;
 
         RenewalRequest request = new RenewalRequest
@@ -245,7 +256,9 @@ public class RenewalService
         }
 
         // the manager can reject the renewal request also when waiting for a clarification from the employee
-        if (request.Status != RequestStatus.PendingManagerApproval && request.Status != RequestStatus.ClarificationRequired)
+        // manager can reject an approved request too - this is an edge case if the approved request isn't completed
+        // so it stays open forever
+        if (request.Status != RequestStatus.PendingManagerApproval && request.Status != RequestStatus.ClarificationRequired && request.Status != RequestStatus.Approved)
         {
             return new RenewalResult { Error = "Cannot process the renewal request." };
         }

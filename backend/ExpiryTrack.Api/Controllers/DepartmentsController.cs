@@ -1,6 +1,7 @@
 using ExpiryTrack.Api.Data;
 using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
+using ExpiryTrack.Api.Models.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -104,6 +105,14 @@ public class DepartmentsController : ControllerBase
         // an admin won't be able to deactivate a user if they're managing a department 
         if (request.UserId == null)
         {
+            // removing the manager would leave open requests with nobody to approve them
+            bool hasOpenRequests = await _db.RenewalRequests.AnyAsync(r =>
+                r.Period.Item.DepartmentId == id &&
+                r.Status != RequestStatus.Completed && r.Status != RequestStatus.Rejected);
+
+            if (hasOpenRequests)
+                return Conflict(
+                    "This department has open renewal requests. Assign another manager instead of removing the current one.");
             department.ManagerId = null;
             department.Manager = null;
             await _db.SaveChangesAsync();

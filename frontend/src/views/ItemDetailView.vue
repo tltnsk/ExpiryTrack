@@ -227,7 +227,7 @@ async function reassignEmployee() {
         <button v-if="auth.user?.role === 'DepartmentManager' && (item.lifecycleState === 'Active' || item.lifecycleState === 'ExpiringSoon')"  @click="cancelItem">Cancel Item</button>
         <p v-if="cancelError">{{ cancelError }}</p>
         
-        <form v-if="auth.user?.role === 'DepartmentManager' && (item.lifecycleState === 'Active' || item.lifecycleState === 'ExpiringSoon')" @submit.prevent="reassignEmployee">
+        <form v-if="auth.user?.role === 'DepartmentManager' && (item.lifecycleState === 'Active' || item.lifecycleState === 'ExpiringSoon' || item.lifecycleState === 'Expired')" @submit.prevent="reassignEmployee">
             <div>
                 <label>
                     Reassign Employee

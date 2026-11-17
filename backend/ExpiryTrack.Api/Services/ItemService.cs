@@ -231,10 +231,11 @@ public class ItemService
             return new ItemResult { NotFound = true };
         }
 
-        // only active and expiring soon items can be reassigned
-        if (item.LifecycleState != LifecycleState.ExpiringSoon && item.LifecycleState != LifecycleState.Active)
+        // expired items can be reassigned to, because if an employee is deactivated,
+        // expired items can become stuck 
+        if (item.LifecycleState == LifecycleState.Cancelled)
         {
-            return new ItemResult { Error = "Only Active and Expiring Soon items can be reassigned." };
+            return new ItemResult { Error = "Cancelled items cannot be reassigned." };
         }
 
         if (assignedUser == null)

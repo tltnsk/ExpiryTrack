@@ -93,6 +93,24 @@ public class UserService
 
             if (await _db.Departments.AnyAsync(d => d.ManagerId == id))
                 return new UserResult { Conflict = "This user manages a department. Assign another manager first."};
+
+            if (user.Role.Name == "FinanceOfficer")
+            {
+                bool otherFinanceOfficer = await _db.Users.AnyAsync(u => 
+                    u.Id != id && u.Role.Name == "FinanceOfficer" && u.IsActive);
+
+                bool waitingForFinance = await _db.RenewalRequests
+                    .AnyAsync(r => r.Status == RequestStatus.PendingFinancialReview);
+
+                if (!otherFinanceOfficer && waitingForFinance)
+                {
+                    return new UserResult
+                    {
+                        Conflict =
+                            "This is the only active finance officer and some requests are waiting for financial review. "
+                    };
+                }
+            }
         }
 
         user.IsActive = request.IsActive;

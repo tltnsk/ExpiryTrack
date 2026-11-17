@@ -1,6 +1,7 @@
 using ExpiryTrack.Api.Controllers;
 using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
+using ExpiryTrack.Api.Models.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExpiryTrack.Tests;
@@ -179,5 +180,20 @@ public class DepartmentsControllerTests
         
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("The user does not belong to this department.", badRequest.Value);
+    }
+
+    [Fact]
+    public async Task RemoveManager_RequestsOpen_Refused()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.Active, daysLeft: 105, manager: manager);
+        TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
+        
+        var controller = new DepartmentsController(db);
+        var result = await controller.AssignManager(item.DepartmentId, new AssignManagerRequest { UserId = null });
+
+        Assert.IsType<ConflictObjectResult>(result);
+        Assert.Equal(manager.Id, db.Departments.Find(item.DepartmentId)!.ManagerId);
     }
 }

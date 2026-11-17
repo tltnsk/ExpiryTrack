@@ -133,6 +133,21 @@ public class RenewalServiceTests
         var notification = Assert.Single(db.Notifications);
         Assert.Equal(manager.Id, notification.RecipientUserId);
     }
+    
+    [Fact]
+    public async Task Submit_ReviewRequired_NoFinanceOfficer()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 20, manager: manager, requiresFinancialReview: true);
+        var service = new RenewalService(db);
+
+        var result = await service.SubmitAsync(item.Id, item.ResponsibleUserId, SubmitData(cost: 500));
+
+        Assert.NotNull(result.Error);
+        Assert.Contains("There is no active finance officer", result.Error);
+        Assert.Empty(db.RenewalRequests);
+    }
 
     [Fact]
     public async Task SubmitActiveItem()
@@ -345,6 +360,49 @@ public class RenewalServiceTests
 
         var notification = Assert.Single(db.Notifications);
         Assert.Equal(item.ResponsibleUserId, notification.RecipientUserId);
+    }
+    
+    [Fact]
+    public async Task Reject_ApprovedRequestPastProposedDate_Rejects()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: -2, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.Approved);
+        request.ProposedExpirationDate = DateOnly.FromDateTime(DateTime.Now).AddDays(-1);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.RejectAsync(request.Id, manager.Id, ManagerData("Not completed in time."));
+
+        Assert.Null(result.Error);
+        Assert.NotNull(result.Request);
+        Assert.Equal(RequestStatus.Rejected, result.Request.Status);
+
+        var action = Assert.Single(db.RequestActions);
+        Assert.Equal(RequestActionType.Rejected, action.ActionType);
+        Assert.Equal(RequestStatus.Approved, action.FromStatus);
+
+        var notification = Assert.Single(db.Notifications);
+        Assert.Equal(item.ResponsibleUserId, notification.RecipientUserId);
+    }
+    
+    [Fact]
+    public async Task Reject_ApprovedRequestStillCompletable_Refused()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: -2, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.Approved);
+        db.SaveChanges();
+        var service = new RenewalService(db);
+
+        var result = await service.RejectAsync(request.Id, manager.Id, ManagerData("Not completed in time."));
+        
+        Assert.Contains("An approved request can only be rejected once its proposed expiration date has passed.", result.Error);
+        Assert.Empty(db.RequestActions);
     }
 
     // clarification with question works

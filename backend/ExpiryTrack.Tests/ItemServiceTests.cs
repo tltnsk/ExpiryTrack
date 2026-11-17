@@ -106,6 +106,54 @@ public class ItemServiceTests
         Assert.Contains(db.Notifications, n => n.RecipientUserId == oldEmployeeId);
     }
     
+    [Fact]
+    public async Task Reassign_ExpiredItem_Reassigns()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.Expired, daysLeft: -10, manager: manager);
+        var newEmployee = new User { FirstName = "Responsible", LastName = "Employee", Email = "responsible@test.com", RoleId = 2, DepartmentId = item.DepartmentId };
+        db.Users.Add(newEmployee);
+        db.SaveChanges();
+
+        int oldEmployeeId = item.ResponsibleUserId;
+        var service = new ItemService(db);
+        var result = await service.ReassignAsync(item.Id, manager.Id,
+            new ReassignItemRequest { ResponsibleUserId = newEmployee.Id });
+        
+        Assert.Null(result.Error);
+        Assert.False(result.NotFound);
+        
+        Assert.Equal(item.ResponsibleUserId, newEmployee.Id);
+
+        // both employees are notified
+        Assert.Equal(2, db.Notifications.Count());
+        Assert.Contains(db.Notifications, n => n.RecipientUserId == newEmployee.Id);
+        Assert.Contains(db.Notifications, n => n.RecipientUserId == oldEmployeeId);
+    }
+    
+    [Fact]
+    public async Task Reassign_CancelledItem_Refused()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.Cancelled, daysLeft: -10, manager: manager);
+        var newEmployee = new User { FirstName = "Responsible", LastName = "Employee", Email = "responsible@test.com", RoleId = 2, DepartmentId = item.DepartmentId };
+        db.Users.Add(newEmployee);
+        db.SaveChanges();
+
+        int oldEmployeeId = item.ResponsibleUserId;
+        var service = new ItemService(db);
+        var result = await service.ReassignAsync(item.Id, manager.Id,
+            new ReassignItemRequest { ResponsibleUserId = newEmployee.Id });
+        
+        Assert.NotNull(result.Error);
+        Assert.Contains("Cancelled items cannot be reassigned.", result.Error);
+        
+        Assert.Equal(item.ResponsibleUserId, oldEmployeeId);
+        Assert.Empty(db.Notifications);
+    }
+    
     // Reassigning an item to an employee from different department should result in an error
     [Fact]
     public async Task Reassign_Item_Different_Department()

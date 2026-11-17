@@ -79,6 +79,28 @@ public class UserServiceTests
         Assert.Contains("cannot deactivate your own account.", result.Conflict);
     }
     
+    // cannot deactivate the only finance officer
+    [Fact]
+    public async Task Deactivate_LastFinance_Conflict()
+    {
+        using var db = TestData.CreateDb();
+        var admin = new User { FirstName = "Test", LastName = "Admin", Email = "admin@test.com", RoleId = 1 };
+        var finance = new User { FirstName = "Test", LastName = "Finance", Email = "finance@test.com", RoleId = 4 };
+        var item = TestData.AddItem(db, LifecycleState.Active, daysLeft: 100);
+        TestData.AddRequest(db, item, RequestStatus.PendingFinancialReview);
+        
+        db.Users.Add(admin);
+        db.Users.Add(finance);
+        db.SaveChanges();
+        
+        var service = new UserService(db);
+        var result = await service.SetActiveAsync(finance.Id, admin.Id, new SetUserActiveRequest{IsActive = false});
+        
+        Assert.NotNull(result.Conflict);
+        Assert.Contains("This is the only active finance officer and some requests are waiting for financial review.", result.Conflict);
+    }
+    
+    
     // an employee who's still responsible for an item cannot be deactivated
     [Fact]
     public async Task SetActive_UserWithItems_Conflict()

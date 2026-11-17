@@ -24,7 +24,7 @@ interface RenewalRequest {
     proposedExpirationDate: string
     proposedCost: number | null
     justification: string | null
-    submittedAt: string 
+    submittedAt: string
     decidedAt: string | null
     completedAt: string | null
     periodId: number
@@ -59,11 +59,11 @@ const canFinanceReview = computed(() => auth.user?.role === 'FinanceOfficer' && 
 
 // manager
 const canManagerReview = computed(() => auth.user?.role === 'DepartmentManager' && request.value?.status === 'PendingManagerApproval')
-const canManagerReject = computed(() => auth.user?.role === 'DepartmentManager' && (request.value?.status === 'PendingManagerApproval' || request.value?.status === 'ClarificationRequired' || request.value?.status === 'Approved'))
+const canManagerReject = computed(() => auth.user?.role === 'DepartmentManager' && (request.value?.status === 'PendingManagerApproval' || request.value?.status === 'ClarificationRequired' || (request.value?.status === 'Approved' && request.value.proposedExpirationDate <= new Date().toISOString().slice(0, 10))))
 const managerError = ref('')
 const managerSaving = ref(false)
 
-// employee 
+// employee
 const canAnswerClarification = computed(() => auth.user?.role === 'Employee' && request.value?.status === 'ClarificationRequired')
 const canRecordCompletion = computed(() => auth.user?.role === 'Employee' && request.value?.status === 'Approved')
 const employeeError = ref('')
@@ -131,7 +131,7 @@ async function managerAction(action: string) {
             comment: managerComment.value
         })
     })
-    
+
     managerSaving.value = false
     if (response.status === 400) {
         const contentType = response.headers.get('Content-Type') ?? ''
@@ -162,7 +162,7 @@ async function provideClarification() {
             answer: employeeComment.value
         })
     })
-    
+
     employeeSaving.value = false
     if (response.status === 400) {
         const contentType = response.headers.get('Content-Type') ?? ''
@@ -189,7 +189,7 @@ async function completeRenewal() {
     const response = await fetch(`/api/requests/${id}/complete-renewal`, {
         method: 'POST',
     })
-    
+
     employeeCompleteSaving.value = false
     if (response.status === 400) {
         const contentType = response.headers.get('Content-Type') ?? ''

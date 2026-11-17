@@ -254,13 +254,17 @@ public class RenewalService
         {
             return new RenewalResult { NotFound = true };
         }
-
-        // the manager can reject the renewal request also when waiting for a clarification from the employee
-        // manager can reject an approved request too - this is an edge case if the approved request isn't completed
-        // so it stays open forever
+        
         if (request.Status != RequestStatus.PendingManagerApproval && request.Status != RequestStatus.ClarificationRequired && request.Status != RequestStatus.Approved)
         {
             return new RenewalResult { Error = "Cannot process the renewal request." };
+        }
+        
+        // an approved request can only be rejected when it can no longer be completed
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (request.Status == RequestStatus.Approved && request.ProposedExpirationDate > today)
+        {
+            return new RenewalResult { Error = "An approved request can only be rejected once its proposed expiration date has passed." };
         }
 
         if (string.IsNullOrWhiteSpace(data.Comment))

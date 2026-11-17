@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { formatDate, formatDateTime, formatLabel} from '@/utils/format'
+import { formatDate, formatDateTime, formatLabel, formatMoney} from '@/utils/format'
 
 interface RequestAction{
     type: string
@@ -220,6 +220,40 @@ onMounted(async () => {
     }
 })
 
+
+// the steps of the request 
+const steps = computed(() => {
+    if (!request.value) return []
+    const list = ['Submitted']
+    if (request.value.needsFinancialReview) list.push('Financial review')
+    list.push('Manager decision', 'Renewal completed')
+    return list
+})
+
+// how many steps are finished when the request has this status
+function stepsDoneFor(status: string | null): number {
+    const total = steps.value.length
+    if (status === 'Completed') return total
+    if (status === 'Approved') return total - 1
+    if (status === 'PendingManagerApproval' || status === 'ClarificationRequired') return total - 2
+    if (status === 'PendingFinancialReview') return 1
+    return 0
+}
+
+const isRejected = computed(() => request.value?.status === 'Rejected')
+
+const doneSteps = computed(() => {
+    if (!request.value) return 0
+    if (isRejected.value) {
+        const last = request.value.actions[request.value.actions.length - 1]
+        return stepsDoneFor(last?.fromStatus ?? null)
+    }
+    return stepsDoneFor(request.value.status)
+})
+
+const percent = computed(() => 
+    steps.value.length === 0 ? 0 : Math.round(doneSteps.value / steps.value.length * 100))
+
 </script>
 
 <template>
@@ -229,24 +263,46 @@ onMounted(async () => {
 
     <p v-else-if="errorMessage" class="error"> {{  errorMessage }}</p>
     <div v-else-if="request">
-        <h3>Details</h3>
-        <dl>
-            <dt>Status</dt>
-            <dd><span class="state" :class="request.status">{{ formatLabel(request.status) }}</span></dd>
-            <dt>Proposed Expiration Date</dt>
-            <dd>{{ formatDate(request.proposedExpirationDate )}}</dd>
-            <dt>Proposed Cost</dt>
-            <dd>{{ request.proposedCost ?? '-' }}</dd>
-            <dt>Justification</dt>
-            <dd>{{ request.justification ?? '-' }}</dd>
-            <dt>Submitted At</dt>
-            <dd>{{ formatDateTime(request.submittedAt) }}</dd>
-            <dt>Decided At</dt>
-            <dd>{{ formatDateTime(request.decidedAt) ?? '-' }}</dd>
-            <dt>Completed At</dt>
-            <dd>{{ formatDateTime(request.completedAt) ?? '-' }}</dd>
-        </dl>
+        <h2>Renewal Request for <RouterLink :to="`/items/${request.itemId}`">{{ request.itemName }}</RouterLink></h2>
+        <div class="request-layout">
+            <div class="card">
+                <dl>
+                    <dt>Status</dt>
+                    <dd><span class="state" :class="request.status">{{ formatLabel(request.status) }}</span></dd>
+                    <dt>Proposed Expiration Date</dt>
+                    <dd>{{ formatDate(request.proposedExpirationDate )}}</dd>
+                    <dt>Proposed Cost</dt>
+                    <dd>{{ formatMoney(request.proposedCost)  }}</dd>
+                    <dt>Justification</dt>
+                    <dd>{{ request.justification ?? '-' }}</dd>
+                    <dt>Submitted At</dt>
+                    <dd>{{ formatDateTime(request.submittedAt) }}</dd>
+                    <dt>Decided At</dt>
+                    <dd>{{ formatDateTime(request.decidedAt)}}</dd>
+                    <dt>Completed At</dt>
+                    <dd>{{ formatDateTime(request.completedAt) }}</dd>
+                </dl>
+            </div>  
+            <aside class="progress-box">
+                <div class="progress-header">
+                    <h3>Progress</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" :class="{ rejected: isRejected}" :style="{ width: percent + '%'}"></div>
+                    </div>
+                    <span>{{ doneSteps }}/{{ steps.length }}</span>
+                </div>
+                <div class="progress-inner">
+                    <ol class="steps">
+                        <li v-for="(step, index) in steps" :key="step" :class="{done: index < doneSteps,
+                            current: index === doneSteps && !isRejected,
+                            stopped: index === doneSteps && isRejected
+                        }">{{ step }}</li>
+                    </ol>
+                </div>
+            </aside>                
+        </div>
 
+    <h3>History</h3>
     <table>
         <thead>
             <tr>
@@ -263,15 +319,16 @@ onMounted(async () => {
                 <td>{{formatDateTime(action.createdAt) }}</td>
                 <td>{{ action.actorUserName}}</td>
                 <td>{{ formatLabel(action.type) }}</td>
-                <td>{{ formatLabel(action.fromStatus)}} -> {{ formatLabel(action.toStatus) }}</td>
+                <td><template v-if="action.fromStatus">{{ formatLabel(action.fromStatus)}} -></template> {{ formatLabel(action.toStatus) }}</td>
                 <td>{{ action.recommendation ?? '-' }}</td>
                 <td>{{ action.comment  ?? '-'}}</td>
             </tr>
         </tbody>
     </table>
 
-    <form v-if="canFinanceReview" @submit.prevent="financeRecommendation">
+    <form v-if="canFinanceReview" @submit.prevent="financeRecommendation" class="card section">
     <div>
+        <h3>Financial review</h3>
         <label>
         Recommendation
         <select v-model="recommendation" required>
@@ -293,20 +350,23 @@ onMounted(async () => {
     <p v-if="financeError" class="error">{{ financeError }}</p>
     </form>
 
-    <div v-if="canManagerReview || canManagerReject" id="managerReview">
-        <div>
-            <label> Comment (Required for Reject and Request Clarification)
+    <div v-if="canManagerReview || canManagerReject" class="card section">
+        <h3>Your decision</h3>
+        <p v-if="request.status === 'Approved'">
+            This approval can no longer be completed, so you can reject it. 
+        </p>
+        <label> Comment (required to reject or to request clarification)
             <textarea v-model="managerComment" id="managerComment"></textarea>
-            </label>
-        </div>
+        </label>
         <div id="managerButtons">
             <button type="button" @click="managerAction('approve')" v-if="canManagerReview" :disabled="managerSaving">Approve</button>
-            <button type="button" @click="managerAction('reject')" v-if="canManagerReject" :disabled="managerSaving">Reject</button>
             <button type="button" @click="managerAction('request-clarification')" v-if="!clarificationUsed && canManagerReview" :disabled="managerSaving">Request Clarification</button>
+            <button type="button" class="danger" @click="managerAction('reject')" v-if="canManagerReject" :disabled="managerSaving">Reject</button>
         </div>
         <p v-if="managerError" class="error">{{ managerError }}</p>
     </div>
-      <form @submit.prevent="provideClarification" v-if="canAnswerClarification">
+
+      <form @submit.prevent="provideClarification" v-if="canAnswerClarification" class="card section">
         <h3>Your answer</h3>
         <div>
             <label> Provide Clarification
@@ -319,14 +379,16 @@ onMounted(async () => {
         <p v-if="employeeError" class="error">{{ employeeError }}</p>
     </form>
 
-    <form @submit.prevent="completeRenewal" v-if="canRecordCompletion">
+    <form @submit.prevent="completeRenewal" v-if="canRecordCompletion" class="card section">
+        <h3>Complete the renewal</h3>
+        <p>Do this once the renewal is done. It starts a new period that ends on {{  formatDate(request.proposedExpirationDate) }}.</p>
         <div>
           <button type="submit" :disabled="employeeCompleteSaving">Complete</button>
         </div>
         <p v-if="employeeCompleteError" class="error">{{ employeeCompleteError }}</p>
     </form>
 
-    <h2>Documents</h2>
+    <h3>Documents</h3>
         <p v-if="documents.length === 0">No documents.</p>
         <table v-else>
         <thead>
@@ -352,20 +414,113 @@ onMounted(async () => {
     color: var(--danger);
 }
 
-#managerReview {
-    display: flex;
-    flex-direction: column;
-    padding-bottom: 30px;
-    margin: 16px auto;
-    max-width: 420px;
+.section {
+    max-width: 640px;
+    margin: 24xp 0;
+    padding: 20px 24px;
 }
 
 #managerButtons {
     display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    padding-top: 20px;
     flex-wrap: wrap;
     gap: 8px;
+    margin-top: 12px;
 }
+
+.request-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+.progress-box {
+    background: #f4f4f5;
+    border-radius: 20px;
+    padding: 6px;
+}
+
+.progress-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+}
+
+.progress-header h3 {
+    margin: 0;
+    flex: 1;            
+}
+
+.progress-bar {
+    width: 90px;
+    height: 8px;
+    background: white;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--light-blue);
+    border-radius: 999px;
+    transition: width 0.3s;
+}
+
+.progress-fill.rejected {
+    background: var(--danger);
+}
+
+.progress-inner {
+    background: white;
+    border-radius: 16px;
+    padding: 14px 18px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.steps li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    color: #b0b0b0;              
+}
+
+.steps li::before {
+    content: '';
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 2px dashed #c4c4c4;   
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+}
+
+.steps li.done { color: #4b5563; }
+.steps li.done::before { content: '✓'; background: #43c825; border: 2px solid #1e8644; }
+
+.steps li.current { color: var(--text); font-weight: 500; }
+.steps li.current::before { border-color: #6b7280; }
+
+.steps li.stopped { color: var(--danger); font-weight: 500; }
+.steps li.stopped::before { content: '✕'; background: var(--danger); border: 2px solid var(--danger); }
+
+.card {
+    background: #f4f4f5;
+}
+
+@media (max-width: 900px) {
+    .request-layout {grid-template-columns: 1fr;}
+}
+
 </style>

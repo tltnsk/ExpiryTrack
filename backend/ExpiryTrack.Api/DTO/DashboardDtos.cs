@@ -72,6 +72,7 @@ public class ManagerDashboardResponse
     public List<DashboardRequest> RequestsAwaitingCompletion { get; set; } = new();
     public List<DashboardItem> UpcomingExpirations { get; set; } = new();
     public List<MonthCount> ExpirationsByMonth { get; set; } = new();
+    public List<ChartEntry> RequestsByStatus { get; set; } = new();
 }
 
 public class EmployeeDashboardResponse
@@ -87,6 +88,7 @@ public class EmployeeDashboardResponse
     public List<DashboardRequest> MyOpenRequests { get; set; } = new();
     public List<DashboardItem> UpcomingExpirations { get; set; } = new();
     public List<MonthCount> ExpirationsByMonth { get; set; } = new();
+    public List<ChartEntry> ItemsByTimeLeft { get; set; } = new();
 }
 
 public class FinanceDashboardResponse
@@ -101,6 +103,7 @@ public class FinanceDashboardResponse
     public decimal ApprovedCost { get; set; }
     public List<DashboardRequest> RequestsNeedingFinancialReview { get; set; } = new();
     public List<MonthCount> ExpirationsByMonth { get; set; } = new();
+    public List<ChartEntry> CostsByDepartment { get; set; } = new();
 }
 
 // to return number of items expiring in each month
@@ -109,4 +112,10 @@ public class MonthCount
     public int Year { get; set; }
     public int Month { get; set; }
     public int Count { get; set; }
+}
+
+public class ChartEntry
+{
+    public string Label { get; set; } = "";
+    public decimal Value { get; set; }
 }

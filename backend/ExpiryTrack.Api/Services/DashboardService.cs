@@ -45,6 +45,32 @@ public class DashboardService
         return result;
     }
 
+
+    // helper method for counting the items that are not cancelled and expired
+    // grouped by how soon they expire
+    public async Task<List<ChartEntry>> CountItemsByTimeLeft(IQueryable<Item> items, DateOnly today)
+    {
+        DateOnly in7 = today.AddDays(7);
+        DateOnly in30 = today.AddDays(30);
+        DateOnly in90 = today.AddDays(90);
+
+        IQueryable<Item> upcoming = items.Where(i => i.LifecycleState != LifecycleState.Cancelled
+                                        && i.CurrentPeriod!.ExpirationDate >= today);
+
+        int week = await upcoming.CountAsync(i => i.CurrentPeriod!.ExpirationDate <= in7);
+        int month = await upcoming.CountAsync(i => i.CurrentPeriod!.ExpirationDate >= in7 && i.CurrentPeriod!.ExpirationDate <= in30);
+        int quarter = await upcoming.CountAsync(i => i.CurrentPeriod!.ExpirationDate > in30 && i.CurrentPeriod!.ExpirationDate <= in90);
+        int later = await upcoming.CountAsync(i => i.CurrentPeriod!.ExpirationDate > in90);
+
+        return new List<ChartEntry>
+        {
+            new ChartEntry { Label = "7 days of less", Value = week },
+            new ChartEntry { Label = "8-30 days", Value = month },
+            new ChartEntry { Label = "31-90 days", Value = quarter },
+            new ChartEntry { Label = "More than 90 days", Value = later }
+        };
+    }
+
     public async Task<AdminDashboardResponse> GetAdminDashboardAsync()
     {
         DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -57,6 +83,7 @@ public class DashboardService
 
         // items per department
         List<DepartmentItemCount> byDepartment = await _db.Departments
+            .OrderByDescending(d => d.Items.Count)
             .Select(d => new DepartmentItemCount
             {
                 DepartmentName = d.Name,
@@ -166,6 +193,15 @@ public class DashboardService
                 ExpirationDate = item.CurrentPeriod!.ExpirationDate,
             });
         }
+
+        List<ChartEntry> requestsByStatus = new List<ChartEntry>();
+        foreach (RequestStatus status in Enum.GetValues<RequestStatus>())
+        {
+            int count = await _db.RenewalRequests
+                  .CountAsync(r => r.Status == status && r.Period.Item.DepartmentId == user.DepartmentId);
+            requestsByStatus.Add(new ChartEntry { Label = status.ToString(), Value = count });
+        }
+
         return new ManagerDashboardResponse
         {
             TotalItems = totalItems,
@@ -176,7 +212,8 @@ public class DashboardService
             RequestsToReview = requestsToReview,
             RequestsAwaitingCompletion = requestsToApprove,
             UpcomingExpirations = upcomingExpirations,
-            ExpirationsByMonth = await CountExpirationsByMonth(_db.Items.Where(i => i.DepartmentId == user.DepartmentId), today)
+            ExpirationsByMonth = await CountExpirationsByMonth(_db.Items.Where(i => i.DepartmentId == user.DepartmentId), today),
+            RequestsByStatus = requestsByStatus
         };
     }
 
@@ -289,6 +326,7 @@ public class DashboardService
             requestsOpen.Add(DashboardRequest.ToDashboardRequest(request));
         }
 
+
         return new EmployeeDashboardResponse
         {
             TotalItems = totalItems,
@@ -301,7 +339,8 @@ public class DashboardService
             RequestsAwaitingCompletion = requestsAwaitingCompletion,
             MyOpenRequests = requestsOpen,
             UpcomingExpirations = upcomingExpirations,
-            ExpirationsByMonth = await CountExpirationsByMonth(_db.Items.Where(i => i.ResponsibleUserId == userId), today)
+            ExpirationsByMonth = await CountExpirationsByMonth(_db.Items.Where(i => i.ResponsibleUserId == userId), today),
+            ItemsByTimeLeft = await CountItemsByTimeLeft(_db.Items.Where(i => i.ResponsibleUserId == userId), today)
         };
     }
 
@@ -352,6 +391,16 @@ public class DashboardService
             financialRequests.Add(DashboardRequest.ToDashboardRequest(request));
         }
 
+        List<ChartEntry> costsByDepartment = await _db.Departments
+            .Select(d => new ChartEntry
+            {
+                Label = d.Name,
+                Value = d.Items
+                    .Where(i => i.LifecycleState != LifecycleState.Cancelled && i.CurrentPeriod!.Cost != null)
+                    .Sum(i => i.CurrentPeriod!.Cost) ?? 0
+            })
+            .ToListAsync();
+
         return new FinanceDashboardResponse
         {
             ActiveItems = active,
@@ -363,7 +412,8 @@ public class DashboardService
             ExpectedUpcomingCosts = expectedUpcomingCosts,
             ApprovedCost = approvedCost,
             RequestsNeedingFinancialReview = financialRequests,
-            ExpirationsByMonth = await CountExpirationsByMonth(_db.Items.Where(i => i.CurrentPeriod!.Cost != null), today)
+            ExpirationsByMonth = await CountExpirationsByMonth(_db.Items.Where(i => i.CurrentPeriod!.Cost != null), today),
+            CostsByDepartment = costsByDepartment.OrderByDescending(e => e.Value).ToList()
         };
     }
 }

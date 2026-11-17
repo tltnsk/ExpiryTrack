@@ -3,6 +3,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate, formatDateTime, formatLabel} from '@/utils/format'
 import Chart from 'chart.js/auto'
+import BarChart from '@/components/BarChart.vue'
 
 interface DepartmentItemCount {
     departmentName: string
@@ -54,6 +55,7 @@ interface ManagerDashboard {
     requestsAwaitingCompletion: DashboardRequest[]
     upcomingExpirations: DashboardItem[]
     expirationsByMonth: MonthCount[]
+    requestsByStatus: ChartEntry[]
 }
 
 interface EmployeeDashboard {
@@ -68,6 +70,7 @@ interface EmployeeDashboard {
     myOpenRequests: DashboardRequest[]
     upcomingExpirations: DashboardItem[]
     expirationsByMonth: MonthCount[]
+    itemsByTimeLeft: ChartEntry[]
 }
 
 interface FinanceDashboard {
@@ -81,6 +84,12 @@ interface FinanceDashboard {
     approvedCost: number
     requestsNeedingFinancialReview: DashboardRequest[]
     expirationsByMonth: MonthCount[]
+    costsByDepartment: ChartEntry[]
+}
+
+interface ChartEntry {
+    label: string
+    value: number
 }
 
 const auth = useAuthStore()
@@ -106,32 +115,16 @@ async function drawStateChart(data: AdminDashboard | ManagerDashboard | Employee
                 backgroundColor: ['#1e8e47', '#e0a100', '#d64545', '#000000'],
             }],
         },
+        options: {
+            aspectRatio: adminDashboard.value ? 1 : 2,
+            plugins: { legend: { position: adminDashboard.value ? 'top' : 'right' }}
+        }
     })
 }
 
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-async function drawMonthChart(data: AdminDashboard | ManagerDashboard | EmployeeDashboard | FinanceDashboard) {
-    await nextTick() 
-    new Chart(monthChart.value!, {
-        type: 'bar',
-        data: {
-            labels: data.expirationsByMonth.map((m) => `${monthNames[m.month - 1]} ${m.year}`),
-            datasets: [{
-                label: 'Items expiring',
-                data: data.expirationsByMonth.map((m) => m.count),
-                backgroundColor: '#ffffff',
-            }],
-        },
-        options: {
-            plugins: { legend: { display: false } },
-            scales: { 
-                x: {
-                    ticks: { color: '#ffffff'}
-                },
-                y: { beginAtZero: true, ticks: { precision: 0, color: '#ffffff' }}},
-        },
-    
-    })
+function monthLabels(months: MonthCount[]) {
+    return months.map((m) => `${monthNames[m.month - 1]} ${m.year}`)
 }
 
 onMounted(async () => {
@@ -173,7 +166,6 @@ onMounted(async () => {
 
     if (data) {
         await drawStateChart(data)
-        await drawMonthChart(data)
     }
 })
 
@@ -185,78 +177,96 @@ onMounted(async () => {
 
     <!-- ADMIN -->
     <div v-else-if="adminDashboard">
-        <div class="cards">
-            <div class="card">
-                <span class="number">{{ adminDashboard.totalItems }}</span>
-                <span>Total Items</span>
-                <RouterLink :to="{ path: '/items'}">View</RouterLink>
+        <div class="row admin-top">
+            <div class="cards">
+                <div class="card">
+                    <span class="number">{{ adminDashboard.totalItems }}</span>
+                    <span>Total Items</span>
+                    <RouterLink :to="{ path: '/items'}">View</RouterLink>
+                </div>
+                <div class="card">
+                    <span class="number">{{ adminDashboard.activeItems }}</span>
+                    <span>Active Items</span>
+                    <RouterLink :to="{ path: '/items', query: { state: 'Active'}}">View</RouterLink>
+                </div>
+                <div class="card">
+                    <span class="number">{{ adminDashboard.expiringSoonItems }}</span>
+                    <span>Expiring Soon Items</span>
+                    <RouterLink :to="{ path: '/items', query: { state: 'ExpiringSoon'}}">View</RouterLink>
+                </div>
+                <div class="card">
+                    <span class="number">{{ adminDashboard.expiredItems }}</span>
+                    <span>Expired Items</span>
+                    <RouterLink :to="{ path: '/items', query: { state: 'Expired'}}">View</RouterLink>
+                </div>
+                <div class="card">
+                    <span class="number">{{ adminDashboard.cancelledItems }}</span>
+                    <span>Cancelled Items</span>
+                    <RouterLink :to="{ path: '/items', query: { state: 'Cancelled'}}">View</RouterLink>
+                </div>
+
+                <div class="chart month-chart">
+                    <h3>Expirations in the next 12 months</h3>
+                    <BarChart :labels="monthLabels(adminDashboard.expirationsByMonth)"
+                            :values="adminDashboard.expirationsByMonth.map((m) => m.count)"/>  
+                </div>
             </div>
-            <div class="card">
-                <span class="number">{{ adminDashboard.activeItems }}</span>
-                <span>Active Items</span>
-                <RouterLink :to="{ path: '/items', query: { state: 'Active'}}">View</RouterLink>
-            </div>
-            <div class="card">
-                <span class="number">{{ adminDashboard.expiringSoonItems }}</span>
-                <span>Expiring Soon Items</span>
-                <RouterLink :to="{ path: '/items', query: { state: 'ExpiringSoon'}}">View</RouterLink>
-            </div>
-            <div class="card">
-                <span class="number">{{ adminDashboard.expiredItems }}</span>
-                <span>Expired Items</span>
-                <RouterLink :to="{ path: '/items', query: { state: 'Expired'}}">View</RouterLink>
-            </div>
-            <div class="card">
-                <span class="number">{{ adminDashboard.cancelledItems }}</span>
-                <span>Cancelled Items</span>
-                <RouterLink :to="{ path: '/items', query: { state: 'Cancelled'}}">View</RouterLink>
+            <div class="side">
+                <div class="chart" id="items-chart">
+                    <h3>Items by state</h3>
+                    <div class="state-box">
+                        <canvas ref="stateChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart">
+                    <h3>Department totals</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Department</th>
+                                <th>Items</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="row in adminDashboard.itemsByDepartment" :key="row.departmentName">
+                                <td>{{ row.departmentName }}</td>
+                                <td>{{ row.itemCount }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <div class="chart" id="items-chart">
-            <h3>Items by state</h3>
-            <canvas ref="stateChart"></canvas>
+        <div class="row even">
+            <div class="chart accent-chart">
+                <h3>Items per department</h3>
+                <BarChart :labels="adminDashboard.itemsByDepartment.map((d) => d.departmentName)"
+                    :values="adminDashboard.itemsByDepartment.map((d) => d.itemCount)" />
+            </div>
+            <div class="chart">
+                <h3>Upcoming expirations</h3>
+                    <p v-if="adminDashboard.upcomingExpirations.length === 0">No items are expiring soon.</p>
+                    <table v-else>
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Department</th>
+                                <th>Expires</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in adminDashboard.upcomingExpirations" :key="item.id">
+                                <td><RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
+                                <td>{{ item.departmentName }}</td>
+                                <td>{{ formatDate(item.expirationDate) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+            </div>
+            
         </div>
-
-        <div class="chart" id="months-chart">
-            <h3>Expirations in the next 12 months</h3>
-            <canvas ref="monthChart"></canvas>
-        </div>
-
-        <h3>Items per department</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Department</th>
-                    <th>Items</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="row in adminDashboard.itemsByDepartment" :key="row.departmentName">
-                    <td>{{ row.departmentName }}</td>
-                    <td>{{ row.itemCount }}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h3>Upcoming expirations</h3>
-        <p v-if="adminDashboard.upcomingExpirations.length === 0">No items are expiring soon.</p>
-        <table v-else>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Department</th>
-                    <th>Expires</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="item in adminDashboard.upcomingExpirations" :key="item.id">
-                    <td><RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
-                    <td>{{ item.departmentName }}</td>
-                    <td>{{ formatDate(item.expirationDate) }}</td>
-                </tr>
-            </tbody>
-        </table>
+    
     </div>
 
     <!-- MANAGER -->
@@ -289,14 +299,22 @@ onMounted(async () => {
             </div>
         </div>
 
-        <div class="chart" id="items-chart">
-            <h3>Items by state</h3>
-            <canvas ref="stateChart"></canvas>
-        </div>
+        <div class="row">
+            <div class="chart" id="items-chart">
+                <h3>Items by state</h3>
+                <canvas ref="stateChart"></canvas>
+            </div>
 
-        <div class="chart" id="months-chart">
-            <h3>Expirations in the next 12 months</h3>
-            <canvas ref="monthChart"></canvas>
+            <!-- <div class="chart month-chart">
+                <h3>Expirations in the next 12 months</h3>
+                <BarChart :labels="monthLabels(managerDashboard.expirationsByMonth)"
+                    :values="managerDashboard.expirationsByMonth.map((m) => m.count)"/>  
+            </div> -->
+            <div class="chart accent-chart">
+                <h3>Department requests by status</h3>
+                <BarChart :labels="managerDashboard.requestsByStatus.map((e) => formatLabel(e.label))"
+                    :values="managerDashboard.requestsByStatus.map((e) => e.value)"/> 
+            </div>
         </div>
 
         <h3>Requests to Review</h3>
@@ -392,17 +410,24 @@ onMounted(async () => {
                  <RouterLink :to="{ path: '/items', query: { state: 'Cancelled'}}">View</RouterLink>
             </div>
         </div>
+        <div class="row">
 
-        <div class="chart" id="items-chart">
-            <h3>Items by state</h3>
-            <canvas ref="stateChart"></canvas>
+            <div class="chart" id="items-chart">
+                <h3>Items by state</h3>
+                <canvas ref="stateChart"></canvas>
+            </div>
+
+            <!-- <div class="chart month-chart">
+                <h3>Expirations in the next 12 months</h3>
+                <BarChart :labels="monthLabels(employeeDashboard.expirationsByMonth)"
+                    :values="employeeDashboard.expirationsByMonth.map((m) => m.count)" />  
+            </div> -->
+            <div class="chart accent-chart">
+                <h3>Items By Time Left</h3>
+                <BarChart :labels="employeeDashboard.itemsByTimeLeft.map((e) => formatLabel(e.label))"
+                    :values="employeeDashboard.itemsByTimeLeft.map((e) => e.value)"/> 
+            </div>
         </div>
-
-        <div class="chart" id="months-chart">
-            <h3>Expirations in the next 12 months</h3>
-            <canvas ref="monthChart"></canvas>
-        </div>
-
         <h3>Items Needing Renewal</h3>
         <p v-if="employeeDashboard.itemsNeedingRenewal.length === 0">No items needing renewal.</p>
         <table v-else>
@@ -525,15 +550,23 @@ onMounted(async () => {
             </div>
         </div>
 
-        <div class="chart" id="items-chart">
-            <h3>Items by state</h3>
-            <canvas ref="stateChart"></canvas>
-        </div>
+        <div class="row">
+            <div class="chart" id="items-chart">
+                <h3>Items by state</h3>
+                <canvas ref="stateChart"></canvas>
+            </div>
 
-        <div class="chart" id="months-chart">
-            <h3>Expirations in the next 12 months</h3>
-            <canvas ref="monthChart"></canvas>
-        </div>
+            <!-- <div class="chart month-chart">
+                <h3>Expirations in the next 12 months</h3>
+                <BarChart :labels="monthLabels(financeDashboard.expirationsByMonth)"
+                            :values="financeDashboard.expirationsByMonth.map((m) => m.count)" />  
+            </div> -->
+            <div class="chart accent-chart">
+                <h3>Costs By Department</h3>
+                <BarChart :labels="financeDashboard.costsByDepartment.map((e) => formatLabel(e.label))"
+                    :values="financeDashboard.costsByDepartment.map((e) => e.value)"/> 
+            </div>
+        </div>       
 
         <h3>Requests Needing Financial Review</h3>
         <table>
@@ -581,14 +614,61 @@ onMounted(async () => {
 }
 
 #items-chart {
-    background-color: rgb(243, 232, 232);
+    background-color: #c8daff;
 }
 
-#months-chart {
-    background-color: rgb(190, 37, 37);
+.row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
 }
 
-#months-chart h3 {
+.row.even {
+    grid-template-columns: 1fr 1fr;
+}
+
+.row > * {
+    min-width: 0;
+}
+
+.accent-chart {
+    background-color: #434793;
+    border-radius: 16px;
+    padding: 20px;
+}
+
+.accent-chart h3 {
     color: white;
+}
+
+.month-chart {
+    background-color: rgb(111, 135, 240); 
+}
+
+.state-box {
+    max-width: 350px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+#items-chart {
+    display: flex;
+    flex-direction: column;
+    align-self: start;
+}
+
+.row.admin-top {
+    grid-template-columns: 3fr 2fr;
+}
+
+.side {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.side > .chart:last-child {
+    flex: 1;
 }
 </style>

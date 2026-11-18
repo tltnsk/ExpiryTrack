@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { formatLabel } from '@/utils/format'
 
 // UserResposnse 
 interface User {
@@ -54,52 +55,105 @@ async function toggleActive(user: User) {
     actionError.value = `Could not change the user (error ${response.status}).`
   }
 }
+
+const isAdmin = computed(() => auth.user?.role === 'Administrator')
 </script> 
 
 <template>
-  <h2>Users</h2>
-
-  <button v-if="auth.user?.role === 'Administrator'" class="add-btn"><RouterLink to="/users/new" class="add-link">+ New User</RouterLink></button>
+  <div class="page-top">
+      <h2>Users</h2>
+      <RouterLink v-if="isAdmin" to="/users/new" class="new-button">New user</RouterLink>
+  </div>
 
   <p v-if="actionError" class="error">{{ actionError }}</p>
   <p v-if="loading">Loading...</p>
   <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>
   <p v-else-if="users.length === 0">No users yet.</p>
 
-  <table v-else>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Role</th>
-        <th>Department</th>
-        <th>Active</th>
-        <th v-if="auth.user?.role === 'Administrator'"></th>
-        <th v-if="auth.user?.role === 'Administrator'"></th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="user in users" :key="user.id">
-        <td>
-            {{ user.firstName }} {{ user.lastName }}
-        </td>
-        <td> {{ user.email}}</td>
-        <td> {{ user.role }}</td>
-        <td> {{ user.departmentName  ?? '-'}}</td>
-        <td> {{ user.isActive ? "Yes" : "No"}}</td>
-        <td v-if="auth.user?.role === 'Administrator'">
-          <RouterLink :to="`/users/${user.id}/edit`">Edit</RouterLink>
-        </td>
-        <td>
-            <button :class="{danger: user.isActive}" @click="toggleActive(user)">{{ user.isActive ? 'Deactivate' : 'Activate' }}</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <div v-else class="table-box">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Department</th>
+            <th>Active</th>
+            <th v-if="isAdmin"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="user in users" :key="user.id">
+            <td class="name">
+                {{ user.firstName }} {{ user.lastName }}
+            </td>
+            <td> {{ user.email}}</td>
+            <td> {{ formatLabel(user.role) }}</td>
+            <td> {{ user.departmentName  ?? '-'}}</td>
+            <td> {{ user.isActive ? "Yes" : "No"}}</td>
+            <td v-if="isAdmin">
+              <RouterLink :to="`/users/${user.id}/edit`" class="edit-link" :title="`Edit ${user.firstName} ${user.lastName}`" :aria-label="`Edit ${user.lastName}`">✎</RouterLink>
+              <button :class="{danger: user.isActive}" @click="toggleActive(user)">{{ user.isActive ? 'Deactivate' : 'Activate' }}</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+  </div>
 </template>
 <style scoped>
+.page-top{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-top h2 {
+  margin: 0;
+}
+
+.new-button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+th {
+  background: #f9fafb;
+}
+
+.name {
+  font-weight: 500;
+}
+
+.actions-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.edit-link {
+  margin-right: 12px;
+  color: #6b7280;
+  font-size: 1.23em;
+  text-decoration: none;
+  vertical-align: middle;
+}
+
 .error {
   color: var(--danger);
+}
+
+.table-box {
+  border: 1px solid rgb(200, 197, 197);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+table {
+  margin: 0;
 }
 
 </style>

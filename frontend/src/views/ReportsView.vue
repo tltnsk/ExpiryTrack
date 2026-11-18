@@ -144,7 +144,7 @@ const totalCost = computed(() =>
                         </tr>
                     </tbody>
                 </table>
-                <button v-if="report.topEmployees.length > 3" type="button" class="more" @click="showAllEmployees = !showAllEmployees">
+                <button v-if="report.topEmployees.length > 3" type="button" class="more" :class="{open: showAllProviders}" @click="showAllEmployees = !showAllEmployees">
                     {{ showAllEmployees ? 'Show less' : ` ⤢ View ${report.topEmployees.length - 3} more` }}
                 </button>
             </div>
@@ -259,6 +259,10 @@ const totalCost = computed(() =>
     color: var(--text);
     border: 1px solid #d1d5db;
     border-radius: 8px;
+}
+
+.more.open {
+    margin-top: 12px;
 }
 
 .more:hover {

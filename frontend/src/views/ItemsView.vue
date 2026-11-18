@@ -79,7 +79,7 @@ function resetFilters() {
 }
 
 // show 15 items per page
-const pageSize = 10
+const pageSize = 15
 const page = ref(1)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / pageSize)))
@@ -129,41 +129,84 @@ watch([search, stateFilter, categoryFilter, responsibleFilter, expiresFrom, expi
     <p v-else-if="items.length===0">No items.</p>
     <p v-else-if="filteredItems.length===0">No items match your search.</p>
 
-
-    <table v-else>
-        <thead>
-            <tr>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Responsible Employee</th>
-              <th>Expires</th>
-              <th>Provider</th>
-              <th>Cost</th>
-              <th>State</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr v-for="item in pageItems" :key="item.id">
-                <td>
-                    <RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
-                <td>{{ item.categoryName }}</td>
-                <td>{{ item.responsibleUserName }}</td>
-                <td>{{ formatDate(item.expirationDate) }}</td>
-                <td>{{ item.provider ?? '-'}}</td>
-                <td>{{ formatMoney(item.cost) }}</td>
-                <td>
-                <span class="state" :class="item.lifecycleState">{{ formatLabel(item.lifecycleState) }}</span>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-
-    <div v-if="totalPages > 1" class="pagination">
-      <button type="button" :disabled="page === 1" @click="page--" aria-label="Previous page"><</button>
-      <span>Page {{ page }} of {{ totalPages }}</span>
-      <button type="button" :disabled="page === totalPages" @click="page++" aria-label="Next page">></button>
-    </div>
+    <template v-else>
+      <div class="table-box">
+          <table>
+            <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Responsible Employee</th>
+                  <th>Expires</th>
+                  <th>Provider</th>
+                  <th>Cost</th>
+                  <th>State</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="item in pageItems" :key="item.id">
+                    <td>
+                        <RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
+                    <td>{{ item.categoryName }}</td>
+                    <td>{{ item.responsibleUserName }}</td>
+                    <td>{{ formatDate(item.expirationDate) }}</td>
+                    <td>{{ item.provider ?? '-'}}</td>
+                    <td>{{ formatMoney(item.cost) }}</td>
+                    <td>
+                    <span class="state" :class="item.lifecycleState">{{ formatLabel(item.lifecycleState) }}</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+      </div>
+       <div v-if="totalPages > 1" class="pager">
+        <button type="button" :disabled="page === 1" @click="page--" aria-label="Previous page">&lt;</button>
+        <span>Page {{ page }} of {{ totalPages }}</span>
+        <button type="button" :disabled="page === totalPages" @click="page++" aria-label="Next page">&gt;</button>
+      </div>
+    </template>
 </template>
 <style scoped>
+.table-box {
+  background: white;
+  border: 1px solid #eceef1;
+  border-radius: 12px;
+  overflow: hidden;
+}
 
+table {
+  margin: 0;
+  table-layout: fixed;
+}
+
+th {
+  background: #f9fafb;
+}
+
+th:nth-child(1) {width: 22%}
+th:nth-child(2) {width: 14%}
+th:nth-child(3) {width: 16%}
+th:nth-child(4) {width: 12%}
+th:nth-child(5) {width: 14%}
+th:nth-child(6) {width: 10%}
+th:nth-child(7) {width: 12%}
+
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  color: #6b7280;
+}
+
+.pager button {
+  margin: 0;
+  padding: 8px 16px;
+  color: var(--primary);
+  background: rgba(255, 255, 255, 0.856);
+  border: 1px solid rgba(235, 228, 228, 0.7);
+  border-radius: 999px;
+}
 </style>

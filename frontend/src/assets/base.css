@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap');
 :root {
   --background: rgb(255, 255, 255);
   --primary: #111111;
@@ -18,7 +18,7 @@ html, body {
 
 body {
   margin: 0;
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family: "Lato", system-ui, -apple-system, sans-serif;
   color: var(--text);
 }
 

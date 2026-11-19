@@ -54,7 +54,7 @@ async function createDepartment() {
   <form @submit.prevent="createDepartment">
     <div>
       <label>
-        Name
+        Name <span class="required">*</span>
         <input v-model="name" required maxlength="100" />
       </label>
     </div>

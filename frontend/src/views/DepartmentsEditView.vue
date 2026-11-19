@@ -59,7 +59,9 @@ onMounted(async() => {
         const users: User[] = await userResponse.json()
         managers.value = users.filter(
             (u) => u.role === 'DepartmentManager' && u.isActive && u.departmentId === Number(id),
-        )
+        ) 
+    } else {
+            saveError.value = `Could not load the managers.`
     }
 })
 
@@ -76,23 +78,24 @@ async function editDepartment() {
         }),
     })
 
-    saving.value = false
-
-    if (response.ok) {
-        router.push('/departments')
-    } else if (response.status === 400) {
-        const contentType = response.headers.get('Content-Type') ?? ''
-        if (contentType.includes('json')) {
-            const problem = await response.json()
-            saveError.value = Object.values(problem.errors).flat().join(' ')
-        } else {
+    if (!response.ok) {
+        saving.value = false
+            if (response.status === 400) {
+                const contentType = response.headers.get('Content-Type') ?? ''
+                if (contentType.includes('json')) {
+                    const problem = await response.json()
+                    saveError.value = Object.values(problem.errors).flat().join(' ')
+                } else {
+                    saveError.value = await response.text()
+                }
+        } else if (response.status === 409) {
             saveError.value = await response.text()
+        } else {
+            saveError.value = `Could not edit the department (error ${response.status}).`
         }
-    } else if (response.status === 409) {
-        saveError.value = await response.text()
-    } else {
-        saveError.value = `Could not edit the department (error ${response.status}).`
+        return 
     }
+
 
     // update manager if name and is active updates succeeded
     if (managerId.value !== department.value?.managerId) {
@@ -129,7 +132,7 @@ async function editDepartment() {
     <form @submit.prevent="editDepartment">
         <div>
         <label>
-            Name
+            Name <span class="required">*</span>
             <input v-model="name" required maxlength="100" />
         </label>
         </div>

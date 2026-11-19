@@ -48,7 +48,7 @@ export function formatDateTime(value: string | null): string {
 
 export function formatMoney(value: number | null): string {
     if (value === null) return '-'
-    return value.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})
+    return "$" + value.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})
 }
 
 export function formatDate(value: string | null): string {

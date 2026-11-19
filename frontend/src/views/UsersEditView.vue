@@ -91,19 +91,19 @@ async function editUser() {
     <form @submit.prevent="editUser">
          <div>
       <label>
-        First Name
+        First Name <span class="required">*</span>
         <input v-model="firstName" required maxlength="100" />
       </label>
     </div>
     <div>
       <label>
-        Last Name
+        Last Name <span class="required">*</span>
         <input v-model="lastName" required maxlength="100" />
       </label>
     </div>
     <div>
       <label>
-        Email
+        Email <span class="required">*</span>
         <input v-model="email" type="email" required/>
       </label>
     </div>

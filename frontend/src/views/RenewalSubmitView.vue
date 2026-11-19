@@ -124,7 +124,7 @@ async function submitRequest() {
     <form @submit.prevent="submitRequest">
     <div>
       <label>
-          Proposed Expiration Date
+          Proposed Expiration Date <span class="required">*</span>
           <input v-model="proposedExpirationDate" required type="date" :min="item.expirationDate"/>
       </label>
     </div>
@@ -136,7 +136,7 @@ async function submitRequest() {
     </div>
     <div>
       <label>
-        Justification
+        Justification <span class="required">*</span>
           <textarea v-model="justification" required  />
       </label>
     </div>

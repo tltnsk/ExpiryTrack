@@ -31,6 +31,8 @@ onMounted(async () => {
   if (departmentResponse.ok) {
     const possibleDepartments: Department[] = await departmentResponse.json()
     departments.value = possibleDepartments.filter((d) => d.isActive)
+  } else {
+        errorMessage.value = 'Could not load the departments.'
   }
 })
 
@@ -81,33 +83,33 @@ async function createUser() {
   <form @submit.prevent="createUser">
     <div>
       <label>
-        First Name
+        First Name <span class="required">*</span>
         <input v-model="firstName" required maxlength="100" />
       </label>
     </div>
     <div>
       <label>
-        Last Name
+        Last Name <span class="required">*</span>
         <input v-model="lastName" required maxlength="100" />
       </label>
     </div>
     <div>
       <label>
-        Email
+        Email <span class="required">*</span>
         <input v-model="email" type="email" required/>
       </label>
     </div>
     <div>
       <label>
-        Password
+        Password <span class="required">*</span>
         <input v-model="password" type="password" minlength="8" required/>
       </label>
     </div>
     <div>
         <label>
-          Role
-          <select v-model="role">
-            <option :value="''">No role</option>
+          Role <span class="required">*</span>
+          <select v-model="role" required>
+            <option :value="''" >Choose a role</option>
             <option v-for="role in roles" :key="role" :value="role">
               {{  role }}
             </option>
@@ -116,7 +118,7 @@ async function createUser() {
     </div>
     <div>
         <label>
-          Department
+          Department <span v-if="role === 'Employee' || role === 'DepartmentManager'" class="required">*</span>
           <select v-model="departmentId">
             <option :value="null">No department</option>
             <option v-for="department in departments" :key="department.id" :value="department.id">

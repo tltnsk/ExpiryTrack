@@ -41,11 +41,15 @@ onMounted(async () => {
     if (response.ok) {
         const all: Category[] = await response.json()
         categories.value = all.filter((c) => c.isActive)
+    } else {
+        errorMessage.value = 'Could not load the categories.'
     }
     if (auth.user?.role === 'DepartmentManager') {
       const employeesResponse = await fetch('/api/users/employees')
       if (employeesResponse.ok) {
         employees.value = await employeesResponse.json()
+      } else {
+        errorMessage.value = 'Could not load the employees.'
       }
     }
 })
@@ -139,13 +143,13 @@ async function createItem() {
     <form @submit.prevent="createItem">
       <div>
       <label>
-        Name
+        Name <span class="required">*</span>
         <input v-model="name" required maxlength="150" />
       </label>
        </div>
         <div>
             <label>
-                Category
+                Category <span class="required">*</span>
                 <select v-model="categoryId" required>
                     <option :value="null" disabled>Select a category</option>
                     <option v-for="category in categories" :key="category.id" :value="category.id">
@@ -174,13 +178,13 @@ async function createItem() {
     </div>
     <div>
       <label>
-        Start date
+        Start date <span class="required">*</span>
         <input v-model="startDate" type="date" required />
       </label>
     </div>
     <div>
       <label>
-        Expiration date
+        Expiration date <span class="required">*</span>
         <input v-model="expirationDate" type="date" required />
       </label>
     </div>
@@ -192,7 +196,7 @@ async function createItem() {
     </div>
     <div v-if="auth.user?.role === 'DepartmentManager'">
       <label>
-        Responsible Employee
+        Responsible Employee <span class="required">*</span>
         <select v-model="responsibleUserId" required>
           <option :value="null" disabled>Select a responsible user</option>
           <option v-if="employees.length===0" :value="null" disabled>No active employees in your department.</option>

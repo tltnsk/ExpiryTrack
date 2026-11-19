@@ -60,7 +60,7 @@ async function createCategory() {
   <form @submit.prevent="createCategory">
     <div>
       <label>
-        Name
+        Name <span class="required">*</span>
         <input v-model="name" required maxlength="100" />
       </label>
     </div>
@@ -72,7 +72,7 @@ async function createCategory() {
     </div>
     <div>
       <label>
-        Warning Period (days)
+        Warning Period (days) <span class="required">*</span>
         <input v-model="warningPeriodDays" type="number" min="1" max="365" required/>
       </label>
     </div>

@@ -15,10 +15,10 @@ describe('formatLabel', () => {
 
 describe('formatMoney', () => {
     it('adds thousands separator with 2 decimals', () => {
-        expect(formatMoney(12400.5)).toBe('12,400.50')
+        expect(formatMoney(12400.5)).toBe('$12,400.50')
     })
     it('shows 0 as a number', () => {
-        expect(formatMoney(0)).toBe('0.00')
+        expect(formatMoney(0)).toBe('$0.00')
     })
 })
 

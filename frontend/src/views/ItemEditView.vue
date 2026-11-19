@@ -15,7 +15,7 @@ interface Item {
     periodNumber: string
     startDate: string 
     expirationDate: string
-    cost: number
+    cost: number | null
 }
 
 
@@ -54,7 +54,7 @@ onMounted(async () => {
 })
 
 async function editItem() {
-  errorMessage.value = ''
+  saveError.value = ''
   saving.value = true
 
   const response = await fetch(`/api/items/${id}`, {
@@ -93,7 +93,7 @@ async function editItem() {
 
     <p v-if="loading">Loading...</p>
 
-    <p v-else-if="errorMessage">{{ errorMessage }}</p>
+    <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>
 
     <div v-else-if="item">
     <h2>Edit item</h2>
@@ -101,7 +101,7 @@ async function editItem() {
     <form @submit.prevent="editItem">
       <div>
       <label>
-        Name
+        Name <span class="required">*</span>
         <input v-model="name" required maxlength="150" />
       </label>
        </div>
@@ -138,7 +138,7 @@ async function editItem() {
     <div>
       <label>
         Cost
-        <input :value="item.cost" readonly />
+        <input :value="item.cost ?? '-'" readonly />
       </label>
     </div>
 

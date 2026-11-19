@@ -18,6 +18,7 @@ async function changePassword() {
     return
   }
 
+  saving.value = true
   const response = await fetch('/api/auth/change-password', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json'},
@@ -55,13 +56,13 @@ async function changePassword() {
     <h2>Change Password</h2>
       <form @submit.prevent="changePassword">
         <div>
-          <label>Current Password <input v-model="currentPassword" type="password" required /></label>
+          <label>Current Password <span class="required">*</span> <input v-model="currentPassword" type="password" required /></label>
         </div>
         <div>
-          <label>New Password <input v-model="newPassword" type="password" required minlength="8"/></label>
+          <label>New Password <span class="required">*</span> <input v-model="newPassword" type="password" required minlength="8"/></label>
         </div>
         <div>
-          <label>Confirm New Password <input v-model="confirmPassword" type="password" required minlength="8"/></label>
+          <label>Confirm New Password <span class="required">*</span> <input v-model="confirmPassword" type="password" required minlength="8"/></label>
         </div>
         <button type="submit" :disabled="saving">Change Password</button>
         <p v-if="errorMessage" class="error">{{ errorMessage }}</p>

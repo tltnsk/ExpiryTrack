@@ -212,8 +212,9 @@ async function completeRenewal() {
 // find clarifictions from history
 const clarificationUsed = computed(() => request.value?.actions.some(a => a.type === 'ClarificationRequested') ?? false)
 
-onMounted(loadRequest)
 onMounted(async () => {
+    await loadRequest()
+
     const documentsResponse = await fetch(`/api/requests/${id}/documents`)
     if (documentsResponse.ok) {
       documents.value = await documentsResponse.json()
@@ -251,9 +252,31 @@ const doneSteps = computed(() => {
     return stepsDoneFor(request.value.status)
 })
 
-const percent = computed(() => 
-    steps.value.length === 0 ? 0 : Math.round(doneSteps.value / steps.value.length * 100))
+function stepClass(index: number): string {
+    const status = request.value?.status
+    if (index < doneSteps.value) {
+        if (status === 'Completed' && index === steps.value.length - 1) return 'success'
+        return 'done'
+    }
+    if (index === doneSteps.value) {
+        if (isRejected.value) return 'stopped'
+        if (status === 'ClarificationRequired') return 'warning'
+        return 'current'
+    }
+    return 'pending'
+}
 
+// the symbol inside each circle
+const stepIcons: Record<string, string> = {
+    done: '✓', success: '✓', stopped: '✕', warning: '', current: '•', pending: ''
+}
+
+const hasAction = computed(() => canFinanceReview.value || canManagerReview.value || canManagerReject.value 
+        || canAnswerClarification.value || canRecordCompletion.value)
+
+const clarificationQuestion = computed(() => 
+    request.value?.actions.find(a => a.type === 'ClarificationRequested')?.comment ?? null
+)
 </script>
 
 <template>
@@ -263,264 +286,388 @@ const percent = computed(() =>
 
     <p v-else-if="errorMessage" class="error"> {{  errorMessage }}</p>
     <div v-else-if="request">
-        <h2>Renewal Request for <RouterLink :to="`/items/${request.itemId}`">{{ request.itemName }}</RouterLink></h2>
+        <ol class="stepper">
+            <li v-for="(step, index) in steps" :key="step" :class="stepClass(index)">
+                <span class="circle">{{ stepIcons[stepClass(index)] }}</span>
+                <span class="step-label">{{step}}</span>
+            </li>
+        </ol>
         <div class="request-layout">
-            <div class="card">
-                <dl>
-                    <dt>Status</dt>
-                    <dd><span class="state" :class="request.status">{{ formatLabel(request.status) }}</span></dd>
-                    <dt>Proposed Expiration Date</dt>
-                    <dd>{{ formatDate(request.proposedExpirationDate )}}</dd>
-                    <dt>Proposed Cost</dt>
-                    <dd>{{ formatMoney(request.proposedCost)  }}</dd>
-                    <dt>Justification</dt>
-                    <dd>{{ request.justification ?? '-' }}</dd>
-                    <dt>Submitted At</dt>
-                    <dd>{{ formatDateTime(request.submittedAt) }}</dd>
-                    <dt>Decided At</dt>
-                    <dd>{{ formatDateTime(request.decidedAt)}}</dd>
-                    <dt>Completed At</dt>
-                    <dd>{{ formatDateTime(request.completedAt) }}</dd>
-                </dl>
-            </div>  
-            <aside class="progress-box">
-                <div class="progress-header">
-                    <h3>Progress</h3>
-                    <div class="progress-bar">
-                        <div class="progress-fill" :class="{ rejected: isRejected}" :style="{ width: percent + '%'}"></div>
-                    </div>
-                    <span>{{ doneSteps }}/{{ steps.length }}</span>
+        <article class="request-card">
+            <div class="status-tab">
+                <span class="state" :class="request.status">{{ formatLabel(request.status) }}</span>
+            </div>
+            <p class="kicker">Renewal request #{{ request.id }}</p>
+            <h2 class="card-title">{{request.itemName}}</h2>
+
+            <div class="facts">
+                <div>
+                    <span>Proposed date</span>
+                    <strong>{{ formatDate(request.proposedExpirationDate) }}</strong>
                 </div>
-                <div class="progress-inner">
-                    <ol class="steps">
-                        <li v-for="(step, index) in steps" :key="step" :class="{done: index < doneSteps,
-                            current: index === doneSteps && !isRejected,
-                            stopped: index === doneSteps && isRejected
-                        }">{{ step }}</li>
-                    </ol>
+                <div>
+                    <span>Financial review</span>
+                    <strong>{{ request.needsFinancialReview ? 'Required' : 'Not required' }}</strong>
                 </div>
-            </aside>                
-        </div>
+                <div>
+                    <span>Submitted</span>
+                    <strong>{{ formatDate(request.submittedAt) }}</strong>
+                </div>
+            </div>
 
-    <h3>History</h3>
-    <table>
-        <thead>
-            <tr>
-              <th>When</th>
-              <th>Who</th>
-              <th>Step</th>
-              <th>Status</th>
-              <th>Recommendation</th>
-              <th>Comment</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr v-for="(action, index) in request.actions" :key="index">
-                <td>{{formatDateTime(action.createdAt) }}</td>
-                <td>{{ action.actorUserName}}</td>
-                <td>{{ formatLabel(action.type) }}</td>
-                <td><template v-if="action.fromStatus">{{ formatLabel(action.fromStatus)}} -></template> {{ formatLabel(action.toStatus) }}</td>
-                <td>{{ action.recommendation ?? '-' }}</td>
-                <td>{{ action.comment  ?? '-'}}</td>
-            </tr>
-        </tbody>
-    </table>
+            <p class="justification">{{ request.justification ?? 'No justification.' }}</p>
 
-    <form v-if="canFinanceReview" @submit.prevent="financeRecommendation" class="card section">
-    <div>
-        <h3>Financial review</h3>
-        <label>
-        Recommendation
-        <select v-model="recommendation" required>
-          <option value="" disabled>Select a recommendation for the manager</option>
-          <option>Approve</option>
-          <option>Reject</option>
-        </select>
-      </label>
-    </div>
-    <div>
-      <label>
-        Comment
-        <textarea v-model="comment" required></textarea>
-      </label>
-    </div>
-    <div>
-          <button type="submit" :disabled="financeSaving">Submit recommendation</button>
-    </div>
-    <p v-if="financeError" class="error">{{ financeError }}</p>
-    </form>
+            <div class="card-bottom">
+                <span class="cost">{{ formatMoney(request.proposedCost) }}</span>
+                <RouterLink :to="`/items/${request.itemId}`" class="item-button">Open item</RouterLink>
+            </div>
+        </article>
 
-    <div v-if="canManagerReview || canManagerReject" class="card section">
-        <h3>Your decision</h3>
-        <p v-if="request.status === 'Approved'">
-            This approval can no longer be completed, so you can reject it. 
-        </p>
-        <label> Comment (required to reject or to request clarification)
-            <textarea v-model="managerComment" id="managerComment"></textarea>
-        </label>
-        <div id="managerButtons">
-            <button type="button" @click="managerAction('approve')" v-if="canManagerReview" :disabled="managerSaving">Approve</button>
-            <button type="button" @click="managerAction('request-clarification')" v-if="!clarificationUsed && canManagerReview" :disabled="managerSaving">Request Clarification</button>
-            <button type="button" class="danger" @click="managerAction('reject')" v-if="canManagerReject" :disabled="managerSaving">Reject</button>
-        </div>
-        <p v-if="managerError" class="error">{{ managerError }}</p>
-    </div>
-
-      <form @submit.prevent="provideClarification" v-if="canAnswerClarification" class="card section">
-        <h3>Your answer</h3>
-        <div>
-            <label> Provide Clarification
-            <textarea v-model="employeeComment" required></textarea>
+        <aside class="side">
+            <form v-if="canFinanceReview" @submit.prevent="financeRecommendation" class="action-panel">
+                <h3>Financial review</h3>
+                <label>
+                Recommendation
+                    <select v-model="recommendation" required>
+                        <option value="" disabled>Select a recommendation for the manager</option>
+                        <option>Approve</option>
+                        <option>Reject</option>
+                    </select>
+                 </label>
+            <label>
+                Comment
+                <textarea v-model="comment" rows="4" required></textarea>
             </label>
-        </div>
-        <div>
-          <button type="submit" :disabled="employeeSaving">Send clarification</button>
-        </div>
-        <p v-if="employeeError" class="error">{{ employeeError }}</p>
-    </form>
+                <button type="submit" :disabled="financeSaving">{{ financeSaving ? 'Sending...' : 'Send recommendation' }}</button>
+            <p v-if="financeError" class="error">{{ financeError }}</p>
+            </form>
 
-    <form @submit.prevent="completeRenewal" v-if="canRecordCompletion" class="card section">
-        <h3>Complete the renewal</h3>
-        <p>Do this once the renewal is done. It starts a new period that ends on {{  formatDate(request.proposedExpirationDate) }}.</p>
-        <div>
-          <button type="submit" :disabled="employeeCompleteSaving">Complete</button>
-        </div>
-        <p v-if="employeeCompleteError" class="error">{{ employeeCompleteError }}</p>
-    </form>
+            <div v-if="canManagerReview || canManagerReject" class="action-panel">
+                <h3>Your decision</h3>
+                <p v-if="request.status === 'Approved'" class="hint">
+                    This approval can no longer be completed, so you can reject it. 
+                </p>
+                <label> Comment (required to reject or to request clarification)
+                    <textarea v-model="managerComment" rows="4"></textarea>
+                </label>
+                <div class="decision-buttons">
+                    <button type="button" @click="managerAction('approve')" v-if="canManagerReview" :disabled="managerSaving">Approve</button>
+                    <button type="button" @click="managerAction('request-clarification')" v-if="!clarificationUsed && canManagerReview" :disabled="managerSaving">Request Clarification</button>
+                    <button type="button" class="danger" @click="managerAction('reject')" v-if="canManagerReject" :disabled="managerSaving">Reject</button>
+                </div>
+                <p v-if="managerError" class="error">{{ managerError }}</p>
+            </div>
 
-    <h3>Documents</h3>
+            <form @submit.prevent="provideClarification" v-if="canAnswerClarification" class="action-panel">
+                <h3>Your answer</h3>
+                <p v-if="clarificationQuestion" class="question">"{{ clarificationQuestion }}"</p>
+                <label> Answer
+                    <textarea v-model="employeeComment" rows="4" required></textarea>
+                </label>
+                <button type="submit" :disabled="employeeSaving">{{ employeeSaving ? 'Sending...' : 'Send answer' }}</button>
+                <p v-if="employeeError" class="error">{{ employeeError }}</p>
+            </form>
+
+            <form @submit.prevent="completeRenewal" v-if="canRecordCompletion" class="action-panel">
+                <h3>Complete the renewal</h3>
+                <p>Do this once the renewal is done. It starts a new period that ends on {{  formatDate(request.proposedExpirationDate) }}.</p>
+                <div>
+                <button type="submit" :disabled="employeeCompleteSaving">{{ employeeCompleteSaving ? 'Saving...' : 'Complete renewal' }}</button>
+                </div>
+                <p v-if="employeeCompleteError" class="error">{{ employeeCompleteError }}</p>
+            </form>
+
+        </aside>
+    </div>
+
+    <h3 class="section-title">History</h3>
+    <div class="table-box">
+        <table>
+            <thead>
+                <tr>
+                <th>When</th>
+                <th>Who</th>
+                <th>Step</th>
+                <th>Status</th>
+                <th>Recommendation</th>
+                <th>Comment</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="(action, index) in request.actions" :key="index">
+                    <td>{{formatDateTime(action.createdAt) }}</td>
+                    <td>{{ action.actorUserName}}</td>
+                    <td>{{ formatLabel(action.type) }}</td>
+                    <td><template v-if="action.fromStatus">{{ formatLabel(action.fromStatus)}} -></template> {{ formatLabel(action.toStatus) }}</td>
+                    <td>{{ action.recommendation ?? '-' }}</td>
+                    <td>{{ action.comment  ?? '-'}}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3 class="section-title">Documents</h3>
         <p v-if="documents.length === 0">No documents.</p>
-        <table v-else>
-        <thead>
-            <tr>
-              <th>File Name</th>
-              <th>Uploaded At</th>
-              <th>Uploaded By</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr v-for="doc in documents" :key="doc.id">
-                <td><a :href="`/api/documents/${doc.id}/download`">{{ doc.originalFileName }}</a></td>
-                <td>{{ formatDateTime(doc.uploadedAt)}}</td>
-                <td>{{ doc.uploadedByUserName}}</td>
-            </tr>
-        </tbody>
-      </table>
+        <div v-for="doc in documents" :key="doc.id" class="file-row">
+            <div class="file-info">
+                <p class="file-name">{{ doc.originalFileName }}</p>
+                <p>{{ Math.ceil(doc.sizeBytes / 1024) }} KB {{ doc.uploadedByUserName }} {{ formatDateTime(doc.uploadedAt) }}</p>
+            </div>
+            <a :href="`/api/documents/${doc.id}/download`" class="download-link">Download</a>
+        </div>
     </div>
 </template>
 <style scoped>
-
-.error {
-    color: var(--danger);
-}
-
-.section {
-    max-width: 640px;
-    margin: 24xp 0;
-    padding: 20px 24px;
-}
-
-#managerButtons {
+.stepper {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 12px;
+    margin: 16px 0 28px;
+    padding: 24px 16px;
+    list-style: none;
+}
+
+.stepper li {
+  position: relative;            
+  flex: 1;                       
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #000000;
+}
+
+/* the line that comes into this step from the one before */
+.stepper li::before {
+  content: '';
+  position: absolute;
+  top: 14px;                     
+  right: 50%;                   
+  width: 100%;                   
+  height: 2px;
+  background: #000000;
+}
+
+.circle {
+  position: relative;          
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #000000;
+  border-radius: 50%;
+  background: white;
+  font-size: 13px;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+
+.stepper li:first-child::before {
+    display: none;
+}
+
+.stepper li.done .circle    { background: #0a4bff; border-color: #0a4bff; color: white; }
+.stepper li.done::before    { background: #0a4bff; }
+
+.stepper li.current .circle { border-color: #0a4bff; color: #0a4bff; }
+.stepper li.current::before { background: #0a4bff; }
+.stepper li.current         { color: var(--text); font-weight: 500; }
+
+.stepper li.warning .circle { background: #eb9c08; border-color: #eb9c08; color: #111; }
+.stepper li.warning::before { background: #eb9c08; }
+
+.stepper li.stopped .circle { background: var(--danger); border-color: var(--danger); color: white; }
+.stepper li.stopped::before { background: var(--danger); }
+
+.stepper li.success .circle { background: #0c7c35; border-color: #0c7c35;; color: white; }
+.stepper li.success::before { background: #1d4ed8; }
+
+.request-card {
+  position: relative;            
+  max-width: 560px;
+  overflow: hidden;
+  padding: 28px 28px 0;
+  color: white;
+  background: #1d1d1d;
+  border-radius: 28px;
+}
+
+.status-tab {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0 0 12px 12px;
+  background: var(--background);
+  border-bottom-left-radius: 24px;
+}
+
+.status-tab::before,
+.status-tab::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: radial-gradient(circle at bottom left, transparent 24px, var(--background) 24.5px);
+}
+
+.status-tab::before { top: 0; left: -24px; }
+.status-tab::after  { bottom: -24px; right: 0; }
+
+.status-tab .state {
+  display: inline-block;
+  margin: 8px 8px 0 0;
+  padding: 8px 14px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.facts {
+  display: flex;
+  gap: 20px;
+}
+
+.facts div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.facts div + div {
+  padding-left: 20px;
+}
+
+.justification {
+  margin: 20px 0 24px;
+  line-height: 1.6;
+}
+
+.card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 -28px;               
+  padding: 20px 28px;
+  background-color: rgb(49, 47, 47);
+}
+
+.cost {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.item-button {
+  padding: 14px 28px;
+  border-radius: 999px;
+  background: rgb(255, 255, 255);
+  color: #000000;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.card-title{
+    color: white;
 }
 
 .request-layout {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 3fr 2fr;
     gap: 24px;
     align-items: start;
 }
 
-.progress-box {
-    background: #f4f4f5;
-    border-radius: 20px;
-    padding: 6px;
-}
-
-.progress-header {
+.side {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
+    flex-direction: column;
+    gap: 16px;
 }
 
-.progress-header h3 {
+.action-panel {
+    max-width: none;
     margin: 0;
-    flex: 1;            
+    padding: 24px;
+    background: white;
+    border: 1px solid #eceef1;
+    border-radius: 20px;
 }
 
-.progress-bar {
-    width: 90px;
-    height: 8px;
+.action-panel h3 {
+    margin: 0 0 4px;
+}
+
+.action-panel label {
+    display: block;
+    margin-top: 16px;
+    font-weight: 500;
+}
+
+.hint {
+    margin: 0;
+}
+
+.action-panel button {
+    margin: 16px 0 0;
+    padding: 10px 16px;
+}
+
+.decision-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.section-title {
+    margin: 36px 0 12px;
+}
+
+.table-box {
     background: white;
-    border-radius: 999px;
+    border: 1px solid #eceef1;
+    border-radius: 12px;
     overflow: hidden;
 }
 
-.progress-fill {
-    height: 100%;
-    background: var(--light-blue);
-    border-radius: 999px;
-    transition: width 0.3s;
-}
-
-.progress-fill.rejected {
-    background: var(--danger);
-}
-
-.progress-inner {
-    background: white;
-    border-radius: 16px;
-    padding: 14px 18px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.steps {
-    list-style: none;
-    padding: 0;
+.table-box table {
     margin: 0;
 }
 
-.steps li {
+.table-box th {
+    background: #b5b5b5;
+}
+
+.file-row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px 0;
-    color: #b0b0b0;              
+    gap: 14px;
+    margin-bottom: 10px;
+    padding: 14px 16px;
+    border: 1px solid #eceef1;
+    border-radius: 14px;
 }
 
-.steps li::before {
-    content: '';
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    border: 2px dashed #c4c4c4;   
-    display: grid;
-    place-items: center;
-    font-size: 11px;
-    font-weight: 700;
-    color: white;
+.file-info { 
+    flex: 1;
 }
 
-.steps li.done { color: #4b5563; }
-.steps li.done::before { content: '✓'; background: #43c825; border: 2px solid #1e8644; }
-
-.steps li.current { color: var(--text); font-weight: 500; }
-.steps li.current::before { border-color: #6b7280; }
-
-.steps li.stopped { color: var(--danger); font-weight: 500; }
-.steps li.stopped::before { content: '✕'; background: var(--danger); border: 2px solid var(--danger); }
-
-.card {
-    background: #f4f4f5;
+.file-info p {
+    margin: 0;
 }
 
-@media (max-width: 900px) {
-    .request-layout {grid-template-columns: 1fr;}
+.file-name {
+    font-weight: 500;
 }
 
+.download-link {
+    padding: 8px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+@media (max-width: 700px) {
+  .facts { flex-direction: column; }
+  .facts div + div { padding-left: 0; border-left: none; }
+  .step-label { font-size: 0.8em; }
+  .request-layout { grid-template-columns: 1fr;}
+}
 </style>

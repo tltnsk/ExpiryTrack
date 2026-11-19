@@ -121,7 +121,7 @@ const totalCost = computed(() =>
                         </tr>
                     </tbody>
                 </table>
-                <button v-if="report.topProviders.length > 3" type="button" class="more" @click="showAllProviders = !showAllProviders">
+                <button v-if="report.topProviders.length > 3" type="button" class="more" :class="{open: showAllProviders}" @click="showAllProviders = !showAllProviders">
                     {{ showAllProviders ? 'Show less' : ` ⤢ View ${report.topProviders.length - 3} more` }}
                 </button>
             </div>
@@ -144,7 +144,7 @@ const totalCost = computed(() =>
                         </tr>
                     </tbody>
                 </table>
-                <button v-if="report.topEmployees.length > 3" type="button" class="more" :class="{open: showAllProviders}" @click="showAllEmployees = !showAllEmployees">
+                <button v-if="report.topEmployees.length > 3" type="button" class="more" :class="{open: showAllEmployees}" @click="showAllEmployees = !showAllEmployees">
                     {{ showAllEmployees ? 'Show less' : ` ⤢ View ${report.topEmployees.length - 3} more` }}
                 </button>
             </div>
@@ -282,8 +282,7 @@ const totalCost = computed(() =>
     margin: 0;
 }
 
-.sort {
-    display: inline-flex;
+.sort { 
     align-items: center;
     gap: 4px;
     padding: 4px;

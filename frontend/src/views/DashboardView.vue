@@ -1,96 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { formatDate, formatDateTime, formatLabel} from '@/utils/format'
-import Chart from 'chart.js/auto'
+import { formatDate, formatDateTime, formatMoney} from '@/utils/format'
+import {getTiles, getBarChart, getStateCounts, getMonthChart, percent, daysLeftText} from '@/utils/dashboard'
+import type { AdminDashboard, ManagerDashboard, EmployeeDashboard, FinanceDashboard } from '@/utils/dashboard'
 import BarChart from '@/components/BarChart.vue'
-
-interface DepartmentItemCount {
-    departmentName: string
-    itemCount: number
-}
-
-interface DashboardItem {
-    id: number
-    name: string
-    departmentName: string
-    expirationDate: string
-}
-
-interface MonthCount {
-    year: number
-    month: number
-    count: number
-}
-
-interface AdminDashboard {
-    totalItems: number
-    activeItems: number
-    expiringSoonItems: number
-    expiredItems: number
-    cancelledItems: number
-    itemsByDepartment: DepartmentItemCount[]
-    upcomingExpirations: DashboardItem[]
-    expirationsByMonth: MonthCount[]
-}
-
-interface DashboardRequest {
-    id: number
-    itemName: string
-    status: string
-    needsFinancialReview: boolean
-    proposedExpirationDate: string
-    submittedAt: string
-    proposedCost: number | null
-    requestedByUserName: string
-}
-
-interface ManagerDashboard {
-    totalItems: number
-    activeItems: number
-    expiringSoonItems: number
-    expiredItems: number
-    cancelledItems: number
-    requestsToReview: DashboardRequest[]
-    requestsAwaitingCompletion: DashboardRequest[]
-    upcomingExpirations: DashboardItem[]
-    expirationsByMonth: MonthCount[]
-    requestsByStatus: ChartEntry[]
-}
-
-interface EmployeeDashboard {
-    totalItems: number
-    activeItems: number
-    expiringSoonItems: number
-    expiredItems: number
-    cancelledItems: number
-    itemsNeedingRenewal: DashboardItem[]
-    requestsNeedingClarification: DashboardRequest[]
-    requestsAwaitingCompletion: DashboardRequest[]
-    myOpenRequests: DashboardRequest[]
-    upcomingExpirations: DashboardItem[]
-    expirationsByMonth: MonthCount[]
-    itemsByTimeLeft: ChartEntry[]
-}
-
-interface FinanceDashboard {
-    activeItems: number
-    expiringSoonItems: number
-    expiredItems: number
-    cancelledItems: number
-    requestsToReviewCount: number
-    totalCostWaitingForReview: number
-    expectedUpcomingCosts: number
-    approvedCost: number
-    requestsNeedingFinancialReview: DashboardRequest[]
-    expirationsByMonth: MonthCount[]
-    costsByDepartment: ChartEntry[]
-}
-
-interface ChartEntry {
-    label: string
-    value: number
-}
+import StateChart from '@/components/StateChart.vue'
 
 const auth = useAuthStore()
 
@@ -101,31 +16,13 @@ const financeDashboard = ref<FinanceDashboard | null>(null)
 const loading = ref(true)
 const errorMessage = ref('')
 
-const stateChart = ref<HTMLCanvasElement | null>(null)
-const monthChart = ref<HTMLCanvasElement | null>(null)
+const tiles = computed(() => getTiles(adminDashboard.value, managerDashboard.value, employeeDashboard.value, financeDashboard.value))
+const barChart = computed(() => getBarChart(adminDashboard.value, managerDashboard.value, employeeDashboard.value, financeDashboard.value))
+const stateCounts = computed(() => getStateCounts(adminDashboard.value, managerDashboard.value, employeeDashboard.value, financeDashboard.value))
+const monthChart = computed(() => getMonthChart(adminDashboard.value, managerDashboard.value, employeeDashboard.value, financeDashboard.value))
 
-async function drawStateChart(data: AdminDashboard | ManagerDashboard | EmployeeDashboard | FinanceDashboard) {
-    await nextTick() // wait until Vue has put the <canvas> on the page
-    new Chart(stateChart.value!, {
-        type: 'doughnut',
-        data: {
-            labels: ['Active', 'Expiring soon', 'Expired', 'Cancelled'],
-            datasets: [{
-                data: [data.activeItems, data.expiringSoonItems, data.expiredItems, data.cancelledItems],
-                backgroundColor: ['#1e8e47', '#e0a100', '#d64545', '#000000'],
-            }],
-        },
-        options: {
-            aspectRatio: adminDashboard.value ? 1 : 2,
-            plugins: { legend: { position: adminDashboard.value ? 'top' : 'right' }}
-        }
-    })
-}
-
-const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-function monthLabels(months: MonthCount[]) {
-    return months.map((m) => `${monthNames[m.month - 1]} ${m.year}`)
-}
+const upcoming = computed(() => 
+(adminDashboard.value ?? managerDashboard.value ?? employeeDashboard.value)?.upcomingExpirations ?? [])
 
 onMounted(async () => {
     if (auth.user?.role === 'Administrator') {
@@ -161,12 +58,6 @@ onMounted(async () => {
         }
     }
     loading.value = false
-
-    const data = adminDashboard.value ?? employeeDashboard.value ?? managerDashboard.value ?? financeDashboard.value
-
-    if (data) {
-        await drawStateChart(data)
-    }
 })
 
 
@@ -175,500 +66,414 @@ onMounted(async () => {
     <p v-if="loading">Loading...</p>
     <p v-else-if="errorMessage" class="error"> {{ errorMessage }}</p>
 
-    <!-- ADMIN -->
-    <div v-else-if="adminDashboard">
-        <div class="row admin-top">
-            <div class="cards">
-                <div class="card">
-                    <span class="number">{{ adminDashboard.totalItems }}</span>
-                    <span>Total Items</span>
-                    <RouterLink :to="{ path: '/items'}">View</RouterLink>
-                </div>
-                <div class="card">
-                    <span class="number">{{ adminDashboard.activeItems }}</span>
-                    <span>Active Items</span>
-                    <RouterLink :to="{ path: '/items', query: { state: 'Active'}}">View</RouterLink>
-                </div>
-                <div class="card">
-                    <span class="number">{{ adminDashboard.expiringSoonItems }}</span>
-                    <span>Expiring Soon Items</span>
-                    <RouterLink :to="{ path: '/items', query: { state: 'ExpiringSoon'}}">View</RouterLink>
-                </div>
-                <div class="card">
-                    <span class="number">{{ adminDashboard.expiredItems }}</span>
-                    <span>Expired Items</span>
-                    <RouterLink :to="{ path: '/items', query: { state: 'Expired'}}">View</RouterLink>
-                </div>
-                <div class="card">
-                    <span class="number">{{ adminDashboard.cancelledItems }}</span>
-                    <span>Cancelled Items</span>
-                    <RouterLink :to="{ path: '/items', query: { state: 'Cancelled'}}">View</RouterLink>
-                </div>
-
-                <div class="chart month-chart">
-                    <h3>Expirations in the next 12 months</h3>
-                    <BarChart :labels="monthLabels(adminDashboard.expirationsByMonth)"
-                            :values="adminDashboard.expirationsByMonth.map((m) => m.count)"/>  
-                </div>
+    <div v-else class="dashboard" :class="{ 'no-side': financeDashboard}">
+        <div class="main">
+            <div class="tiles">
+                <RouterLink v-for="tile in tiles" :key="tile.label" :to="tile.link" class="tile" :class="tile.color">
+                    <span class="tile-label">{{ tile.label }}</span>
+                    <span class="tile-bottom">
+                        <span class="tile-value">{{ tile.value }}</span>
+                    </span>
+                </RouterLink>
             </div>
-            <div class="side">
-                <div class="chart" id="items-chart">
+
+            <div class="charts">
+                <div class="chart-card">
                     <h3>Items by state</h3>
-                    <div class="state-box">
-                        <canvas ref="stateChart"></canvas>
-                    </div>
+                    <StateChart :values="stateCounts" />
                 </div>
-                <div class="chart">
-                    <h3>Department totals</h3>
+                <div class="chart-card">
+                    <h3>{{barChart.title }}</h3>
+                    <BarChart :labels="barChart.labels" :values="barChart.values" />
+                 </div>
+                <div class="chart-card wide">
+                    <h3>Expirations in the next 12 months</h3>
+                    <BarChart :labels="monthChart.labels" :values="monthChart.values" :aspect-ratio="4"/>
+                 </div>
+            </div>
+
+        <section v-if="managerDashboard" class="table-section">
+            <h3>Requests to review</h3>
+            <p v-if="managerDashboard.requestsToReview.length === 0" class="empty">No requests to review.</p>
+            <div v-else class="table-box">
+                <table>
+                    <thead>
+                        <tr><th>Item</th><th>Requested by</th><th>Submitted</th><th>New expiry</th><th>Cost</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="request in managerDashboard.requestsToReview" :key="request.id">
+                            <td>{{ request.itemName }}</td>
+                            <td>{{ request.requestedByUserName }}</td>
+                            <td>{{ formatDateTime(request.submittedAt) }}</td>
+                            <td>{{ formatDate(request.proposedExpirationDate) }}</td>
+                            <td>{{ formatMoney(request.proposedCost) }}</td>
+                            <td><RouterLink :to="`/requests/${request.id}`" class="table-link">Review →</RouterLink></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+
+
+        <!--Employee-->
+        <section v-if="employeeDashboard" class="table-section">
+                <h3>Items needing renewal</h3>
+                <p v-if="employeeDashboard.itemsNeedingRenewal.length === 0" class="empty">No items needing renewal.</p>
+                <div v-else class="table-box">
                     <table>
                         <thead>
-                            <tr>
-                                <th>Department</th>
-                                <th>Items</th>
-                            </tr>
+                            <tr><th>Item</th><th>Department</th><th>Expires</th><th>Time left</th><th></th></tr>
                         </thead>
                         <tbody>
-                            <tr v-for="row in adminDashboard.itemsByDepartment" :key="row.departmentName">
-                                <td>{{ row.departmentName }}</td>
-                                <td>{{ row.itemCount }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="row even">
-            <div class="chart accent-chart">
-                <h3>Items per department</h3>
-                <BarChart :labels="adminDashboard.itemsByDepartment.map((d) => d.departmentName)"
-                    :values="adminDashboard.itemsByDepartment.map((d) => d.itemCount)" />
-            </div>
-            <div class="chart">
-                <h3>Upcoming expirations</h3>
-                    <p v-if="adminDashboard.upcomingExpirations.length === 0">No items are expiring soon.</p>
-                    <table v-else>
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Department</th>
-                                <th>Expires</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="item in adminDashboard.upcomingExpirations" :key="item.id">
+                            <tr v-for="item in employeeDashboard.itemsNeedingRenewal" :key="item.id">
                                 <td><RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
                                 <td>{{ item.departmentName }}</td>
                                 <td>{{ formatDate(item.expirationDate) }}</td>
+                                <td>{{ daysLeftText(item.expirationDate) }}</td>
+                                <td><RouterLink :to="`/items/${item.id}/renew`" class="table-link">Renew →</RouterLink></td>
                             </tr>
                         </tbody>
                     </table>
+                </div>
+        </section>
+        
+        <section v-if="financeDashboard" class="table-section">
+            <h3>Requests to review</h3>
+            <p v-if="financeDashboard.requestsNeedingFinancialReview.length === 0" class="empty">No requests to review.</p>
+            <div v-else class="table-box">
+                <table>
+                    <thead>
+                        <tr><th>Item</th><th>Requested by</th><th>Submitted</th><th>New expiry</th><th>Cost</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="request in financeDashboard.requestsNeedingFinancialReview" :key="request.id">
+                            <td>{{ request.itemName }}</td>
+                            <td>{{ request.requestedByUserName }}</td>
+                            <td>{{ formatDateTime(request.submittedAt) }}</td>
+                            <td>{{ formatDate(request.proposedExpirationDate) }}</td>
+                            <td>{{ formatMoney(request.proposedCost) }}</td>
+                            <td><RouterLink :to="`/requests/${request.id}`" class="table-link">Review →</RouterLink></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            
-        </div>
-    
-    </div>
-
-    <!-- MANAGER -->
-    <div v-else-if="managerDashboard">
-        <div class="cards">
-            <div class="card">
-                <span class="number">{{ managerDashboard.totalItems }}</span>
-                <span>Total Items</span>
-                <RouterLink :to="{ path: '/items'}">View</RouterLink>
-            </div>
-            <div class="card">
-                <span class="number">{{ managerDashboard.activeItems }}</span>
-                <span>Active Items</span>
-                <RouterLink :to="{ path: '/items', query: { state: 'Active'}}">View</RouterLink>
-            </div>
-            <div class="card">
-                <span class="number">{{ managerDashboard.expiringSoonItems }}</span>
-                <span>Expiring Soon Items</span>
-                <RouterLink :to="{ path: '/items', query: { state: 'ExpiringSoon'}}">View</RouterLink>
-            </div>
-            <div class="card">
-                <span class="number">{{ managerDashboard.expiredItems }}</span>
-                <span>Expired Items</span>
-                <RouterLink :to="{ path: '/items', query: { state: 'Expired'}}">View</RouterLink>
-            </div>
-            <div class="card">
-                <span class="number">{{ managerDashboard.cancelledItems }}</span>
-                <span>Cancelled Items</span>
-                <RouterLink :to="{ path: '/items', query: { state: 'Cancelled'}}">View</RouterLink>
-            </div>
+        </section>
         </div>
 
-        <div class="row">
-            <div class="chart" id="items-chart">
-                <h3>Items by state</h3>
-                <canvas ref="stateChart"></canvas>
+    <aside v-if="!financeDashboard" class="side">
+        <section>
+            <h3>Upcoming expirations</h3>
+            <p v-if="upcoming.length === 0" class="empty">No items are expiring soon.</p>
+            <ul v-else class="timeline">
+                <li v-for="item in upcoming" :key="item.id">
+                    <span class="timeline-date">{{ formatDate(item.expirationDate) }}</span>
+                    <RouterLink :to="`/items/${item.id}`" class="timeline-card">
+                        <strong>{{ item.name }}</strong>
+                    </RouterLink>
+                </li>
+            </ul>
+            <RouterLink to="/items" class="all-button">View all items</RouterLink>
+        </section>
+
+        <section v-if="adminDashboard" class="table-section">
+            <h3>Department totals</h3>
+            <div v-for="row in adminDashboard.itemsByDepartment" :key="row.departmentName" class="list-row">
+                <span class="row-text">
+                    <strong>{{ row.departmentName }}</strong>
+                    <span class="share">
+                        <span class="share-bar" :style="{ width: percent(row.itemCount, adminDashboard.totalItems) + '%' }"></span>
+                    </span>
+                </span>
+                <span class="row-count">{{ row.itemCount }}</span>
             </div>
-
-            <!-- <div class="chart month-chart">
-                <h3>Expirations in the next 12 months</h3>
-                <BarChart :labels="monthLabels(managerDashboard.expirationsByMonth)"
-                    :values="managerDashboard.expirationsByMonth.map((m) => m.count)"/>  
-            </div> -->
-            <div class="chart accent-chart">
-                <h3>Department requests by status</h3>
-                <BarChart :labels="managerDashboard.requestsByStatus.map((e) => formatLabel(e.label))"
-                    :values="managerDashboard.requestsByStatus.map((e) => e.value)"/> 
-            </div>
-        </div>
-
-        <h3>Requests to Review</h3>
-        <p v-if="managerDashboard.requestsToReview.length === 0">No requests to review.</p>
-        <table v-else>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Proposed Expiration Date</th>
-                    <th>Submitted At</th>
-                    <th>Proposed Cost</th>
-                    <th>Requested By</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="request in managerDashboard.requestsToReview" :key="request.id">
-                    <td><RouterLink :to="`/requests/${request.id}`">{{ request.itemName }}</RouterLink></td>
-                    <td>{{ formatDate(request.proposedExpirationDate) }}</td>
-                    <td>{{ formatDateTime(request.submittedAt) }}</td>
-                    <td>{{ request.proposedCost ?? '-'}}</td>
-                    <td>{{ request.requestedByUserName }}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h3>Requests Awaiting Completion</h3>
-        <p v-if="managerDashboard.requestsAwaitingCompletion.length === 0">No requests awaiting completion.</p>
-        <table v-else>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Proposed Expiration Date</th>
-                    <th>Submitted At</th>
-                    <th>Proposed Cost</th>
-                    <th>Requested By</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="request in managerDashboard.requestsAwaitingCompletion" :key="request.id">
-                    <td><RouterLink :to="`/requests/${request.id}`">{{ request.itemName }}</RouterLink></td>
-                    <td>{{ formatDate(request.proposedExpirationDate) }}</td>
-                    <td>{{ formatDateTime(request.submittedAt) }}</td>
-                    <td>{{ request.proposedCost ?? '-'}}</td>
-                    <td>{{ request.requestedByUserName }}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h3>Upcoming expirations</h3>
-        <p v-if="managerDashboard.upcomingExpirations.length === 0">No items are expiring soon.</p>
-        <table v-else>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Expires</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="item in managerDashboard.upcomingExpirations" :key="item.id">
-                    <td><RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
-                    <td>{{ formatDate(item.expirationDate) }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- EMPLOYEE -->
-    <div v-else-if="employeeDashboard">
-        <div class="cards">
-            <div class="card">
-                <span class="number">{{ employeeDashboard.totalItems }}</span>
-                <span>Total Items</span>
-                 <RouterLink :to="{ path: '/items'}">View</RouterLink>
-            </div>
-            <div class="card">
-                <span class="number">{{ employeeDashboard.activeItems }}</span>
-                <span>Active Items</span>
-                 <RouterLink :to="{ path: '/items', query: { state: 'Active'}}">View</RouterLink>
-            </div>
-            <div class="card">
-                <span class="number">{{ employeeDashboard.expiringSoonItems }}</span>
-                <span>Expiring Soon Items</span>
-                 <RouterLink :to="{ path: '/items', query: { state: 'ExpiringSoon'}}">View</RouterLink>
-            </div>
-            <div class="card">
-                <span class="number">{{ employeeDashboard.expiredItems }}</span>
-                <span>Expired Items</span>
-                 <RouterLink :to="{ path: '/items', query: { state: 'Expired'}}">View</RouterLink>
-            </div>
-            <div class="card">
-                <span class="number">{{ employeeDashboard.cancelledItems }}</span>
-                <span>Cancelled Items</span>
-                 <RouterLink :to="{ path: '/items', query: { state: 'Cancelled'}}">View</RouterLink>
-            </div>
-        </div>
-        <div class="row">
-
-            <div class="chart" id="items-chart">
-                <h3>Items by state</h3>
-                <canvas ref="stateChart"></canvas>
-            </div>
-
-            <!-- <div class="chart month-chart">
-                <h3>Expirations in the next 12 months</h3>
-                <BarChart :labels="monthLabels(employeeDashboard.expirationsByMonth)"
-                    :values="employeeDashboard.expirationsByMonth.map((m) => m.count)" />  
-            </div> -->
-            <div class="chart accent-chart">
-                <h3>Items By Time Left</h3>
-                <BarChart :labels="employeeDashboard.itemsByTimeLeft.map((e) => formatLabel(e.label))"
-                    :values="employeeDashboard.itemsByTimeLeft.map((e) => e.value)"/> 
-            </div>
-        </div>
-        <h3>Items Needing Renewal</h3>
-        <p v-if="employeeDashboard.itemsNeedingRenewal.length === 0">No items needing renewal.</p>
-        <table v-else>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Expiration Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="item in employeeDashboard.itemsNeedingRenewal" :key="item.id">
-                    <td><RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
-                    <td>{{ formatDate(item.expirationDate) }}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h3>Requests Needing Clarification</h3>
-        <p v-if="employeeDashboard.requestsNeedingClarification.length === 0">No requests needing clarification.</p>
-        <table v-else>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Proposed Expiration Date</th>
-                    <th>Submitted At</th>
-                    <th>Proposed Cost</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="request in employeeDashboard.requestsNeedingClarification" :key="request.id">
-                    <td><RouterLink :to="`/requests/${request.id}`">{{ request.itemName }}</RouterLink></td>
-                    <td>{{ formatDate(request.proposedExpirationDate) }}</td>
-                    <td>{{ formatDateTime(request.submittedAt) }}</td>
-                    <td>{{ request.proposedCost ?? '-'}}</td>
-                </tr>
-            </tbody>
-        </table>
-
-
-        <h3>Requests Awaiting Completion</h3>
-        <p v-if="employeeDashboard.requestsAwaitingCompletion.length === 0">No requests awaiting completion.</p>
-        <table v-else>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Proposed Expiration Date</th>
-                    <th>Submitted At</th>
-                    <th>Proposed Cost</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="request in employeeDashboard.requestsAwaitingCompletion" :key="request.id">
-                    <td><RouterLink :to="`/requests/${request.id}`">{{ request.itemName }}</RouterLink></td>
-                    <td>{{ formatDate(request.proposedExpirationDate) }}</td>
-                    <td>{{ formatDateTime(request.submittedAt) }}</td>
-                    <td>{{ request.proposedCost ?? '-'}}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h3>My Open Requests</h3>
-        <p v-if="employeeDashboard.myOpenRequests.length === 0">No open requests.</p>
-        <table v-else>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Proposed Expiration Date</th>
-                    <th>Submitted At</th>
-                    <th>Proposed Cost</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="request in employeeDashboard.myOpenRequests" :key="request.id">
-                    <td><RouterLink :to="`/requests/${request.id}`">{{ request.itemName }}</RouterLink></td>
-                    <td>{{ formatDate(request.proposedExpirationDate) }}</td>
-                    <td>{{ formatDateTime(request.submittedAt) }}</td>
-                    <td>{{ request.proposedCost ?? '-'}}</td>
-                    <td>{{ formatLabel(request.status) }}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h3>Upcoming expirations</h3>
-        <p v-if="employeeDashboard.upcomingExpirations.length === 0">No items are expiring soon.</p>
-        <table v-else>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Expires</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="item in employeeDashboard.upcomingExpirations" :key="item.id">
-                    <td><RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
-                    <td>{{ formatDate(item.expirationDate) }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- FINANCE OFFICER -->
-    <div v-else-if="financeDashboard">
-        <div class="cards">
-            <div class="card">
-                <span class="number">{{ financeDashboard.requestsToReviewCount }}</span>
-                <span>Number of Requests to Review</span>
-            </div>
-            <div class="card">
-                <span class="number">{{ financeDashboard.totalCostWaitingForReview }}</span>
-                <span>Total Cost Waiting for Review</span>
-            </div>
-            <div class="card">
-                <span class="number">{{ financeDashboard.expectedUpcomingCosts }}</span>
-                <span>Expected Upcoming Cost</span>
-            </div>
-            <div class="card">
-                <span class="number">{{ financeDashboard.approvedCost }}</span>
-                <span>Approved Cost</span>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="chart" id="items-chart">
-                <h3>Items by state</h3>
-                <canvas ref="stateChart"></canvas>
-            </div>
-
-            <!-- <div class="chart month-chart">
-                <h3>Expirations in the next 12 months</h3>
-                <BarChart :labels="monthLabels(financeDashboard.expirationsByMonth)"
-                            :values="financeDashboard.expirationsByMonth.map((m) => m.count)" />  
-            </div> -->
-            <div class="chart accent-chart">
-                <h3>Costs By Department</h3>
-                <BarChart :labels="financeDashboard.costsByDepartment.map((e) => formatLabel(e.label))"
-                    :values="financeDashboard.costsByDepartment.map((e) => e.value)"/> 
-            </div>
-        </div>       
-
-        <h3>Requests Needing Financial Review</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Proposed Cost</th>
-                    <th>Proposed Expiration Date</th>
-                    <th>Requested By</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="request in financeDashboard.requestsNeedingFinancialReview" :key="request.id">
-                    <td>{{ request.itemName}}</td>
-                    <td>{{ request.proposedCost}}</td>
-                    <td>{{ formatDate(request.proposedExpirationDate) }}</td>
-                    <td>{{ request.requestedByUserName }}</td>
-                </tr>
-            </tbody>
-        </table>
+        </section>
+        <section v-if="managerDashboard">
+            <h3>Awaiting completion</h3>
+            <p v-if="managerDashboard.requestsAwaitingCompletion.length === 0" class="empty">No requests awaiting completion.</p>
+            <RouterLink v-for="request in managerDashboard.requestsAwaitingCompletion" :key="request.id" :to="`/requests/${request.id}`" class="list-row">
+                <span class="row-text">
+                    <strong>{{ request.itemName }}</strong>
+                    <small>{{ request.requestedByUserName }}</small>
+                </span>
+            </RouterLink>
+        </section>
+        <template v-if="employeeDashboard">
+            <section>
+                <h3>Needs clarification</h3>
+                <p v-if="employeeDashboard.requestsNeedingClarification.length === 0" class="empty">No requests needing clarification.</p>
+                <RouterLink v-for="request in employeeDashboard.requestsNeedingClarification" :key="request.id" :to="`/requests/${request.id}`" class="list-row">
+                    <span class="row-text">
+                        <strong>{{ request.itemName }}</strong>
+                        <small>Submitted {{ formatDateTime(request.submittedAt) }}</small>
+                    </span>
+                </RouterLink>
+            </section>
+            <section>
+                <h3>Awaiting completion</h3>
+                <p v-if="employeeDashboard.requestsAwaitingCompletion.length === 0" class="empty">No requests awaiting completion.</p>
+                <RouterLink v-for="request in employeeDashboard.requestsAwaitingCompletion" :key="request.id" :to="`/requests/${request.id}`" class="list-row">
+                    <span class="row-text">
+                        <strong>{{ request.itemName }}</strong>
+                        <small>New expiry date</small>
+                    </span>
+                </RouterLink>
+            </section>
+            <section>
+                <h3>My open requests</h3>
+                <p v-if="employeeDashboard.myOpenRequests.length === 0" class="empty">No open requests.</p>
+                <RouterLink v-for="request in employeeDashboard.myOpenRequests" :key="request.id" :to="`/requests/${request.id}`" class="list-row">
+                    <span class="row-text">
+                        <strong>{{ request.itemName }}</strong>
+                        <small>Submitted {{ formatDateTime(request.submittedAt) }}</small>
+                    </span>
+                </RouterLink>
+            </section>
+        </template>
+    </aside>
     </div>
 </template>
 <style scoped>
-.cards{
-    display: flex;
-    flex-direction: column;
+.dashboard {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 32px;
+    align-items: start;
+}
+
+.dashboard.no-side {
+    grid-template-columns: 1fr;
+}
+
+.main {
+    min-width: 0;
+}
+
+h3 {
+    margin: 0 0 12px;
+}
+
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 16px;
     margin-bottom: 24px;
 }
 
-.card{
+.tile {
     display: flex;
-    align-items: center;
-    padding: 10px 16px;
-    gap: 10px;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 110px;
+    padding: 16px 18px;
+    border-radius: 10px;
+    color: #111;
+    text-decoration: none;
 }
 
-.card a {
-    margin-left: auto;
+.tile:hover {
+    opacity: 0.85;
 }
 
-.number {
-    font-size: 20px;
-    font-weight: bold;
+.tile-label {
+    font-size: 14px;
+    font-weight: 600;
 }
 
-#items-chart {
-    background-color: #c8daff;
+.tile-value {
+    font-size: 32px;
 }
 
-.row {
+.shade-5 { background-color: #3e81ec; }
+.shade-4 { background-color: #618fd8; }
+.shade-3 { background-color: #94bcfa; }
+.shade-2 { background-color: #96b8ef; }
+.shade-1 { background-color: #bcd2f6; }
+.charts {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 24px;
+    gap: 16px;
+    margin-bottom: 32px;
 }
 
-.row.even {
-    grid-template-columns: 1fr 1fr;
+.chart-card {
+    min-width: 0;
+    padding: 20px;
+    background-color: #f1f5fe;
 }
 
-.row > * {
+.list-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding: 10px 14px;
+    background-color: #ececec;
+    color: #111;
+    text-decoration: none;
+}
+.list-row:hover {
+    background-color: #ebe7e0;
+}
+
+.row-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
     min-width: 0;
 }
 
-.accent-chart {
-    background-color: #434793;
-    border-radius: 16px;
-    padding: 20px;
+.row-text strong {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
-.accent-chart h3 {
+.row-text small,
+.timeline-card small,
+.empty {
+    color: #777;
+}
+
+/* timeline */
+.timeline {
+    position: relative;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* the vertical line */
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 72px;
+    width: 1px;
+    background-color: #d3cabb;
+}
+
+.timeline li {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 32px;
+    margin-bottom: 12px;
+}
+
+.timeline-date {
+    padding-top: 10px;
+    font-size: 12px;
+}
+
+.timeline-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 14px;
+    background-color: #e6e7e8;
+    color: #111;
+    text-decoration: none;
+}
+
+/* the dot on the line */
+.timeline-card::before {
+    content: '';
+    position: absolute;
+    top: 16px;
+    left: -20px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background-color: #000000;
+}
+
+.all-button {
+    display: block;
+    margin-top: 16px;
+    padding: 12px;
+    background-color: #000000;
     color: white;
+    border-radius: 10px;
+    text-align: center;
+    text-decoration: none;
 }
 
-.month-chart {
-    background-color: rgb(111, 135, 240); 
+.tile-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
 }
 
-.state-box {
-    max-width: 350px;
+
+.tile-bottom small {
+    font-size: 12px;
+    opacity: 0.75;
+}
+
+.wide {
+    grid-column: 1 / -1;
+}
+
+.table-section {
+    margin-bottom: 32px;
+}
+
+.table-box {
+    border: 1px solid rgb(247, 247, 247);
+    border-radius: 12px;
+    overflow-x: auto;
+}
+
+.table-box table {
+    margin: 0;
+}
+
+.table-box th {
+    background-color: #fcfbfb;
+}
+
+.table-link {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.share {
+    display: inline-block;
+    width: 80px;
+    height: 6px;
+    margin-right: 8px;
+    border-radius: 999px;
+    background-color: #e3ebfc;
+    vertical-align: middle;
+}
+
+.share-bar {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background-color: #2f61e2;
+}
+
+.side section + section {
+    margin-top: 32px;
+}
+
+.row-text .share {
     width: 100%;
-    margin: 0 auto;
+    margin: 6px 0 0;
 }
 
-#items-chart {
-    display: flex;
-    flex-direction: column;
-    align-self: start;
+.row-count {
+    font-weight: 700;
+}
+/* keep this last so it wins */
+@media (max-width: 1000px) {
+    .dashboard,
+    .charts {
+        grid-template-columns: 1fr;
+    }
 }
 
-.row.admin-top {
-    grid-template-columns: 3fr 2fr;
-}
-
-.side {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
-.side > .chart:last-child {
-    flex: 1;
-}
 </style>

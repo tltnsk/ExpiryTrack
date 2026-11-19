@@ -68,7 +68,7 @@ onMounted(async () => {
           <span v-if="category.isActive" class="active-cat">Active</span>
           <span v-else class="inactive-cat">Inactive</span>
         </td>
-        <td v-if="isAdmin">
+        <td v-if="isAdmin" class="edit-cell">
           <RouterLink :to="`/categories/${category.id}/edit`" class="edit-link" :title="`Edit ${category.name}`" :aria-label="`Edit ${category.name}`">✎</RouterLink>
         </td>
       </tr>

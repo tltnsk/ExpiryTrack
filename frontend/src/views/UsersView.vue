@@ -91,7 +91,7 @@ const isAdmin = computed(() => auth.user?.role === 'Administrator')
             <td> {{ formatLabel(user.role) }}</td>
             <td> {{ user.departmentName  ?? '-'}}</td>
             <td> {{ user.isActive ? "Yes" : "No"}}</td>
-            <td v-if="isAdmin">
+            <td v-if="isAdmin" class="actions-cell">
               <RouterLink :to="`/users/${user.id}/edit`" class="edit-link" :title="`Edit ${user.firstName} ${user.lastName}`" :aria-label="`Edit ${user.lastName}`">✎</RouterLink>
               <button :class="{danger: user.isActive}" @click="toggleActive(user)">{{ user.isActive ? 'Deactivate' : 'Activate' }}</button>
             </td>

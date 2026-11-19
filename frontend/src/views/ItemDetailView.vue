@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { formatDate, formatDateTime, formatLabel} from '@/utils/format'
+import { formatDate, formatDateTime, formatLabel, formatMoney } from '@/utils/format'
 
 interface Item {
     id: number
@@ -131,7 +131,16 @@ onMounted(async () => {
 })
 
 const hasOpenRequest = computed(() =>requests.value.some(r => r.status !== "Rejected" && r.status !== "Completed"))
+const isManager = computed(() => auth.user?.role === 'DeparmentMangager')
+const isEmployee = computed(() => auth.user?.role === 'Employee')
 
+// only active and expiring soon items can be edited/cancelled
+const isOpen = computed(() =>
+  item.value?.lifecycleState === 'Active' || item.value?.lifecycleState === 'ExpiringSoon')
+
+const canEdit = computed(() => (isManager.value || isEmployee.value) && isOpen.value)
+const canCancel = computed(() => isManager.value && isOpen.value)
+const canRenew = computed(() => isEmployee.value && !hasOpenRequest.value && (item.value?.lifecycleState === 'ExpiringSoon' || item.value?.lifecycleState === 'Expired'))
 
 async function cancelItem() {
     cancelError.value = ''
@@ -180,12 +189,36 @@ async function reassignEmployee() {
   item.value = await response.json()
 }
 
+function daysBetween(from: string, to: string): number {
+  const oneDay = 1000 * 60 * 60 * 24
+  return Math.round((new Date(to).getTime() - new Date(from).getTime()) / oneDay)
+}
+
+const today = new Date().toISOString().slice(0, 10)
+
+const daysLeft = computed(() => item.value ? daysBetween(today, item.value.expirationDate) : 0)
+
+
+// how much of the current period has already passed
+const periodPercent = computed(() => {
+  if (!item.value) return 0
+  const total = daysBetween(item.value.startDate, item.value.expirationDate)
+  const used = daysBetween(item.value.startDate, today)
+  return Math.min(100, Math.max(0, Math.round(used/total * 100)))
+})
+
+const openRequest = computed(() => requests.value.find(r => r.status !== 'Rejected' && r.status !== 'Completed') ?? null)
+
+// expired items can be reassigned too
+const canReassign = computed(() => isManager.value && item.value?.lifecycleState !== 'Cancelled')
+
+const activeTab = ref('requests')
+
 </script>
 
 <template>
   <div class="page-links">
       <RouterLink to="/items" class="back-link">Back to Items</RouterLink>
-      <RouterLink v-if="item && (auth.user?.role === 'DepartmentManager' || auth.user?.role === 'Employee') && (item.lifecycleState === 'Active' || item.lifecycleState === 'ExpiringSoon')" :to="`/items/${item.id}/edit`">Edit Item</RouterLink>
   </div>
 
     <p v-if="loading">Loading...</p>
@@ -193,148 +226,466 @@ async function reassignEmployee() {
     <p v-else-if="errorMessage" class="error"> {{  errorMessage }}</p>
 
     <div v-else-if="item">
-        <h2>{{ item.name }}</h2>
-        <span class="state" :class="item.lifecycleState">{{ formatLabel(item.lifecycleState) }}</span>
+      <div class="item-layout">
+        <article class="item-card">
+          <div class="status-tab">
+            <span class="state" :class="item.lifecycleState">{{ formatLabel(item.lifecycleState) }}</span>
+          </div>
 
-        <h3>Details</h3>
-        <dl>
-            <dt>Description</dt>
-            <dd>{{ item.description ?? '-' }}</dd>
-            <dt>Category</dt>
-            <dd>{{ item.categoryName }}</dd>
-            <dt>Department</dt>
-            <dd>{{ item.departmentName }}</dd>
-            <dt>Responsible</dt>
-            <dd>{{ item.responsibleUserName }}</dd>
-            <dt>Provider</dt>
-            <dd>{{ item.provider ?? '-' }}</dd>
-            <dt>Reference Number</dt>
-            <dd>{{ item.referenceNumber ?? '-' }}</dd>
-        </dl>
+          <p>{{ item.categoryName }} | {{ item.departmentName }}</p>
+          <h2 class="card-title">{{ item.name }}</h2>
 
-        <h3>Current Period</h3>
-        <dl>
-            <dt>Period</dt>
-            <dd>{{ item.periodNumber }}</dd>
-            <dt>Start date</dt>
-            <dd>{{ formatDate(item.startDate) }}</dd>
-            <dt>Expiration Date</dt>
-            <dd>{{ formatDate(item.expirationDate) }}</dd>
-            <dt>Cost</dt>
-            <dd>{{ item.cost ?? '-' }}</dd>
-        </dl>
-
-        <button v-if="auth.user?.role === 'DepartmentManager' && (item.lifecycleState === 'Active' || item.lifecycleState === 'ExpiringSoon')"  @click="cancelItem">Cancel Item</button>
-        <p v-if="cancelError">{{ cancelError }}</p>
-        
-        <form v-if="auth.user?.role === 'DepartmentManager' && (item.lifecycleState === 'Active' || item.lifecycleState === 'ExpiringSoon' || item.lifecycleState === 'Expired')" @submit.prevent="reassignEmployee">
+          <div class="facts">
             <div>
-                <label>
-                    Reassign Employee
-                    <select v-model="responsibleUserId" required>
-                        <option :value="null" disabled>Select a responsible employee</option>
-                        <option v-if="employees.length===0" :value="null" disabled>No active employees in your department.</option>
-                        <option v-for="employee in employees" :key="employee.id" :value="employee.id">
-                          {{ employee.firstName }} {{  employee.lastName }}
-                        </option>
-                    </select>
-                </label>
+              <span>Responsible</span>
+              <strong>{{ item.responsibleUserName }}</strong>
             </div>
-            <button type="submit">Reassign employee</button>
-            <p v-if="reassignError" class="error">{{ reassignError }}</p>
-        </form>
-        <RouterLink v-if="auth.user?.role=='Employee' && (item.lifecycleState=='ExpiringSoon' || item.lifecycleState === 'Expired') && !hasOpenRequest" :to="`/items/${item.id}/renew`">Submit a Renewal Request</RouterLink>
+            <div>
+              <span>Provider</span>
+              <strong>{{ item.provider ?? '-' }}</strong>
+            </div>
+            <div>
+              <span>Reference no.</span>
+              <strong>{{ item.referenceNumber ?? '-' }}</strong>
+            </div>
+          </div>
+          <p class="description">{{ item.description ?? 'No description.' }}</p>
+          <div class="card-bottom">
+            <span class="cost">{{ formatMoney(item.cost) }}</span>
+            <div class="card-actions">
+                <RouterLink v-if="canEdit" :to="`/items/${item.id}/edit`" class="card-button">Edit</RouterLink>
+                <RouterLink v-if="canRenew" :to="`/items/${item.id}/renew`" class="card-button">Submit renewal</RouterLink>
+                <button v-if="canCancel" class="danger" @click="cancelItem" type="button">Cancel Item</button>
+            </div>
+          </div>
+        </article>
 
-        <h2>Renewal Requests</h2>
+        <aside class="side">
+          <p v-if="cancelError" class="error">{{ cancelError }}</p>
+          <div class="kpis">
+            <div class="kpi wide" :class="{warning: item.lifecycleState === 'ExpiringSoon', danger: item.lifecycleState === 'Expired'}">
+              <p class="kpi-label">{{ daysLeft >= 0 ? 'Days left' : 'Days since it expired' }}</p>
+              <p class="kpi-value">
+                <template v-if="item.lifecycleState === 'Cancelled'">-</template>
+                <template v-else>{{ Math.abs(daysLeft) }}<sup>days</sup></template>
+              </p>
+              <p class="kpi-note">{{ daysLeft >= 0 ? 'Expires' : 'Expired' }} {{ formatDate(item.expirationDate) }}</p>
+            </div>
+
+            <div class="kpi">
+              <p class="kpi-label">Current period</p>
+              <p class="kpi-value">{{ item.periodNumber ?? '-' }}</p>
+              <p class="kpi-note">Started {{ formatDate(item.startDate) }}</p>
+            </div>
+
+            <div class="kpi">
+              <p class="kpi-label">Period passed</p>
+              <p class="kpi-value">{{ periodPercent }}<sup>%</sup></p>
+            </div>
+          </div>
+
+          <RouterLink v-if="openRequest" :to="`/requests/${openRequest.id}`" class="open-request">
+            <div>
+              <p class="kpi-label">Renewal in progress</p>
+              <span class="state" :class="openRequest.status">{{ formatLabel(openRequest.status) }}</span>
+            </div>
+          </RouterLink>
+          <form v-if="canReassign" class="action-panel" @submit.prevent="reassignEmployee">
+              <h3>Reassign</h3>
+                <select v-model="responsibleUserId" required>
+                    <option :value="null" disabled>Select a responsible employee</option>
+                    <option v-if="employees.length===0" :value="null" disabled>No active employees in your department.</option>
+                    <option v-for="employee in employees" :key="employee.id" :value="employee.id">
+                      {{ employee.firstName }} {{  employee.lastName }}
+                    </option>
+                </select>
+                <button type="submit">Reassign</button>
+                <p v-if="reassignError" class="error">{{ reassignError }}</p>
+          </form>
+        </aside>
+      </div>
+      <div class="tabs">
+        <button type="button" :class="{active: activeTab === 'requests'}" @click="activeTab = 'requests'">
+          Renewal requests <span class="count">{{ requests.length }}</span>
+        </button>
+        <button type="button" :class="{active: activeTab === 'periods'}" @click="activeTab = 'periods'">
+          Periods <span class="count">{{ periods.length }}</span>
+        </button>
+        <button type="button" :class="{active: activeTab === 'history'}" @click="activeTab = 'history'">
+          State history <span class="count">{{ histories.length }}</span>
+        </button>
+        <button type="button" :class="{active: activeTab === 'documents'}" @click="activeTab = 'documents'">
+          Documents <span class="count">{{ documents.length }}</span>
+        </button>
+      </div>
+      <div v-if="activeTab === 'requests'">
         <p v-if="requests.length === 0">No renewal requests yet.</p>
-        <table v-else>
-        <thead>
-            <tr>
-              <th>Status</th>
-              <th>Proposed Date</th>
-              <th>Submitted</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr v-for="request in requests" :key="request.id">
-                <td><span class="state" :class="request.status">{{ formatLabel(request.status) }}</span></td>
-                <td>{{ formatDate(request.proposedExpirationDate) }}</td>
-                <td>{{ formatDateTime(request.submittedAt)}}</td>
-                <td><RouterLink :to="`/requests/${request.id}`">Go to request</RouterLink></td>
-            </tr>
-        </tbody>
-        </table>
+        <div v-else class="table-box">
+            <table>
+            <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Proposed date</th>
+                  <th>Proposed cost</th>
+                  <th>Submitted</th>
+                  <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="request in requests" :key="request.id">
+                    <td><span class="state" :class="request.status">{{ formatLabel(request.status) }}</span></td>
+                    <td>{{ formatDate(request.proposedExpirationDate) }}</td>
+                    <td>{{ formatMoney(request.proposedCost) }}</td>
+                    <td>{{ formatDateTime(request.submittedAt)}}</td>
+                    <td><RouterLink :to="`/requests/${request.id}`">Go to request</RouterLink></td>
+                </tr>
+            </tbody>
+            </table>
+        </div>
+      </div>
 
-        <h2>Lifecycle Periods</h2>
+      <div v-if="activeTab === 'periods'">
         <p v-if="periods.length === 0">No lifecycle periods yet.</p>
-        <table v-else>
-        <thead>
-            <tr>
-              <th>Period Number</th>
-              <th>Start Date</th>
-              <th>Expiration Date</th>
-              <th>Cost</th>
-              <th>Created At</th>
-              <th>Created From Request</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr v-for="period in periods" :key="period.periodNumber">
-                <td>{{ period.periodNumber }}</td>
-                <td>{{ formatDate(period.startDate) }}</td>
-                <td>{{ formatDate(period.expirationDate)}}</td>
-                <td>{{ period.cost ?? "-" }}</td>
-                <td>{{ formatDateTime(period.createdAt) }}</td>
-                <td v-if="period.createdFromRequestId!==null"><RouterLink  :to="`/requests/${period.createdFromRequestId}`" >Go to request</RouterLink></td>
-                <td v-else>Initial Period - No request</td>
-            </tr>
-        </tbody>
-      </table>
+        <div v-else class="table-box">
+            <table>
+                <thead>
+                    <tr>
+                      <th>Period Number</th>
+                      <th>Start Date</th>
+                      <th>Expiration Date</th>
+                      <th>Cost</th>
+                      <th>Created At</th>
+                      <th>Created From</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="period in periods" :key="period.periodNumber">
+                        <td>{{ period.periodNumber }}</td>
+                        <td>{{ formatDate(period.startDate) }}</td>
+                        <td>{{ formatDate(period.expirationDate)}}</td>
+                        <td>{{ formatMoney(period.cost) }}</td>
+                        <td>{{ formatDateTime(period.createdAt) }}</td>
+                        <td v-if="period.createdFromRequestId!==null"><RouterLink  :to="`/requests/${period.createdFromRequestId}`" >Go to request</RouterLink></td>
+                        <td v-else>Initial Period</td>
+                    </tr>
+                </tbody>
+              </table>
+        </div>
+      </div>
 
-      <h2>Item State History</h2>
-        <p v-if="histories.length === 0">No item state history.</p>
-        <table v-else>
-        <thead>
-            <tr>
-              <th>From State</th>
-              <th>To State</th>
-              <th>Reason</th>
-              <th>Changed At</th>
-              <th>Changed By</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr v-for="history in histories" :key="history.id">
-                <td>{{ formatLabel(history.fromState)}} </td>
-                <td>{{ formatLabel(history.toState)}}</td>
-                <td>{{ history.reason}}</td>
-                <td>{{ formatDateTime(history.changedAt) }}</td>
-                <td>{{ history.changedByUserName}}</td>
-            </tr>
-        </tbody>
-      </table>
-
-       <h2>Documents</h2>
-        <p v-if="documents.length === 0">No documents.</p>
-        <table v-else>
-        <thead>
-            <tr>
-              <th>File</th>
-              <th>Uploaded At</th>
-              <th>Uploaded By</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr v-for="doc in documents" :key="doc.id">
-                <td><a :href="`/api/documents/${doc.id}/download`">{{ doc.originalFileName }}</a></td>
-                <td>{{ formatDateTime(doc.uploadedAt)}}</td>
-                <td>{{ doc.uploadedByUserName}}</td>
-            </tr>
-        </tbody>
-      </table>
-    </div>
-
+      <div v-if="activeTab === 'history'">
+        <p v-if="histories.length === 0">No state history.</p>
+        <div v-else class="table-box">
+          <table>
+                <thead>
+                    <tr>
+                      <th>From</th>
+                      <th>To</th>
+                      <th>Reason</th>
+                      <th>Changed</th>
+                      <th>By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="history in histories" :key="history.id">
+                        <td>{{ history.fromState ? formatLabel(history.fromState) : '-'}}</td>
+                        <td>{{ formatLabel(history.toState) }}</td>
+                        <td>{{ history.reason ?? '-'}}</td>
+                        <td>{{ formatDateTime(history.changedAt) }}</td>
+                        <td>{{ history.changedByUserName ?? 'System'}}</td>
+                    </tr>
+                </tbody>
+          </table>
+        </div>
+      </div>
+        <div v-if="activeTab === 'documents'">
+          <p v-if="documents.length === 0">No documents.</p>
+          <div v-for="doc in documents" :key="doc.id" class="file-row">
+            <div class="file-info">
+              <p class="file-name">{{ doc.originalFileName }}</p>
+              <p>{{ Math.ceil(doc.sizeBytes / 1024) }} KB {{ doc.uploadedByUserName }} {{ formatDateTime(doc.uploadedAt) }}</p>
+            </div>
+            <a :href="`/api/documents/${doc.id}/download`" class="download-link">Download</a>
+          </div>
+        </div>
+      </div>
 </template>
 
 <style scoped>
+.tabs {
+  display: inline-flex;
+  gap: 4px;
+  margin: 0 0 16px;
+  padding: 4px;
+  background: #f4f4f5;
+  border-radius: 12px;
+}
+
+.tabs button {
+  margin: 0;
+  padding: 6px 12px;
+  background: transparent;
+  color: #6b7280;
+  border-radius: 8px;
+}
+
+.tabs button.active {
+  background: white;
+  color: var(--text);
+}
+
+.count {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  font-size: 0.85em;
+}
+
+.item-layout {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 24px;
+  align-items: start;
+  margin: 16px 0 32px;
+}
+
+.item-card {
+  position: relative;
+  overflow: hidden;
+  padding: 28px 28px 0;
+  color: white;
+  background: #1d1d1d;
+  border-radius: 28px;
+}
+
+.status-tab {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0 0 12px 12px;
+  background: var(--background);
+  border-bottom-left-radius: 24px;
+}
+
+.status-tab::before,
+.status-tab::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: radial-gradient(circle at bottom left, transparent 24px, var(--background) 24.5px);
+}
+
+.status-tab::before { top: 0; left: -24px; }
+.status-tab::after  { bottom: -24px; right: 0; }
+
+.status-tab .state {
+  display: inline-block;
+  margin: 8px 8px 0 0;
+  padding: 8px 14px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.facts {
+  display: flex;
+  gap: 20px;
+}
+
+.facts div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.facts div + div {
+  padding-left: 20px;
+}
+
+.description {
+  margin: 20px 0 24px;
+  line-height: 1.6;
+}
+
+.card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 -28px;               
+  padding: 20px 28px;
+  background-color: rgb(49, 47, 47);
+}
+
+.cost {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.card-button {
+  padding: 14px 28px;
+  border-radius: 999px;
+  background: rgb(255, 255, 255);
+  color: #000000;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.card-actions button {
+  margin: 0;
+  padding: 12px 22px;
+  border-radius: 999px;
+}
+
+.card-title {
+  margin: 6px 0 20px;
+  color: white;
+}
+
+/* right side */
+.side {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.kpi {
+  padding: 20px 24px;
+  background: #f4f4f5;
+}
+
+.kpi.wide {
+  grid-column: 1 / -1;
+}
+
+.kpi p {
+  margin: 0;
+}
+
+.kpi-label {
+  color: #374151;
+}
+
+.kpi-value {
+  margin: 10px 0 4px;
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+.kpi-value sup {
+  margin-left: 4px;
+  font-size: 0.35em;
+  vertical-align: top;
+}
+
+.kpi-note {
+  color: #6b7280;
+  font-size: 0.85em;
+}
+
+.kpi.warning .kpi-value { color: #d97706;}
+.kpi.danger .kpi-value {color: var(--danger);}
+
+.action-panel {
+    max-width: none;
+    margin: 0;
+    padding: 24px;
+    background: white;
+    border: 1px solid #eceef1;
+    border-radius: 20px;
+}
+
+.action-panel h3 {
+    margin: 0 0 4px;
+}
+
+.action-panel button {
+    width: 100%;
+    margin: 16px 0 0;
+    padding: 10px 16px;
+}
+
+
+.table-box {
+    background: white;
+    border: 1px solid #eceef1;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.table-box table {
+    margin: 0;
+}
+
+.table-box th {
+    background: #b5b5b5;
+}
+
+.file-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+    padding: 14px 16px;
+    border: 1px solid #eceef1;
+    border-radius: 14px;
+}
+
+.file-info { 
+    flex: 1;
+}
+
+.file-info p {
+    margin: 0;
+}
+
+.file-name {
+    font-weight: 500;
+}
+
+.download-link {
+    padding: 8px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.open-request {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border: 1px solid #eceef1;
+  border-radius: 20px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.open-request .kpi-label {
+  margin: 0 0 8px;
+}
+
+.open-request:hover {
+  background: #f9fafb;
+}
+
+@media (max-width: 700px) {
+  .facts { flex-direction: column; }
+  .facts div + div { padding-left: 0; }
+  .item-layout { grid-template-columns: 1fr;}
+  .card-bottom {flex-direction: column; align-items: flex-start; gap: 12px;} 
+}
 </style>

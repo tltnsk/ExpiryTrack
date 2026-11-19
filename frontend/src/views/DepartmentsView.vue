@@ -122,10 +122,6 @@ tbody tr:last-child td {
   font-weight: 500;
 }
 
-.description {
-  max-width: 280px;
-}
-
 .active-cat {
   background-color: rgb(132, 219, 132);
   padding: 5px;

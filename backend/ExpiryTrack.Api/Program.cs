@@ -4,6 +4,7 @@ using ExpiryTrack.Api.Data;
 using System.Text.Json.Serialization;
 using ExpiryTrack.Api.Services;
 using ExpiryTrack.Api.BackgroundJobs;
+using Microsoft.AspNetCore.Diagnostics;
 
 
 var builder = WebApplication.CreateBuilder(args);

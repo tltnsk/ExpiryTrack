@@ -174,6 +174,7 @@ namespace ExpiryTrack.Api.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("LifecycleState")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
@@ -385,6 +386,7 @@ namespace ExpiryTrack.Api.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("varchar(30)");

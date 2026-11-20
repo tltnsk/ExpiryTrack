@@ -1,7 +1,9 @@
+using ExpiryTrack.Api.Data;
 using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
 using ExpiryTrack.Api.Models.Enums;
 using ExpiryTrack.Api.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace ExpiryTrack.Tests;
 
@@ -662,5 +664,31 @@ public class RenewalServiceTests
 
         Assert.True(result.NotFound);
         Assert.Empty(db.RequestActions);
+    }
+    
+    [Fact]
+    public async Task TwoUsersChangeTheSameRequest_SecondSaveFails()
+    {
+        var db = TestData.CreateDb();
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, 10);
+        var request = TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
+
+        // a second user: another context on the same database
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(db.Database.GetDbConnection())
+            .Options;
+        using var db2 = new AppDbContext(options);
+
+        // both users load the request while it is waiting for the manager
+        var first = await db.RenewalRequests.FindAsync(request.Id);
+        var second = await db2.RenewalRequests.FindAsync(request.Id);
+
+        // the first one approves and saves
+        first!.Status = RequestStatus.Approved;
+        await db.SaveChangesAsync();
+
+        // the second one still has the old status, so its save must fail
+        second!.Status = RequestStatus.Rejected;
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => db2.SaveChangesAsync());
     }
 }

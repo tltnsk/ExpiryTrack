@@ -48,7 +48,7 @@ public class ItemService
         {
             if (request.ResponsibleUserId == null)
             {
-                return "Responsible user not found.";
+                return "Select the responsible employee.";
             }
 
             var responsibleUser = await _db.Users
@@ -57,7 +57,7 @@ public class ItemService
 
             if (responsibleUser == null)
             {
-                return "Select the responsible employee.";
+                return "Responsible user not found.";
             }
 
             if (!responsibleUser.IsActive)
@@ -207,9 +207,17 @@ public class ItemService
         item.Description = request.Description;
         item.Provider = request.Provider;
         item.ReferenceNumber = request.ReferenceNumber;
-
-        await _db.SaveChangesAsync();
-
+        
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // someone else changed the item's state after we checked it, so nothing was saved
+            return new ItemResult 
+                { Error = "Someone else changed this item at the same time. Reload the page and try again." };
+        }
         return new ItemResult { Item = item };
     }
 
@@ -285,8 +293,17 @@ public class ItemService
             RecipientUserId = item.ResponsibleUserId,
             CreatedAt = now
         });
-
-        await _db.SaveChangesAsync();
+        
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // someone else changed the item's state after we checked it, so nothing was saved
+            return new ItemResult 
+                { Error = "Someone else changed this item at the same time. Reload the page and try again." };
+        }
         return new ItemResult { Item = item };
     }
 
@@ -337,8 +354,17 @@ public class ItemService
             RecipientUserId = item.ResponsibleUserId,
             CreatedAt = now
         });
-
-        await _db.SaveChangesAsync();
+        
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // someone else changed the item's state after we checked it, so nothing was saved
+            return new ItemResult 
+                { Error = "Someone else changed this item at the same time. Reload the page and try again." };
+        }
         return new ItemResult { Item = item };
     }
 

@@ -17,6 +17,8 @@ public class RenewalRequestConfiguration : IEntityTypeConfiguration<RenewalReque
         });
 
         builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(30);
+        // a workflow step is only saved if the status is still the one that was checked
+        builder.Property(r => r.Status).IsConcurrencyToken();
         builder.Property(r => r.ProposedCost).HasPrecision(12, 2);
         builder.Property(r => r.Justification).HasColumnType("text");
 

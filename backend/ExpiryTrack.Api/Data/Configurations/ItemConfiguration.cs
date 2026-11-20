@@ -18,6 +18,7 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.Property(i => i.Provider).HasMaxLength(150);
         builder.Property(i => i.ReferenceNumber).HasMaxLength(100);
         builder.Property(i => i.LifecycleState).HasConversion<string>().HasMaxLength(20);
+        builder.Property(i => i.LifecycleState).IsConcurrencyToken();
 
         // The period that is valid now 
         builder.HasOne(i => i.CurrentPeriod)

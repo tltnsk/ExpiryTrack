@@ -3,7 +3,6 @@ using ExpiryTrack.Api.Data;
 using ExpiryTrack.Api.DTO;
 using ExpiryTrack.Api.Models;
 using ExpiryTrack.Api.Models.Enums;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace ExpiryTrack.Api.Services;
 
@@ -52,7 +51,7 @@ public class RenewalService
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         if (data.ProposedExpirationDate <= today)
         {
-            return new RenewalResult { Error = "The propsed expiration date must be later than today. " };
+            return new RenewalResult { Error = "The proposed expiration date must be later than today." };
         }
 
         if (item.Department.ManagerId == null)
@@ -138,7 +137,7 @@ public class RenewalService
             };
             _db.Notifications.Add(notification);
         }
-
+        
         await _db.SaveChangesAsync();
         return new RenewalResult { Request = request };
     }
@@ -182,7 +181,7 @@ public class RenewalService
             Notification notification = new Notification()
             {
                 Type = "RequestReviewed",
-                Message = $"{request.Period.Item.Name} is expiring soon.",
+                Message = $"{request.Period.Item.Name} has been reviewed by finance and needs your decision.",
                 Request = request,
                 RecipientUserId = request.Period.Item.Department.ManagerId.Value,
                 CreatedAt = now,
@@ -190,8 +189,17 @@ public class RenewalService
 
             _db.Notifications.Add(notification);
         }
-
-        await _db.SaveChangesAsync();
+        
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // someone else changed the status after we checked it, so nothing was saved
+            return new RenewalResult
+                { Error = "Someone else changed this request at the same time. Reload the page and try again." };
+        }
         return new RenewalResult { Request = request };
     }
 
@@ -238,8 +246,17 @@ public class RenewalService
         };
 
         _db.Notifications.Add(notification);
-
-        await _db.SaveChangesAsync();
+        
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // someone else changed the status after we checked it, so nothing was saved
+            return new RenewalResult
+                { Error = "Someone else changed this request at the same time. Reload the page and try again." };
+        }
         return new RenewalResult { Request = request };
     }
 
@@ -299,8 +316,17 @@ public class RenewalService
         };
 
         _db.Notifications.Add(notification);
-
-        await _db.SaveChangesAsync();
+        
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // someone else changed the status after we checked it, so nothing was saved
+            return new RenewalResult
+                { Error = "Someone else changed this request at the same time. Reload the page and try again." };
+        }
         return new RenewalResult { Request = request };
     }
 
@@ -361,8 +387,17 @@ public class RenewalService
         };
 
         _db.Notifications.Add(notification);
-
-        await _db.SaveChangesAsync();
+        
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // someone else changed the status after we checked it, so nothing was saved
+            return new RenewalResult
+                { Error = "Someone else changed this request at the same time. Reload the page and try again." };
+        }
         return new RenewalResult { Request = request };
     }
 
@@ -416,8 +451,16 @@ public class RenewalService
 
             _db.Notifications.Add(notification);
         }
-
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // someone else changed the status after we checked it, so nothing was saved
+            return new RenewalResult
+                { Error = "Someone else changed this request at the same time. Reload the page and try again." };
+        }
         return new RenewalResult { Request = request };
     }
 
@@ -530,8 +573,17 @@ public class RenewalService
         };
 
         _db.ItemStateHistory.Add(history);
-
-        await _db.SaveChangesAsync();
+        
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // someone else changed the status after we checked it, so nothing was saved
+            return new RenewalResult
+                { Error = "Someone else changed this request at the same time. Reload the page and try again." };
+        }
         return new RenewalResult { Request = request };
     }
 }

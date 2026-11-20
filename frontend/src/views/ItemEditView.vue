@@ -12,8 +12,8 @@ interface Item {
     categoryName: string
     departmentName: string
     responsibleUserName: string
-    periodNumber: string
-    startDate: string 
+    periodNumber: number | null
+    startDate: string
     expirationDate: string
     cost: number | null
 }
@@ -36,7 +36,7 @@ const provider = ref('')
 const referenceNumber = ref('')
 
 onMounted(async () => {
-    const response = await fetch(`/api/items/${id}`) 
+    const response = await fetch(`/api/items/${id}`)
     if (response.ok) {
         const data: Item = await response.json()
         item.value = data

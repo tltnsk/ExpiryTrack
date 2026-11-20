@@ -71,11 +71,11 @@ const sortedCategories = computed(() => {
             : (b.totalCost ?? 0) - (a.totalCost ?? 0))
 })
 
-const totalItems = computed(() => 
+const totalItems = computed(() =>
     report.value?.categories.reduce((sum, c) => sum + c.itemCount, 0) ?? 0
 )
 
-const totalCost = computed(() => 
+const totalCost = computed(() =>
     report.value?.categories.reduce((sum, c) => sum + (c.totalCost ?? 0), 0) ?? 0
 )
 </script>
@@ -282,7 +282,7 @@ const totalCost = computed(() =>
     margin: 0;
 }
 
-.sort { 
+.sort {
     align-items: center;
     gap: 4px;
     padding: 4px;
@@ -295,15 +295,15 @@ const totalCost = computed(() =>
 .sort button {
     margin: 0;
     padding: 6px 12px;
-    background: transparent;
-    color: white;
+    background: #e5e7eb;
+    color: var(--text);
     border-radius: 8px;
     font-size: 0.9em;
-    background-color: rgb(0, 0, 0);
 }
 
 .sort button.active {
-    opacity: 0.6;
+    background-color: black;
+    color: white;
 }
 
 .report-table tfoot td {

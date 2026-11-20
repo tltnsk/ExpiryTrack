@@ -222,7 +222,7 @@ onMounted(async () => {
 })
 
 
-// the steps of the request 
+// the steps of the request
 const steps = computed(() => {
     if (!request.value) return []
     const list = ['Submitted']
@@ -271,10 +271,7 @@ const stepIcons: Record<string, string> = {
     done: '✓', success: '✓', stopped: '✕', warning: '', current: '•', pending: ''
 }
 
-const hasAction = computed(() => canFinanceReview.value || canManagerReview.value || canManagerReject.value 
-        || canAnswerClarification.value || canRecordCompletion.value)
-
-const clarificationQuestion = computed(() => 
+const clarificationQuestion = computed(() =>
     request.value?.actions.find(a => a.type === 'ClarificationRequested')?.comment ?? null
 )
 </script>
@@ -345,7 +342,7 @@ const clarificationQuestion = computed(() =>
             <div v-if="canManagerReview || canManagerReject" class="action-panel">
                 <h3>Your decision</h3>
                 <p v-if="request.status === 'Approved'" class="hint">
-                    This approval can no longer be completed, so you can reject it. 
+                    This approval can no longer be completed, so you can reject it.
                 </p>
                 <label> Comment (required to reject or to request clarification)
                     <textarea v-model="managerComment" rows="4"></textarea>
@@ -426,8 +423,8 @@ const clarificationQuestion = computed(() =>
 }
 
 .stepper li {
-  position: relative;            
-  flex: 1;                       
+  position: relative;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -439,15 +436,15 @@ const clarificationQuestion = computed(() =>
 .stepper li::before {
   content: '';
   position: absolute;
-  top: 14px;                     
-  right: 50%;                   
-  width: 100%;                   
+  top: 14px;
+  right: 50%;
+  width: 100%;
   height: 2px;
   background: #000000;
 }
 
 .circle {
-  position: relative;          
+  position: relative;
   z-index: 1;
   width: 28px;
   height: 28px;
@@ -483,8 +480,7 @@ const clarificationQuestion = computed(() =>
 .stepper li.success::before { background: #1d4ed8; }
 
 .request-card {
-  position: relative;            
-  max-width: 560px;
+  position: relative;
   overflow: hidden;
   padding: 28px 28px 0;
   color: white;
@@ -545,7 +541,7 @@ const clarificationQuestion = computed(() =>
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 0 -28px;               
+  margin: 0 -28px;
   padding: 20px 28px;
   background-color: rgb(49, 47, 47);
 }
@@ -643,7 +639,7 @@ const clarificationQuestion = computed(() =>
     border-radius: 14px;
 }
 
-.file-info { 
+.file-info {
     flex: 1;
 }
 

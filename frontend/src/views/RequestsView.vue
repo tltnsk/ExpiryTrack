@@ -8,7 +8,7 @@ interface RenewalRequest {
     status: string
     proposedExpirationDate: string,
     proposedCost: number | null,
-    submittedAt: string 
+    submittedAt: string
 }
 
 const requests = ref<RenewalRequest[]>([])
@@ -32,7 +32,7 @@ onMounted(async() => {
     </div>
 
     <p v-if="loading">Loading...</p>
-    <p v-else-if="errorMessage"> {{ errorMessage }}</p>
+    <p v-else-if="errorMessage" class="error"> {{ errorMessage }}</p>
     <p v-else-if="requests.length===0">No renewal requests.</p>
 
     <div v-else class="table-box">

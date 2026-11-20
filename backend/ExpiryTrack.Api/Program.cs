@@ -4,8 +4,8 @@ using ExpiryTrack.Api.Data;
 using System.Text.Json.Serialization;
 using ExpiryTrack.Api.Services;
 using ExpiryTrack.Api.BackgroundJobs;
-using Microsoft.AspNetCore.Diagnostics;
-
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +24,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SameSite = SameSiteMode.Strict;     // prevent CSRF: prevent cookies from being sent with requests from other sites 
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;                  // stays valid while the user is active
+        // over HTTP only, except locally
+        // locally the app runs on plain http
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
 
         // invalid credentials 
         options.Events.OnRedirectToLogin = context =>
@@ -37,6 +42,26 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             return Task.CompletedTask;
+        };
+        
+        // refuse the cookie if the user was deactivated in the meantime
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            var idText = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+            var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+
+            bool stillActive = false;
+            if (idText != null)
+            {
+                int userId = int.Parse(idText);
+                stillActive = await db.Users.AnyAsync(u => u.Id == userId && u.IsActive);
+            }
+
+            if (!stillActive)
+            {
+                context.RejectPrincipal(); // not logged in -> 401
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            }
         };
     });
 builder.Services.AddAuthorization();

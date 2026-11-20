@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import { formatDate, formatLabel, formatMoney} from '@/utils/format'
 import { useRoute } from 'vue-router'
 
-// ItemResponse 
+// ItemResponse
 interface Item {
     id: number
     name: string
@@ -49,7 +49,7 @@ const filteredItems = computed(() => {
 
   return items.value.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(text) ||
-    (item.provider ?? '').toLowerCase().includes(text) 
+    (item.provider ?? '').toLowerCase().includes(text)
 
     if (!matchesSearch) return false
 
@@ -64,7 +64,7 @@ const filteredItems = computed(() => {
 
     if (expiresFrom.value && item.expirationDate < expiresFrom.value) return false
     if (expiresTo.value && item.expirationDate > expiresTo.value) return false
-    
+
     return true
   })
 })
@@ -102,7 +102,7 @@ watch([search, stateFilter, categoryFilter, responsibleFilter, expiresFrom, expi
        <RouterLink v-if="auth.user?.role === 'Employee' || auth.user?.role === 'DepartmentManager'" to="/items/new" class="add-link">+ New Item</RouterLink>
        <RouterLink v-if="auth.user?.role === 'DepartmentManager'" to="/items/import" class="add-link">Import Items from Excel</RouterLink>
     </div>
-  
+
     <div class="card filters">
       <input v-model="search" type="search" placeholder="Search by name or provider" />
        <select v-model="stateFilter">
@@ -125,7 +125,7 @@ watch([search, stateFilter, categoryFilter, responsibleFilter, expiresFrom, expi
 
        <button type="button" @click="resetFilters">Reset</button>
     </div>
-   
+
     <p v-if="loading">Loading...</p>
     <p v-else-if="errorMessage" class="error"> {{ errorMessage }}</p>
     <p v-else-if="items.length===0">No items.</p>
@@ -162,9 +162,9 @@ watch([search, stateFilter, categoryFilter, responsibleFilter, expiresFrom, expi
         </table>
       </div>
        <div v-if="totalPages > 1" class="pager">
-        <button type="button" :disabled="page === 1" @click="page--" aria-label="Previous page">&lt;</button>
+        <button type="button" :disabled="page === 1" @click="page--" aria-label="Previous page">‹</button>
         <span>Page {{ page }} of {{ totalPages }}</span>
-        <button type="button" :disabled="page === totalPages" @click="page++" aria-label="Next page">&gt;</button>
+        <button type="button" :disabled="page === totalPages" @click="page++" aria-label="Next page">›</button>
       </div>
     </template>
 </template>

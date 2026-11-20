@@ -118,6 +118,26 @@ public static class TestData
         db.SaveChanges();
         return request;
     }
+    
+    // adds a user with the given role 
+    public static User AddUser(AppDbContext db, int roleId, int? departmentId = null, string password = "password1",
+        bool isActive = true)
+    {
+        counter++;
+        var user = new User
+        {
+            FirstName = "User",
+            LastName = "Number" + counter,
+            Email = $"user{counter}@test.com",
+            RoleId = roleId,
+            DepartmentId = departmentId,
+            IsActive = isActive,
+        };
+        user.PasswordHash = new Microsoft.AspNetCore.Identity.PasswordHasher<User>().HashPassword(user, password);
+        db.Users.Add(user);
+        db.SaveChanges();
+        return user;
+    }
 
     public static void SetUser(ControllerBase controller, int userId)
     {

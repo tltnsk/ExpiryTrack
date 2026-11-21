@@ -1,0 +1,98 @@
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import DashboardView from '@/views/DashboardView.vue'
+import {mountView, mockFetch, ok, textError, makeUser} from './helpers' 
+
+// chart.js is replaced with empty function
+vi.mock('chart.js/auto', () => ({ default: vi.fn() })) 
+
+afterEach(() => {
+    vi.unstubAllGlobals() // put the real fetch back
+})
+
+// the numbers every dashboard has
+const counts = { totalItems: 10, activeItems: 5, expiringSoonItems: 3, expiredItems: 1, cancelledItems: 1 }
+const months = [{ year: 2026, month: 11, count: 2 }]
+const upcoming = [{ id: 4, name: 'Zoom', departmentName: 'IT', expirationDate: '2026-12-01' }]
+const request = {
+    id: 31, itemName: 'Zoom', status: 'PendingManagerApproval', needsFinancialReview: false,
+    proposedExpirationDate: '2027-12-01', submittedAt: '2026-11-10T10:00:00', proposedCost: 320, requestedByUserName: 'Ivan Ivanov',
+}
+
+describe('DashboardView', () => {
+    it('shows the admin 5 tiles, department totals, and upcoming expirations', async () => {
+        mockFetch({
+            '/api/dashboard/admin': ok({
+                ...counts,
+                itemsByDepartment: [{ departmentName: 'IT', itemCount: 6 }],
+                upcomingExpirations: upcoming,
+                expirationsByMonth: months,
+            }),
+        })
+        const { wrapper } = await mountView(DashboardView, '/dashboard', makeUser('Administrator'))
+
+        expect(wrapper.findAll('.tile')).toHaveLength(5)
+        expect(wrapper.text()).toContain('Department totals')
+        expect(wrapper.find('.timeline-card').attributes('href')).toBe('/items/4')
+    })
+
+    it('shows the manager the requests to review', async () => {
+        mockFetch({
+            '/api/dashboard/manager': ok({
+                ...counts,
+                requestsToReview: [request],
+                requestsAwaitingCompletion: [],
+                upcomingExpirations: [],
+                expirationsByMonth: months,
+                requestsByStatus: [],
+            }),
+        })
+        const { wrapper } = await mountView(DashboardView, '/dashboard', makeUser('DepartmentManager'))
+
+        expect(wrapper.text()).toContain('No requests awaiting completion')
+        expect(wrapper.find('a[href="/requests/31"]').text()).toContain('Review')
+    })
+
+    it('shows the employee a renew link for items that need renewal', async () => {
+        mockFetch({
+            '/api/dashboard/employee': ok({
+                ...counts,
+                itemsNeedingRenewal: upcoming,
+                requestsNeedingClarification: [],
+                myOpenRequests: [],
+                requestsAwaitingCompletion: [],
+                upcomingExpirations: [],
+                expirationsByMonth: months,
+                itemsByTimeLeft: [],
+            }),
+        })
+        const { wrapper } = await mountView(DashboardView, '/dashboard', makeUser('Employee'))
+
+        expect(wrapper.find('a[href="/items/4/renew"]').exists()).toBe(true)
+    })
+
+    it('shows the finance officer 4 money tiles', async () => {
+        mockFetch({
+            '/api/dashboard/finance': ok({
+                activeItems: 5, expiringSoonItems: 3, expiredItems: 1, cancelledItems: 1,
+                requestsToReviewCount: 1, totalCostWaitingForReview: 320, expectedUpcomingCosts: 900, approvedCost: 100,
+                requestsNeedingFinancialReview: [request],
+                expirationsByMonth: months,
+                costsByDepartment: [],
+            }),
+        })
+        const { wrapper } = await mountView(DashboardView, '/dashboard', makeUser('FinanceOfficer'))
+
+        expect(wrapper.findAll('.tile')).toHaveLength(4)
+        expect(wrapper.text()).toContain('$320.00')
+        expect(wrapper.find('aside').exists()).toBe(false)
+    })
+
+    it('shows an error when the dashboard cannot be loaded', async () => {
+        mockFetch({
+            '/api/dashboard/employee': textError(500, '')
+        })
+        const { wrapper } = await mountView(DashboardView, '/dashboard', makeUser('Employee'))
+
+        expect(wrapper.find('.error').text()).toBe('Could not load the dashboard.')
+    })
+})

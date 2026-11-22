@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { flushPromises, type VueWrapper } from '@vue/test-utils'
 import CategoriesCreateView from '@/views/CategoriesCreateView.vue'
+import CategoriesEditView from '@/views/CategoriesEditView.vue'
 import { mountView, mockFetch, ok, textError, validationError, makeUser, sentBody } from './helpers'
 
 afterEach(() => {
@@ -45,5 +46,31 @@ describe('CategoriesCreateView', () => {
         await submit(wrapper)
 
         expect(wrapper.find('.error').text()).toBe('The Name field is required.')
+    })
+})
+
+describe('CategoriesEditView', () => {
+    const category = { id: 2, name: 'Software', description: 'Apps', warningPeriodDays: 30, requiresFinancialReview: false, financeReviewThreshold: null, isActive: true }
+
+    it('fills the form with the category and saves the changes', async () => {
+        const fetchMock = mockFetch({ '/api/categories/2': ok(category), 'PUT /api/categories/2': ok(category) })
+        const { wrapper, router } = await mountView(CategoriesEditView, '/categories/2/edit', admin)
+
+        const nameInput = wrapper.find('input')
+        expect((nameInput.element as HTMLInputElement).value).toBe('Software')
+
+        await nameInput.setValue('Software licenses')
+        await submit(wrapper)
+
+        expect(sentBody(fetchMock, 'PUT', '/api/categories/2')).toMatchObject({ name: 'Software licenses' })
+        expect(router.currentRoute.value.path).toBe('/categories')
+    })
+
+    it('says when the category does not exist', async () => {
+        mockFetch({ '/api/categories/2': textError(404, '')})
+        const { wrapper } = await mountView(CategoriesEditView, '/categories/2/edit', admin)
+
+        expect(wrapper.find('.error').text()).toBe('Category not found.')
+        expect(wrapper.find('form').exists()).toBe(false)
     })
 })

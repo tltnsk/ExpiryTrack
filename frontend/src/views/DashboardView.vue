@@ -254,18 +254,19 @@ h3 {
 }
 
 .tiles {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 16px;
     margin-bottom: 24px;
 }
 
 .tile {
+    flex: 1;
     display: flex;
-    flex-direction: column;
     justify-content: space-between;
-    min-height: 110px;
-    padding: 16px 18px;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
     border-radius: 10px;
     color: #111;
     text-decoration: none;
@@ -308,7 +309,7 @@ h3 {
     gap: 12px;
     margin-bottom: 8px;
     padding: 10px 14px;
-    background-color: #ececec;
+    background-color: #f5f2f2;
     color: #111;
     text-decoration: none;
 }
@@ -332,7 +333,7 @@ h3 {
 .row-text small,
 .timeline-card small,
 .empty {
-    color: #777;
+    color: white;
 }
 
 /* timeline */
@@ -371,7 +372,6 @@ h3 {
     display: flex;
     flex-direction: column;
     padding: 10px 14px;
-    background-color: #e6e7e8;
     color: #111;
     text-decoration: none;
 }
@@ -445,7 +445,7 @@ h3 {
     height: 6px;
     margin-right: 8px;
     border-radius: 999px;
-    background-color: #e3ebfc;
+    background-color: white;
     vertical-align: middle;
 }
 
@@ -471,8 +471,17 @@ h3 {
 /* keep this last so it wins */
 @media (max-width: 1000px) {
     .dashboard,
-    .charts {
+    .charts
+    .lists {
         grid-template-columns: 1fr;
+    }
+
+    .tiles {
+        flex-wrap: wrap;
+    }
+
+    .tile {
+        flex: 1 1 40%;
     }
 }
 

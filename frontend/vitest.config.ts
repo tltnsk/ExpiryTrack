@@ -7,7 +7,7 @@ export default mergeConfig(viteConfig, defineConfig({
         environment: 'jsdom',
         coverage: {
             include: ['src/**/*.{ts,vue}'],
-            exclude: ['src/__test__/**', 'src/main.ts'],
+            exclude: ['src/__tests__/**', 'src/main.ts'],
         },
         root: fileURLToPath(new URL('./', import.meta.url)),
     },

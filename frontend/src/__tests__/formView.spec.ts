@@ -6,6 +6,8 @@ import DepartmentsEditView from '@/views/DepartmentsEditView.vue'
 import UsersCreateView from '@/views/UsersCreateView.vue'
 import UsersEditView from '@/views/UsersEditView.vue'
 import ChangePasswordView from '@/views/ChangePasswordView.vue'
+import ItemCreateView from '@/views/ItemCreateView.vue'
+import ItemEditView from '@/views/ItemEditView.vue'
 import { mountView, mockFetch, ok, textError, validationError, makeUser, sentBody } from './helpers'
 
 afterEach(() => {
@@ -232,5 +234,84 @@ describe('ChangePasswordView', () => {
         await submit(wrapper)
 
         expect(wrapper.find('.error').text()).toBe('Invalid password.')
+    })
+})
+
+describe('ItemCreateView', () => {
+    const categories = [
+        { id: 1, name: 'Software', warningPeriodDays: 30, isActive: true },
+        { id: 2, name: 'Old', warningPeriodDays: 30, isActive: false  }]
+
+    it('only shows active categories', async () => {
+        mockFetch({ '/api/categories': ok(categories) })
+        const { wrapper } = await mountView(ItemCreateView, '/items/new', makeUser('Employee'))
+
+        const options = wrapper.find('select').text()
+        expect(options).toContain('Software')
+        expect(options).not.toContain('Old')
+    })
+
+    it('creates an item and opens it ', async () => {
+        const fetchMock = mockFetch({ '/api/categories': ok(categories), 'POST /api/items': ok({id: 15 }) })
+        const { wrapper, router } = await mountView(ItemCreateView, '/items/new', makeUser('Employee'))
+
+        await wrapper.find('input').setValue('Zoom')
+        await wrapper.find('select').setValue('1')
+        await wrapper.findAll('input[type="date"]')[0]!.setValue('2026-11-01')
+        await wrapper.findAll('input[type="date"]')[1]!.setValue('2027-11-01')
+        await submit(wrapper)
+
+        expect(sentBody(fetchMock, 'POST', '/api/items')).toMatchObject({
+            name: 'Zoom', categoryId: 1, startDate: '2026-11-01', expirationDate: '2027-11-01',
+        })
+
+        expect(router.currentRoute.value.path).toBe('/items/15')
+    })
+
+    it('shows message', async () => {
+        mockFetch({ '/api/categories': ok(categories), 'POST /api/items': textError(400, 'The expiration date must be a future date.')})
+        const { wrapper } = await mountView(ItemCreateView, '/items/new', makeUser('Employee'))
+
+        await submit(wrapper)
+
+        expect(wrapper.find('.error').text()).toBe('The expiration date must be a future date.')
+    })
+
+    it('shows message when categories cannot be loaded', async () => {
+        mockFetch({ '/api/categories': textError(500, '')})
+        const { wrapper } = await mountView(ItemCreateView, '/items/new', makeUser('Employee'))
+
+        expect(wrapper.find('.error').text()).toBe('Could not load the categories.')
+    })
+})
+
+describe('ItemEditView', () => {
+    const item = {
+        id: 4, name: 'Zoom', description: null, provider: 'Zoom Inc', referenceNumber: null, lifecycleState: 'Active',
+        categoryName: 'Software', departmentName: 'IT', responsibleUserName: 'Ivan Ivanov',
+        periodNumber: 1, startDate: '2026-01-01', expirationDate: '2027-01-01', cost: null,
+    }
+
+    it('shows the dates and cost as read only', async () => {
+        mockFetch({ '/api/items/4': ok(item)})
+        const { wrapper } = await mountView(ItemEditView, '/items/4/edit', admin)
+
+        const readonlyInputs = wrapper.findAll('input[readonly]')
+        expect(readonlyInputs).toHaveLength(3)
+    })
+
+    it('saves changes and goes back to the item', async() => {
+        const fetchMock = mockFetch({
+            '/api/items/4': ok(item),
+            'PUT /api/items/4': ok(item)
+        })
+
+        const { wrapper, router } = await mountView(ItemEditView, '/items/4/edit', makeUser('Employee'))
+
+        await wrapper.find('input').setValue('Zoom Pro')
+        await submit(wrapper)
+
+        expect(sentBody(fetchMock, 'PUT', '/api/items/4')).toMatchObject({ name: 'Zoom Pro' })
+        expect(router.currentRoute.value.path).toBe('/items/4')
     })
 })

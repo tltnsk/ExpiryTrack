@@ -33,6 +33,11 @@ function stepClasses(wrapper: VueWrapper) {
     return wrapper.findAll('.stepper li').map((li) => li.classes()[0])
 }
 
+// find a button by its label
+function buttonWithText(wrapper: VueWrapper, text: string) {
+    return wrapper.findAll('button').find((button) => button.text() === text)
+}
+
 describe('RequestDetailView progress bar', () => {
     it('has 3 steps when no financial review is needed', async () => {
         mockFetch({ '/api/requests/31': ok(makeRequest('PendingManagerApproval'))})
@@ -71,5 +76,87 @@ describe('RequestDetailView card', () => {
         mockFetch({ '/api/requests/31': textError(404, '') })
         const { wrapper } = await openRequest('Employee')
         expect(wrapper.find('.error').text()).toBe('Request not found.')
+    })
+})
+
+describe('RequestDetailView actions per role', () => {
+    it('lets finance officer send a recommendation', async () => {
+        const fetchMock = mockFetch({
+            '/api/requests/31': ok(makeRequest('PendingFinancialReview', { needsFinancialReview: true})),
+            'POST /api/requests/31/finance-review': ok(),
+        })
+
+        const { wrapper } = await openRequest('FinanceOfficer')
+
+        await wrapper.find('select').setValue('Approve')
+        await wrapper.find('textarea').setValue('Within budget.')
+        await wrapper.find('form').trigger('submit')
+        await flushPromises()
+
+        expect(sentBody(fetchMock, 'POST', '/api/requests/31/finance-review')).toEqual({ recommendation: 'Approve', comment: 'Within budget.'})
+    })
+
+    it('lets manager approve with a comment', async () => {
+        const fetchMock = mockFetch({
+            '/api/requests/31': ok(makeRequest('PendingManagerApproval')),
+            'POST /api/requests/31/approve': ok(),
+        })
+
+        const { wrapper } = await openRequest('DepartmentManager')
+
+        await wrapper.find('textarea').setValue('Looks good.')
+        await buttonWithText(wrapper, 'Approve')!.trigger('click')
+        await flushPromises()
+
+        expect(sentBody(fetchMock, 'POST', '/api/requests/31/approve')).toEqual({ comment: 'Looks good.'})
+    })
+
+    it('shows the message when someone else changed the request at the same time', async () => {
+        const message = 'Someone else changed this request at the same time. Reload the page and try again.'
+        mockFetch({
+            '/api/requests/31': ok(makeRequest('PendingManagerApproval')),
+            'POST /api/requests/31/reject': textError(400, message),
+        })
+
+        const { wrapper } = await openRequest('DepartmentManager')
+
+        await buttonWithText(wrapper, 'Reject')!.trigger('click')
+        await flushPromises()
+
+        expect(wrapper.find('.action-panel .error').text()).toBe(message)
+    })
+
+    it('shows the employee the question and sends the answer', async () => {
+        const waitingForAnswer = makeRequest('ClarificationRequired', {
+            actions: [action('ClarificationRequested', 'PendingManagerApproval', 'ClarificationRequired', 'Why is it more expensive?')],
+        })
+        const fetchMock = mockFetch({
+            '/api/requests/31': ok(waitingForAnswer),
+            'POST /api/requests/31/provide-clarification': ok(),
+        })
+
+        const { wrapper } = await openRequest('Employee')
+
+        expect(wrapper.find('.question').text()).toContain('Why is it more expensive?')
+
+        await wrapper.find('textarea').setValue('Prices went up.')
+        await wrapper.find('form').trigger('submit')
+        await flushPromises()
+
+        expect(sentBody(fetchMock, 'POST', '/api/requests/31/provide-clarification')).toEqual({ answer: 'Prices went up.'})
+    })
+
+    it('lets the employee complete an approved renewal', async () => {
+        const fetchMock = mockFetch({
+            '/api/requests/31': ok(makeRequest('Approved')),
+            'POST /api/requests/31/complete-renewal': ok(),
+        })
+
+        const { wrapper } = await openRequest('Employee')
+
+        await wrapper.find('form').trigger('submit')
+        await flushPromises()
+
+        expect(fetchMock).toHaveBeenCalledWith('/api/requests/31/complete-renewal', { method: 'POST' })
     })
 })

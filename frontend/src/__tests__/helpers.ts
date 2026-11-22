@@ -23,6 +23,10 @@ import { useAuthStore, type User } from '@/stores/auth'
     return { status, text}
  }
 
+ // an error with a plain text message
+ export function validationError(errors: Record<string, string[]>): FakeResponse {
+    return { status: 400, body: { errors } }
+ }
 // a test user with the given role
 export function makeUser(role: string, id = 1): User {
     return { id, firstName: 'Ana', lastName: 'Test', email: 'ana@test.com', role, departmentName: 'IT' }
@@ -80,4 +84,10 @@ export async function mountView(view: Component, path: string, user: User | null
     const wrapper = mount(view, { global: { plugins: [pinia, router] } })
     await flushPromises() // wait for onMounted to finish loading
     return { wrapper, router }
+}
+
+// what the page sent in the body of the request
+export function sentBody(fetchMock: ReturnType<typeof mockFetch>, method: string, url: string) {
+    const call = fetchMock.mock.calls.find(([u, o]) => u === url && o?.method === method)
+    return call ? JSON.parse(String(call[1]?.body)) : undefined
 }

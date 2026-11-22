@@ -131,7 +131,7 @@ onMounted(async () => {
 })
 
 const hasOpenRequest = computed(() =>requests.value.some(r => r.status !== "Rejected" && r.status !== "Completed"))
-const isManager = computed(() => auth.user?.role === 'DeparmentMangager')
+const isManager = computed(() => auth.user?.role === 'DepartmentManager')
 const isEmployee = computed(() => auth.user?.role === 'Employee')
 
 // only active and expiring soon items can be edited/cancelled

@@ -8,6 +8,8 @@ import UsersEditView from '@/views/UsersEditView.vue'
 import ChangePasswordView from '@/views/ChangePasswordView.vue'
 import ItemCreateView from '@/views/ItemCreateView.vue'
 import ItemEditView from '@/views/ItemEditView.vue'
+import ItemImportView from '@/views/ItemImportView.vue'
+import RenewalSubmitView from '@/views/RenewalSubmitView.vue'
 import { mountView, mockFetch, ok, textError, validationError, makeUser, sentBody } from './helpers'
 
 afterEach(() => {
@@ -313,5 +315,72 @@ describe('ItemEditView', () => {
 
         expect(sentBody(fetchMock, 'PUT', '/api/items/4')).toMatchObject({ name: 'Zoom Pro' })
         expect(router.currentRoute.value.path).toBe('/items/4')
+    })
+})
+
+describe('RenewalSubmitView', () => {
+    const item = { name: 'Zoom', expirationDate: '2026-12-01', lifecycleState: 'ExpiringSoon' }
+
+    it('does not allow a date before the current expiration date', async () => {
+        mockFetch({ '/api/items/4': ok(item) })
+        const { wrapper } = await mountView(RenewalSubmitView, '/items/4/renew', makeUser('Employee'))
+
+        expect(wrapper.find('input[type="date"]').attributes('min')).toBe('2026-12-01')
+    })
+
+    it('sends the request and opens it', async () => {
+        const fetchMock = mockFetch({ '/api/items/4': ok(item), 'POST /api/items/4/requests': ok({ id: 30 }) })
+        const { wrapper, router } = await mountView(RenewalSubmitView, '/items/4/renew', makeUser('Employee'))
+
+        await wrapper.find('input[type="date"]').setValue('2027-12-01')
+        await wrapper.find('textarea').setValue('We still use it every day.')
+        await submit(wrapper)
+
+        expect(sentBody(fetchMock, 'POST', '/api/items/4/requests')).toMatchObject({
+            proposedExpirationDate: '2027-12-01', justification: 'We still use it every day.',
+        })
+        expect(router.currentRoute.value.path).toBe('/requests/30')
+    })
+
+    it('shows the message when there is already an open request', async () => {
+        mockFetch({ '/api/items/4': ok(item), 'POST /api/items/4/requests': textError(400, 'Zoom already has an open renewal request.') })
+        const { wrapper } = await mountView(RenewalSubmitView, '/items/4/renew', makeUser('Employee'))
+
+        await submit(wrapper)
+
+        expect(wrapper.find('.error').text()).toBe('Zoom already has an open renewal request.')
+    })
+})
+
+describe('ItemImportView', () => {
+    const manager = makeUser('DepartmentManager')
+    const excelFile = new File(['test'], 'items.xlsx')
+
+    // function that drops the file on the upload box
+    async function dropFile(wrapper: VueWrapper) {
+        await wrapper.find('.dropzone').trigger('drop', { dataTransfer: { files: [excelFile] } })
+    }
+
+    it('shows how many items were imported', async () => {
+        mockFetch({ 'POST /api/items/import': ok({ createdCount: 12 }) })
+        const { wrapper } = await mountView(ItemImportView, '/items/import', manager)
+
+        await dropFile(wrapper)
+        await wrapper.find('button.import-button').trigger('click')
+        await flushPromises()
+
+        expect(wrapper.text()).toContain('12 items imported')
+    })
+
+    it('lists the mistakes in the file', async () => {
+        mockFetch({ 'POST /api/items/import': { status: 400, body: { errors: ['Row 2: Name is required.', 'Row 3: Start date is invalid.'] } } })
+        const { wrapper } = await mountView(ItemImportView, '/items/import', manager)
+
+        await dropFile(wrapper)
+        await wrapper.find('button.import-button').trigger('click')
+        await flushPromises()
+
+        const errors = wrapper.findAll('li.error').map((li) => li.text())
+        expect(errors).toEqual(['Row 2: Name is required.', 'Row 3: Start date is invalid.'])
     })
 })

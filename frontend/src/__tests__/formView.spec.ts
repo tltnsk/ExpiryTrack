@@ -4,6 +4,8 @@ import CategoriesCreateView from '@/views/CategoriesCreateView.vue'
 import CategoriesEditView from '@/views/CategoriesEditView.vue'
 import DepartmentsEditView from '@/views/DepartmentsEditView.vue'
 import UsersCreateView from '@/views/UsersCreateView.vue'
+import UsersEditView from '@/views/UsersEditView.vue'
+import ChangePasswordView from '@/views/ChangePasswordView.vue'
 import { mountView, mockFetch, ok, textError, validationError, makeUser, sentBody } from './helpers'
 
 afterEach(() => {
@@ -170,5 +172,65 @@ describe('UsersCreateView', () => {
         await submit(wrapper)
 
         expect(wrapper.find('.error').text()).toBe('A user with this email already exists.')
+    })
+})
+
+describe('UsersEditView', () => {
+    it('shows role and department as read only and saves name and email', async() => {
+        const user = { id: 5, firstName: 'Ivan', lastName: 'Ivanov', email: 'ivan@test.com', role: 'Employee', departmentName: 'IT', isActive: true }
+        const fetchMock = mockFetch({
+            '/api/users/5': ok(user),
+            'PUT /api/users/5': ok(user)
+        })
+
+        const { wrapper, router } = await mountView(UsersEditView, '/users/5/edit', admin)
+
+        expect(wrapper.findAll('input[readonly]')).toHaveLength(2)
+
+        await wrapper.findAll('input')[1]!.setValue('Petrov')
+        await submit(wrapper)
+
+        expect(sentBody(fetchMock, 'PUT', '/api/users/5')).toEqual({ firstName: 'Ivan', lastName: 'Petrov', email: 'ivan@test.com' })
+        expect(router.currentRoute.value.path).toBe('/users')
+    })
+})
+
+describe('ChangePasswordView', () => {
+    async function fill(wrapper: VueWrapper, current: string, newPassword: string, confirm: string) {
+        const inputs = wrapper.findAll('input[type="password"]')
+        await inputs[0]!.setValue(current)
+        await inputs[1]!.setValue(newPassword)
+        await inputs[2]!.setValue(confirm)
+    }
+
+    it('does not send anything when the passwords dont match', async () => {
+        const fetchMock = mockFetch({})
+        const { wrapper } = await mountView(ChangePasswordView, '/change-password', admin)
+
+        await fill(wrapper, 'oldpassword', 'newpassword', 'pass1234')
+        await submit(wrapper)
+
+        expect(wrapper.find('.error').text()).toContain('do not match')
+        expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('shows a success message when the password was changed', async () => {
+        mockFetch({ 'POST /api/auth/change-password': { status: 204 } })
+        const { wrapper } = await mountView(ChangePasswordView, '/change-password', admin)
+
+        await fill(wrapper, 'oldpass12', 'newpass12', 'newpass12')
+        await submit(wrapper)
+
+        expect(wrapper.text()).toContain('Your password has been changed.')
+    })
+
+    it('shows the message when the current password is wrong', async () => {
+        mockFetch({ 'POST /api/auth/change-password': textError(400, 'Invalid password.') })
+        const { wrapper } = await mountView(ChangePasswordView, '/change-password', admin)
+
+        await fill(wrapper, 'wrong', 'newpass12', 'newpass12')
+        await submit(wrapper)
+
+        expect(wrapper.find('.error').text()).toBe('Invalid password.')
     })
 })

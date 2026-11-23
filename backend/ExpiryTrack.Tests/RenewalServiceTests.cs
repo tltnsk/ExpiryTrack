@@ -181,6 +181,40 @@ public class RenewalServiceTests
     }
 
     [Fact]
+    public async Task Submit_ProposedDateNotAfterToday()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.Expired, daysLeft: -40, manager: manager);
+        var service = new RenewalService(db);
+
+        var data = SubmitData(cost: 500);
+        data.ProposedExpirationDate = DateOnly.FromDateTime(DateTime.UtcNow);
+        var result = await service.SubmitAsync(item.Id, item.ResponsibleUserId, data);
+
+        Assert.NotNull(result.Error);
+        Assert.Contains("later than today", result.Error);
+        Assert.Empty(db.RenewalRequests);
+    }
+
+    [Fact]
+    public async Task Submit_ProposedDateNotAfterExpiration()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 10, manager: manager);
+        var service = new RenewalService(db);
+
+        var data = SubmitData(cost: 500);
+        data.ProposedExpirationDate = item.CurrentPeriod!.ExpirationDate.AddDays(1);
+        var result = await service.SubmitAsync(item.Id, item.ResponsibleUserId, data);
+
+        Assert.NotNull(result.Error);
+        Assert.Contains("at least two days after", result.Error);
+        Assert.Empty(db.RenewalRequests);
+    }
+
+    [Fact]
     public async Task SubmitNoManager()
     {
         using var db = TestData.CreateDb();

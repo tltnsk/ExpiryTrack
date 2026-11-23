@@ -43,9 +43,11 @@ public class RenewalService
             return new RenewalResult { Error = $"{item.Name} already has an open renewal request." };
         }
 
-        if (data.ProposedExpirationDate <= item.CurrentPeriod!.ExpirationDate)
+        // the new period starts the day after the current one ends,
+        // so the proposed date must be at least one day after that
+        if (data.ProposedExpirationDate <= item.CurrentPeriod!.ExpirationDate.AddDays(1))
         {
-            return new RenewalResult { Error = "Invalid proposed expiration date." };
+            return new RenewalResult { Error = "The proposed expiration date must be at least two days after the current expiration date." };
         }
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -542,10 +544,14 @@ public class RenewalService
             _db.Notifications.Add(notification);
         }
 
+        DateOnly daysAfterOld = request.Period.ExpirationDate.AddDays(1);
+
         LifecyclePeriod period = new LifecyclePeriod()
         {
             PeriodNumber = request.Period.PeriodNumber + 1,
-            StartDate = today,
+            // the start date of the new period is a day after the end of the current period
+            // or today if today's date is later than the expiration date
+            StartDate = daysAfterOld > today ? daysAfterOld : today,
             ExpirationDate = request.ProposedExpirationDate,
             Cost = request.ProposedCost,
             CreatedAt = now,

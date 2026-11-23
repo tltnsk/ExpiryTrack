@@ -24,7 +24,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SameSite = SameSiteMode.Strict;     // prevent CSRF: prevent cookies from being sent with requests from other sites 
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;                  // stays valid while the user is active
-        // over HTTP only, except locally
+        // outside the development the cookie is only sent over HTTPS
         // locally the app runs on plain http
         options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
             ? CookieSecurePolicy.SameAsRequest
@@ -43,7 +43,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             return Task.CompletedTask;
         };
-        
+
         // refuse the cookie if the user was deactivated in the meantime
         options.Events.OnValidatePrincipal = async context =>
         {

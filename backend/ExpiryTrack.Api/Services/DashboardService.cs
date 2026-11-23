@@ -265,7 +265,7 @@ public class DashboardService
             .Include(r => r.Period)
             .ThenInclude(p => p.Item)
             .Include(r => r.RequestedByUser)
-            .Where(r => r.Status == RequestStatus.ClarificationRequired && r.RequestedByUserId == userId)
+            .Where(r => r.Status == RequestStatus.ClarificationRequired && r.Period.Item.ResponsibleUserId == userId)
             .OrderBy(r => r.SubmittedAt)
             .ToListAsync();
 
@@ -280,7 +280,7 @@ public class DashboardService
             .Include(r => r.Period)
             .ThenInclude(p => p.Item)
             .Include(r => r.RequestedByUser)
-            .Where(r => r.Status == RequestStatus.Approved && r.RequestedByUserId == userId)
+            .Where(r => r.Status == RequestStatus.Approved && r.Period.Item.ResponsibleUserId == userId)
             .OrderBy(r => r.SubmittedAt)
             .ToListAsync();
 
@@ -316,7 +316,7 @@ public class DashboardService
             .Include(r => r.Period)
             .ThenInclude(p => p.Item)
             .Include(r => r.RequestedByUser)
-            .Where(r => r.Status != RequestStatus.Completed && r.Status != RequestStatus.Rejected && r.RequestedByUserId == userId)
+            .Where(r => r.Status != RequestStatus.Completed && r.Status != RequestStatus.Rejected && r.Period.Item.ResponsibleUserId == userId)
             .OrderBy(r => r.SubmittedAt)
             .ToListAsync();
 

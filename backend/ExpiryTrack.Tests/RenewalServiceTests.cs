@@ -97,7 +97,7 @@ public class RenewalServiceTests
     {
         using var db = TestData.CreateDb();
         var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
-        var finance = new User { FirstName = "Test", LastName = "Finance", Email = "finance@test.com", RoleId = 4};
+        var finance = new User { FirstName = "Test", LastName = "Finance", Email = "finance@test.com", RoleId = 4 };
         db.Users.Add(finance);
         db.SaveChanges();
         var item = TestData.AddItem(db, LifecycleState.ExpiringSoon, daysLeft: 20, manager: manager, requiresFinancialReview: true, threshold: 5000);
@@ -135,7 +135,7 @@ public class RenewalServiceTests
         var notification = Assert.Single(db.Notifications);
         Assert.Equal(manager.Id, notification.RecipientUserId);
     }
-    
+
     [Fact]
     public async Task Submit_ReviewRequired_NoFinanceOfficer()
     {
@@ -203,7 +203,7 @@ public class RenewalServiceTests
         var finance = new User { FirstName = "Test", LastName = "Finance", Email = "finance@test.com", RoleId = 4 };
         db.Users.Add(finance);
         db.SaveChanges();
-        
+
         var request = TestData.AddRequest(db, item, RequestStatus.PendingFinancialReview);
         request.NeedsFinancialReview = true;
         db.SaveChanges();
@@ -279,6 +279,27 @@ public class RenewalServiceTests
 
         var notification = Assert.Single(db.Notifications);
         Assert.Equal(item.ResponsibleUserId, notification.RecipientUserId);
+    }
+
+    [Fact]
+    public async Task ManagerReview_ApproveAfterProposedDate_Refused()
+    {
+        using var db = TestData.CreateDb();
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
+        var item = TestData.AddItem(db, LifecycleState.Expired, daysLeft: -5, manager: manager);
+
+        var request = TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
+        db.SaveChanges();
+        request.ProposedExpirationDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1); // yesterday
+        db.SaveChanges();
+
+        var service = new RenewalService(db);
+
+        var result = await service.ApproveAsync(request.Id, manager.Id, ManagerData("Approved"));
+
+        Assert.Equal("The proposed expiration date has passed. Reject the request so a new one can be submitted.", result.Error);
+        Assert.Equal(RequestStatus.PendingManagerApproval, request.Status);
+        Assert.Empty(db.RequestActions);
     }
 
     // wrong status
@@ -363,7 +384,7 @@ public class RenewalServiceTests
         var notification = Assert.Single(db.Notifications);
         Assert.Equal(item.ResponsibleUserId, notification.RecipientUserId);
     }
-    
+
     [Fact]
     public async Task Reject_ApprovedRequestPastProposedDate_Rejects()
     {
@@ -389,7 +410,7 @@ public class RenewalServiceTests
         var notification = Assert.Single(db.Notifications);
         Assert.Equal(item.ResponsibleUserId, notification.RecipientUserId);
     }
-    
+
     [Fact]
     public async Task Reject_ApprovedRequestStillCompletable_Refused()
     {
@@ -402,7 +423,7 @@ public class RenewalServiceTests
         var service = new RenewalService(db);
 
         var result = await service.RejectAsync(request.Id, manager.Id, ManagerData("Not completed in time."));
-        
+
         Assert.Contains("An approved request can only be rejected once its proposed expiration date has passed.", result.Error);
         Assert.Empty(db.RequestActions);
     }
@@ -665,7 +686,7 @@ public class RenewalServiceTests
         Assert.True(result.NotFound);
         Assert.Empty(db.RequestActions);
     }
-    
+
     [Fact]
     public async Task TwoUsersChangeTheSameRequest_SecondSaveFails()
     {

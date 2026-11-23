@@ -137,7 +137,7 @@ public class RenewalService
             };
             _db.Notifications.Add(notification);
         }
-        
+
         await _db.SaveChangesAsync();
         return new RenewalResult { Request = request };
     }
@@ -189,7 +189,7 @@ public class RenewalService
 
             _db.Notifications.Add(notification);
         }
-        
+
         try
         {
             await _db.SaveChangesAsync();
@@ -198,7 +198,7 @@ public class RenewalService
         {
             // someone else changed the status after we checked it, so nothing was saved
             return new RenewalResult
-                { Error = "Someone else changed this request at the same time. Reload the page and try again." };
+            { Error = "Someone else changed this request at the same time. Reload the page and try again." };
         }
         return new RenewalResult { Request = request };
     }
@@ -218,6 +218,13 @@ public class RenewalService
         if (request.Status != RequestStatus.PendingManagerApproval)
         {
             return new RenewalResult { Error = "This request has already been processed." };
+        }
+
+        // for an approved request to be completed, the proposed date must not have passed
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (request.ProposedExpirationDate <= today)
+        {
+            return new RenewalResult { Error = "The proposed expiration date has passed. Reject the request so a new one can be submitted." };
         }
 
         request.Status = RequestStatus.Approved;
@@ -246,7 +253,7 @@ public class RenewalService
         };
 
         _db.Notifications.Add(notification);
-        
+
         try
         {
             await _db.SaveChangesAsync();
@@ -255,7 +262,7 @@ public class RenewalService
         {
             // someone else changed the status after we checked it, so nothing was saved
             return new RenewalResult
-                { Error = "Someone else changed this request at the same time. Reload the page and try again." };
+            { Error = "Someone else changed this request at the same time. Reload the page and try again." };
         }
         return new RenewalResult { Request = request };
     }
@@ -271,12 +278,12 @@ public class RenewalService
         {
             return new RenewalResult { NotFound = true };
         }
-        
+
         if (request.Status != RequestStatus.PendingManagerApproval && request.Status != RequestStatus.ClarificationRequired && request.Status != RequestStatus.Approved)
         {
             return new RenewalResult { Error = "Cannot process the renewal request." };
         }
-        
+
         // an approved request can only be rejected when it can no longer be completed
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         if (request.Status == RequestStatus.Approved && request.ProposedExpirationDate > today)
@@ -316,7 +323,7 @@ public class RenewalService
         };
 
         _db.Notifications.Add(notification);
-        
+
         try
         {
             await _db.SaveChangesAsync();
@@ -325,7 +332,7 @@ public class RenewalService
         {
             // someone else changed the status after we checked it, so nothing was saved
             return new RenewalResult
-                { Error = "Someone else changed this request at the same time. Reload the page and try again." };
+            { Error = "Someone else changed this request at the same time. Reload the page and try again." };
         }
         return new RenewalResult { Request = request };
     }
@@ -387,7 +394,7 @@ public class RenewalService
         };
 
         _db.Notifications.Add(notification);
-        
+
         try
         {
             await _db.SaveChangesAsync();
@@ -396,7 +403,7 @@ public class RenewalService
         {
             // someone else changed the status after we checked it, so nothing was saved
             return new RenewalResult
-                { Error = "Someone else changed this request at the same time. Reload the page and try again." };
+            { Error = "Someone else changed this request at the same time. Reload the page and try again." };
         }
         return new RenewalResult { Request = request };
     }
@@ -459,7 +466,7 @@ public class RenewalService
         {
             // someone else changed the status after we checked it, so nothing was saved
             return new RenewalResult
-                { Error = "Someone else changed this request at the same time. Reload the page and try again." };
+            { Error = "Someone else changed this request at the same time. Reload the page and try again." };
         }
         return new RenewalResult { Request = request };
     }
@@ -494,7 +501,7 @@ public class RenewalService
         // the new expiration date must be after today
         if (request.ProposedExpirationDate <= today)
         {
-            return new RenewalResult { Error = "The proposed data must be later than today." };
+            return new RenewalResult { Error = "The proposed date must be later than today." };
         }
 
         request.Status = RequestStatus.Completed;
@@ -573,7 +580,7 @@ public class RenewalService
         };
 
         _db.ItemStateHistory.Add(history);
-        
+
         try
         {
             await _db.SaveChangesAsync();
@@ -582,7 +589,7 @@ public class RenewalService
         {
             // someone else changed the status after we checked it, so nothing was saved
             return new RenewalResult
-                { Error = "Someone else changed this request at the same time. Reload the page and try again." };
+            { Error = "Someone else changed this request at the same time. Reload the page and try again." };
         }
         return new RenewalResult { Request = request };
     }

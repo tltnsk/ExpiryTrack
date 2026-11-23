@@ -14,16 +14,16 @@ public class UserService
     {
         _db = db;
     }
-    
+
     public async Task<UserResult> CreateAsync(CreateUserRequest request)
     {
         var email = request.Email.Trim();
 
         if (await _db.Users.AnyAsync(u => u.Email == email))
             return new UserResult { Conflict = "A user with this email exists already." };
-        
+
         var role = await _db.Roles.SingleOrDefaultAsync(r => r.Name == request.Role);
-        if (role == null)  return new UserResult { Error = "Unknown role." };
+        if (role == null) return new UserResult { Error = "Unknown role." };
 
         var departmentError = await CheckDepartment(role.Name, request.DepartmentId);
         if (departmentError != null) return new UserResult { Error = departmentError };
@@ -45,15 +45,15 @@ public class UserService
         await _db.SaveChangesAsync();
 
         var created = await LoadUser(user.Id);
-        return new UserResult {User = created};
+        return new UserResult { User = created };
     }
-    
+
     public async Task<UserResult> UpdateAsync(int id, UpdateUserRequest request)
     {
         var user = await LoadUser(id);
 
         if (user == null)
-             return new UserResult { NotFound = true };
+            return new UserResult { NotFound = true };
 
         var email = request.Email.Trim();
         if (await _db.Users.AnyAsync(u => u.Email == email && u.Id != id))
@@ -85,18 +85,18 @@ public class UserService
             if (ownsItems)
                 return new UserResult { Conflict = "This user is still responsible for items. Reassign the items first." };
 
-            bool hasOpenRequests = await _db.RenewalRequests.AnyAsync(r => r.RequestedByUserId == id
+            bool hasOpenRequests = await _db.RenewalRequests.AnyAsync(r => r.Period.Item.ResponsibleUserId == id
                 && r.Status != RequestStatus.Rejected && r.Status != RequestStatus.Completed);
 
             if (hasOpenRequests)
-                return new UserResult { Conflict = "This user has open renewal requests."};
+                return new UserResult { Conflict = "This user has open renewal requests." };
 
             if (await _db.Departments.AnyAsync(d => d.ManagerId == id))
-                return new UserResult { Conflict = "This user manages a department. Assign another manager first."};
+                return new UserResult { Conflict = "This user manages a department. Assign another manager first." };
 
             if (user.Role.Name == "FinanceOfficer")
             {
-                bool otherFinanceOfficer = await _db.Users.AnyAsync(u => 
+                bool otherFinanceOfficer = await _db.Users.AnyAsync(u =>
                     u.Id != id && u.Role.Name == "FinanceOfficer" && u.IsActive);
 
                 bool waitingForFinance = await _db.RenewalRequests
@@ -118,7 +118,7 @@ public class UserService
 
         return new UserResult { User = user };
     }
-    
+
     // helper method for loading user by id
     private async Task<User?> LoadUser(int id)
     {
@@ -127,7 +127,7 @@ public class UserService
             .Include(u => u.Department)
             .SingleOrDefaultAsync(u => u.Id == id);
     }
-    
+
     // validator for departments
     // employees and managers need an active department
     // administrators and finance officers don't belong to a department

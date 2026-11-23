@@ -102,6 +102,10 @@ public class AuthController : ControllerBase
         if (result == PasswordVerificationResult.Failed)
             return BadRequest("Invalid password.");
 
+        // the new password must be different from the current one
+        if (request.NewPassword == request.CurrentPassword)
+            return BadRequest("The new password must be different from the current one.");
+
         user.PasswordHash = new PasswordHasher<User>().HashPassword(user, request.NewPassword);
 
         await _db.SaveChangesAsync();

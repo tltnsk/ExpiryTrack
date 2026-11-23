@@ -14,37 +14,37 @@ public class AuthControllerTests
         using var db = TestData.CreateDb();
         var user = TestData.AddUser(db, roleId: 2, password: "password123");
         var controller = new AuthController(db);
-        
-        var result = await controller.Login(new LoginRequest {Email = user.Email, Password = "wrongpassword"});
-        
+
+        var result = await controller.Login(new LoginRequest { Email = user.Email, Password = "wrongpassword" });
+
         var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result);
         Assert.Equal("Invalid email or password.", unauthorized.Value);
     }
-    
+
     [Fact]
     public async Task Login_UnknownEmail_SameMessage()
     {
         using var db = TestData.CreateDb();
         var controller = new AuthController(db);
-        
-        var result = await controller.Login(new LoginRequest {Email = "email@test.com", Password = "password123"});
-        
+
+        var result = await controller.Login(new LoginRequest { Email = "email@test.com", Password = "password123" });
+
         var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result);
         Assert.Equal("Invalid email or password.", unauthorized.Value);
     }
-    
+
     [Fact]
     public async Task Login_InactiveUser_Unauthorized()
     {
         using var db = TestData.CreateDb();
         var user = TestData.AddUser(db, roleId: 2, password: "password123", isActive: false);
         var controller = new AuthController(db);
-        
-        var result = await controller.Login(new LoginRequest {Email = user.Email, Password = "wrongpassword"});
-        
+
+        var result = await controller.Login(new LoginRequest { Email = user.Email, Password = "wrongpassword" });
+
         Assert.IsType<UnauthorizedObjectResult>(result);
     }
-    
+
     [Fact]
     public async Task LoggedInUser_Ok()
     {
@@ -54,11 +54,11 @@ public class AuthControllerTests
         TestData.SetUser(controller, user.Id);
 
         var result = await controller.Me();
-        
+
         var ok = Assert.IsType<OkObjectResult>(result);
         Assert.Equal("Administrator", Assert.IsType<UserResponse>(ok.Value).Role);
     }
-    
+
     [Fact]
     public async Task DeactivatedUser_Unauthorized()
     {
@@ -68,7 +68,7 @@ public class AuthControllerTests
         TestData.SetUser(controller, user.Id);
 
         var result = await controller.Me();
-        
+
         Assert.IsType<UnauthorizedResult>(result);
     }
 
@@ -77,17 +77,17 @@ public class AuthControllerTests
     {
         using var db = TestData.CreateDb();
         var user = TestData.AddUser(db, roleId: 2, password: "password123");
-        
+
         var controller = new AuthController(db);
         TestData.SetUser(controller, user.Id);
-        
-        var result = await controller.ChangePassword(new ChangePasswordRequest{CurrentPassword = "password123", NewPassword = "newpassword"});
-        
+
+        var result = await controller.ChangePassword(new ChangePasswordRequest { CurrentPassword = "password123", NewPassword = "newpassword" });
+
         Assert.IsType<NoContentResult>(result);
         var hasher = new PasswordHasher<User>();
         Assert.NotEqual(PasswordVerificationResult.Failed, hasher.VerifyHashedPassword(user, user.PasswordHash, "newpassword"));
     }
-    
+
     [Fact]
     public async Task ChangePassword_WrongCurrent()
     {
@@ -96,14 +96,30 @@ public class AuthControllerTests
         var oldHash = user.PasswordHash;
         var controller = new AuthController(db);
         TestData.SetUser(controller, user.Id);
-        
-        var result = await controller.ChangePassword(new ChangePasswordRequest{CurrentPassword = "wrong", NewPassword = "newpassword"});
-        
+
+        var result = await controller.ChangePassword(new ChangePasswordRequest { CurrentPassword = "wrong", NewPassword = "newpassword" });
+
         var bad = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("Invalid password.", bad.Value);
         Assert.Equal(oldHash, user.PasswordHash);
     }
-    
+
+    [Fact]
+    public async Task ChangePassword_SameAsCurrent()
+    {
+        using var db = TestData.CreateDb();
+        var user = TestData.AddUser(db, roleId: 2, password: "password123");
+        var oldHash = user.PasswordHash;
+        var controller = new AuthController(db);
+        TestData.SetUser(controller, user.Id);
+
+        var result = await controller.ChangePassword(new ChangePasswordRequest { CurrentPassword = "password123", NewPassword = "password123" });
+
+        var bad = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal("The new password must be different from the current one.", bad.Value);
+        Assert.Equal(oldHash, user.PasswordHash); // the password was not changed
+    }
+
     [Fact]
     public async Task ChangePassword_DeactivatedUser_Unauthorized()
     {
@@ -111,9 +127,9 @@ public class AuthControllerTests
         var user = TestData.AddUser(db, roleId: 2, isActive: false);
         var controller = new AuthController(db);
         TestData.SetUser(controller, user.Id);
-        
-        var result = await controller.ChangePassword(new ChangePasswordRequest{CurrentPassword = "password1", NewPassword = "newpassword"});
-        
+
+        var result = await controller.ChangePassword(new ChangePasswordRequest { CurrentPassword = "password1", NewPassword = "newpassword" });
+
         Assert.IsType<UnauthorizedResult>(result);
     }
 }

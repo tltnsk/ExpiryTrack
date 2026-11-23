@@ -207,6 +207,30 @@ const periodPercent = computed(() => {
   return Math.min(100, Math.max(0, Math.round(used/total * 100)))
 })
 
+// days between the end of one period and the start of next one
+const gaps = computed(() => {
+  const result: number[] = []
+  periods.value.forEach((period, i) => {
+    const previous = periods.value[i - 1]
+    if (!previous) return
+    const days = daysBetween(previous.expirationDate, period.startDate) - 1
+    result.push(Math.max(0, days))
+  })
+  return result
+})
+
+const timesRenewed = computed(() => gaps.value.length)
+const lateRenewals = computed(() => gaps.value.filter(days => days > 0).length)
+const daysWithoutCoverage = computed(() => gaps.value.reduce((sum, days) => sum + days, 0))
+
+// how much the cost changed from the first period to the current one in %
+const costChange = computed(() => {
+  const first = periods.value[0]?.cost ?? null
+  const last = periods.value.at(-1)?.cost ?? null
+  if (periods.value.length < 2 || first === null || last === null || first === 0) return null
+  return Math.round((last - first) / first * 100)
+})
+
 const openRequest = computed(() => requests.value.find(r => r.status !== 'Rejected' && r.status !== 'Completed') ?? null)
 
 // expired items can be reassigned too
@@ -303,6 +327,28 @@ const activeTab = ref('requests')
                 <p v-if="reassignError" class="error">{{ reassignError }}</p>
           </form>
         </aside>
+
+        <div v-if="periods.length > 0" class="record">
+            <h3>Renewal record</h3>
+            <div class="record-rows">
+                <div class="record-row">
+                  <span>Times renewed</span>
+                  <strong>{{  timesRenewed }}</strong>
+                </div>
+                <div class="record-row">
+                  <span>Renewed after it expired</span>
+                  <strong :class="{bad: lateRenewals > 0}">{{  lateRenewals }}</strong>
+                </div>
+                <div class="record-row">
+                  <span>Days without coverage</span>
+                  <strong :class="{bad: daysWithoutCoverage > 0}">{{  daysWithoutCoverage }}</strong>
+                </div>
+                <div class="record-row">
+                  <span>Cost since period 1</span>
+                  <strong>{{ costChange === null ? '-' : (costChange > 0 ? '+' : '') + costChange + '%' }}</strong>
+                </div>
+            </div>
+          </div>
       </div>
       <div class="tabs">
         <button type="button" :class="{active: activeTab === 'requests'}" @click="activeTab = 'requests'">
@@ -616,6 +662,31 @@ const activeTab = ref('requests')
     padding: 10px 16px;
 }
 
+.record {
+  grid-column: 1/-1;
+  padding: 24px;
+  background: white;
+  border: 1px solid #eceef1;
+  border-radius: 20px;
+}
+
+.record-rows {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.record-row {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  text-align: center;
+}
+
+.record-row strong.bad {
+  color: var(--danger);
+}
 
 .table-box {
     background: white;

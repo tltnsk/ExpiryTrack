@@ -18,6 +18,7 @@ function makeRequest(status: string, changes: object = {}) {
         id: 31, itemId: 4, itemName: 'Zoom', status, needsFinancialReview: false,
         proposedExpirationDate: '2027-12-01', proposedCost: 320, justification: 'We use it every day.',
         submittedAt: '2026-11-10T10:00:00', decidedAt: null, completedAt: null, periodId: 2, requestedByUserId: 7,
+        periodExpirationDate: '2026-12-01', periodCost: 300,
         actions: [action('Submitted', null, 'PendingManagerApproval')],
         ...changes,
     }
@@ -69,7 +70,9 @@ describe('RequestDetailView card', () => {
         expect(wrapper.find('.card-title').text()).toBe('Zoom')
         expect(wrapper.text()).toContain('$320.00')
         expect(wrapper.find('a.item-button').attributes('href')).toBe('/items/4')
-        expect(wrapper.find('tbody').text()).toContain('Submitted')
+        // the comparison table comes first, the history table second
+        expect(wrapper.findAll('tbody')[1]?.text()).toContain('Submitted')
+        expect(wrapper.find('.compare').text()).toContain('+7%')
     })
 
     it('says when the request does not exist', async () => {

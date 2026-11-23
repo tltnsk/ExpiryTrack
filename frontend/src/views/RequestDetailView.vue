@@ -30,6 +30,8 @@ interface RenewalRequest {
     periodId: number
     requestedByUserId: number
     actions: RequestAction[]
+    periodExpirationDate: string
+    periodCost: number | null
 }
 
 
@@ -274,6 +276,25 @@ const stepIcons: Record<string, string> = {
 const clarificationQuestion = computed(() =>
     request.value?.actions.find(a => a.type === 'ClarificationRequested')?.comment ?? null
 )
+
+function daysBetween(from: string, to: string): number {
+  const oneDay = 1000 * 60 * 60 * 24
+  return Math.round((new Date(to).getTime() - new Date(from).getTime()) / oneDay)
+}
+
+// how many months longer the item will be valid
+const extraMonths = computed(() => {
+  if (!request.value) return 0
+  return Math.round(daysBetween(request.value.periodExpirationDate, request.value.proposedExpirationDate) / 30.4)
+})
+
+// how much the cost changes compared to the period being renewed, in %
+const costChange = computed(() => {
+  const before = request.value?.periodCost ?? null
+  const after = request.value?.proposedCost ?? null
+  if (before === null || after === null || before === 0) return null
+  return Math.round((after - before) / before * 100)
+})
 </script>
 
 <template>
@@ -311,7 +332,6 @@ const clarificationQuestion = computed(() =>
                     <strong>{{ formatDate(request.submittedAt) }}</strong>
                 </div>
             </div>
-
             <p class="justification">{{ request.justification ?? 'No justification.' }}</p>
 
             <div class="card-bottom">
@@ -375,6 +395,36 @@ const clarificationQuestion = computed(() =>
             </form>
 
         </aside>
+    </div>
+
+    <h3 class="section-title">Period Comparison</h3>
+    <div class="table-box">
+        <table class="compare">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>{{ request.status === 'Completed' ? 'Previous period' : 'Current period' }}</th>
+                    <th>Proposed</th>
+                    <th>Change</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Expires</td>
+                    <td>{{ formatDate(request.periodExpirationDate) }}</td>
+                    <td>{{ formatDate(request.proposedExpirationDate) }}</td>
+                    <td>+{{ extraMonths }} months</td>
+                </tr>
+                <tr>
+                    <td>Cost</td>
+                    <td>{{ formatMoney(request.periodCost) }}</td>
+                    <td>{{ formatMoney(request.proposedCost) }}</td>
+                    <td :class="{ up: costChange !== null && costChange > 0 }">
+                        {{ costChange === null ? '-' : (costChange > 0 ? '+' : '') + costChange + '%' }}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <h3 class="section-title">History</h3>
@@ -588,6 +638,14 @@ const clarificationQuestion = computed(() =>
 
 .action-panel h3 {
     margin: 0 0 4px;
+}
+
+.compare th {
+    background: #b5b5b5;
+}
+
+.compare td.up {
+  color: var(--danger);
 }
 
 .action-panel label {

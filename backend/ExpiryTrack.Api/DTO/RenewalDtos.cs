@@ -33,6 +33,10 @@ public class RenewalRequestResponse
 
     public List<RequestActionResponse> Actions { get; set; } = new();
 
+    // the period being renewed, so the page can compare it with the proposal
+    public DateOnly PeriodExpirationDate { get; set; }
+    public decimal? PeriodCost { get; set; }
+
     public static RenewalRequestResponse FromRequest(RenewalRequest request)
     {
         return new RenewalRequestResponse
@@ -54,6 +58,8 @@ public class RenewalRequestResponse
                 .OrderBy(a => a.CreatedAt)
                 .Select(a => RequestActionResponse.FromAction(a))
                 .ToList(),
+            PeriodExpirationDate = request.Period.ExpirationDate,
+            PeriodCost = request.Period.Cost,
         };
     }
 }

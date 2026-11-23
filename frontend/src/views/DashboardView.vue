@@ -333,7 +333,7 @@ h3 {
 .row-text small,
 .timeline-card small,
 .empty {
-    color: white;
+    color: black;
 }
 
 /* timeline */

@@ -758,5 +758,6 @@ const activeTab = ref('requests')
   .facts div + div { padding-left: 0; }
   .item-layout { grid-template-columns: 1fr;}
   .card-bottom {flex-direction: column; align-items: flex-start; gap: 12px;} 
+  .record-rows {grid-template-columns: 1fr 1fr;}
 }
 </style>

@@ -45,6 +45,17 @@ public class DocumentsController : ControllerBase
         }
         return name;
     }
+    
+    // look for PDF commands that run code or start a program when a file is opened
+    private static async Task<bool> HasActiveContent(IFormFile file)
+    {
+        using var memory = new MemoryStream();
+        await file.CopyToAsync(memory);
+        // Latin1 turns every byte into one character
+        // in this way PDF's binary parts don't break the text search
+        string content = System.Text.Encoding.Latin1.GetString(memory.ToArray());
+        return content.Contains("/JavaScript") || content.Contains("/JS") || content.Contains("/Launch");
+    }
 
     // POST api/items/{itemId:int}/documents 
     // upload a PDF to an item
@@ -92,6 +103,16 @@ public class DocumentsController : ControllerBase
         if (System.Text.Encoding.ASCII.GetString(header) != "%PDF-")
         {
             return BadRequest("You can only upload PDF files.");
+        }
+
+        if (Path.GetExtension(file.FileName).ToLower() != ".pdf")
+        {
+            return BadRequest("Only .pdf files can be uploaded.");
+        }
+
+        if (await HasActiveContent(file))
+        {
+            return BadRequest("PDF files with scripts or actions are not allowed.");
         }
 
         // save the file in the Uploads folder with a unique name
@@ -193,6 +214,16 @@ public class DocumentsController : ControllerBase
         if (System.Text.Encoding.ASCII.GetString(header) != "%PDF-")
         {
             return BadRequest("You can only upload PDF files.");
+        }
+        
+        if (Path.GetExtension(file.FileName).ToLower() != ".pdf")
+        {
+            return BadRequest("Only .pdf files can be uploaded.");
+        }
+        
+        if (await HasActiveContent(file))
+        {
+            return BadRequest("PDF files with scripts or actions are not allowed.");
         }
 
         // save the file in the Uploads folder with a unique name

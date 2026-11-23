@@ -35,6 +35,17 @@ public class DocumentsController : ControllerBase
             .SingleAsync(u => u.Id == GetCurrentUserId());
     }
 
+    // helper function to cut the file name if it's longer than 255 characters, because otherwise it would throw a 500 error
+    private static string CleanFileName(string fileName)
+    {
+        string name = Path.GetFileName(fileName);
+        if (name.Length > 255)
+        {
+            name = name.Substring(0, 255);
+        }
+        return name;
+    }
+
     // POST api/items/{itemId:int}/documents 
     // upload a PDF to an item
     [HttpPost("items/{itemId:int}/documents")]
@@ -96,7 +107,7 @@ public class DocumentsController : ControllerBase
 
         Document document = new Document
         {
-            OriginalFileName = file.FileName,
+            OriginalFileName = CleanFileName(file.FileName),
             StoredFileName = storedName,
             SizeBytes = (int)file.Length,
             UploadedAt = DateTime.UtcNow,
@@ -197,7 +208,7 @@ public class DocumentsController : ControllerBase
 
         Document document = new Document
         {
-            OriginalFileName = file.FileName,
+            OriginalFileName = CleanFileName(file.FileName),
             StoredFileName = storedName,
             SizeBytes = (int)file.Length,
             UploadedAt = DateTime.UtcNow,
@@ -335,8 +346,9 @@ public class DocumentsController : ControllerBase
         {
             return NotFound("Unable to find the file.");
         }
-
-
+        // the browser must not guess the file's content, it must trust that the file is pdf
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        
         return PhysicalFile(path, "application/pdf", document.OriginalFileName);
     }
 

@@ -19,11 +19,20 @@ interface TopReportRow {
     itemCount: number
 }
 
+interface RenewalPerformance {
+    renewedOnTime: number
+    renewedLate: number
+    closedByExpiry: number
+    averageDaysToDecision: number | null
+    averageDaysToComplete: number | null
+}
+
 interface ReportResponse {
     expiring: ExpiringReport
     categories: CategoryReportRow[]
     topProviders: TopReportRow[]
     topEmployees: TopReportRow[]
+    renewals: RenewalPerformance
 }
 
 const report = ref<ReportResponse | null>(null)
@@ -78,6 +87,13 @@ const totalItems = computed(() =>
 const totalCost = computed(() =>
     report.value?.categories.reduce((sum, c) => sum + (c.totalCost ?? 0), 0) ?? 0
 )
+
+// percent of renewals that were completed before the item expired
+const onTimePercent = computed(() => {
+    if (!report.value) return null
+    const total = report.value.renewals.renewedOnTime + report.value.renewals.renewedLate
+    return total === 0 ? null : Math.round(report.value.renewals.renewedOnTime / total * 100)
+})
 </script>
 <template>
     <h2>Reports</h2>
@@ -147,6 +163,21 @@ const totalCost = computed(() =>
                 <button v-if="report.topEmployees.length > 3" type="button" class="more" :class="{open: showAllEmployees}" @click="showAllEmployees = !showAllEmployees">
                     {{ showAllEmployees ? 'Show less' : ` ⤢ View ${report.topEmployees.length - 3} more` }}
                 </button>
+            </div>
+
+            <div class="report-card wide">
+                <div class="card-title">
+                    <h3>Renewal Performance</h3>
+                </div>
+                <p class="label">Renewals completed before the item expired</p>
+                <p class="value">{{ onTimePercent === null ? '-' : onTimePercent + '%'}}</p>
+                <div class="stats">
+                    <div><strong>{{report.renewals.renewedOnTime}}</strong><span>Renewed on time</span></div>
+                    <div><strong>{{report.renewals.renewedLate}}</strong><span>Renewed late</span></div>
+                    <div><strong>{{report.renewals.closedByExpiry}}</strong><span>Closed by expiry</span></div>
+                    <div><strong>{{report.renewals.averageDaysToDecision ?? '-'}}</strong><span>Avg. days to decision</span></div>
+                    <div><strong>{{report.renewals.averageDaysToComplete ?? '-'}}</strong><span>Avg. days to complete</span></div>
+                </div>
             </div>
         </div>
 
@@ -311,7 +342,31 @@ const totalCost = computed(() =>
     font-weight: 600;
 }
 
+.report-card.wide {
+    grid-column: 1/-1;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    margin-top: 16px;
+}
+
+.stats div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 0;
+    text-align: center;
+}
+
+.stats strong {
+    font-size: 1.6rem;
+}
+
 @media (max-width: 900px) {
     .cards { grid-template-columns: 1fr;}
+    .stats {grid-template-columns: 1fr 1fr;}
 }
 </style>

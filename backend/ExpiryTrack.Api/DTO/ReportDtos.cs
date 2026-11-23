@@ -22,6 +22,15 @@ public class TopReportRow
     public int ItemCount { get; set; }
 }
 
+public class RenewalPerformance
+{
+    public int RenewedOnTime { get; set; }
+    public int RenewedLate { get; set; }
+    public int ClosedByExpiry { get; set; }
+    public double? AverageDaysToDecision { get; set; }
+    public double? AverageDaysToComplete { get; set; }
+}
+
 // everything the page gets in one response
 public class ReportResponse
 {
@@ -29,4 +38,5 @@ public class ReportResponse
     public List<CategoryReportRow> Categories { get; set; } = new();
     public List<TopReportRow> TopProviders { get; set; } = new();
     public List<TopReportRow> TopEmployees { get; set; } = new();
+    public RenewalPerformance Renewals { get; set; } = new();
 }

@@ -9,7 +9,7 @@ namespace ExpiryTrack.Api.Services;
 public class ReportService
 {
     private readonly AppDbContext _db;
-    
+
     // load the logged-in user along with their role
     private async Task<User> LoadCurrentUser(int userId)
     {
@@ -59,13 +59,13 @@ public class ReportService
                 .OrderBy(i => i.CurrentPeriod!.ExpirationDate)
                 .ToListAsync();
         }
-        
+
         // exclude cancelled items from all report calculations
         items = items.Where(i => i.LifecycleState != LifecycleState.Cancelled).ToList();
 
         // count items expiring within the next 30. 60 and 90 days
         ExpiringReport expiringReport = new();
-        
+
         DateOnly today = DateOnly.FromDateTime(DateTime.Now);
         foreach (Item item in items)
         {
@@ -75,7 +75,7 @@ public class ReportService
                 if (daysLeft < 0)
                 {
                     continue;
-                    
+
                 }
                 if (daysLeft <= 30)
                 {
@@ -137,7 +137,47 @@ public class ReportService
             Expiring = expiringReport,
             Categories = categoryReportRows,
             TopProviders = topProviders,
-            TopEmployees = topEmployees
+            TopEmployees = topEmployees,
+            Renewals = await GetRenewalPerformance(items),
         };
+    }
+
+    // how well renewals went for the items that the user can see
+    private async Task<RenewalPerformance> GetRenewalPerformance(List<Item> items)
+    {
+        HashSet<int> itemIds = items.Select(i => i.Id).ToHashSet();
+
+        List<RenewalRequest> allRequests = await _db.RenewalRequests
+            .Include(r => r.Period)
+            .Include(r => r.Actions)
+            .ToListAsync();
+
+        // only the requests for the user's items
+        List<RenewalRequest> requests = allRequests.Where(r => itemIds.Contains(r.Period.ItemId)).ToList();
+
+        var performance = new RenewalPerformance();
+
+        // on time = completed on or before the day the renewed period expired
+        List<RenewalRequest> completed = requests.Where(r => r.Status == RequestStatus.Completed).ToList();
+        performance.RenewedOnTime = completed.Count(r => DateOnly.FromDateTime(r.CompletedAt!.Value) <= r.Period.ExpirationDate);
+        performance.RenewedLate = completed.Count - performance.RenewedOnTime;
+
+        performance.ClosedByExpiry = requests.Count(r => r.Actions.Any(a => a.ActionType == RequestActionType.ClosedByExpiry));
+
+        if (completed.Count > 0)
+        {
+            performance.AverageDaysToComplete = Math.Round(completed.Average(r => (r.CompletedAt!.Value - r.SubmittedAt).TotalDays), 1);
+        }
+
+        // only decisions made by a manager, not requests closed by the system
+        List<RenewalRequest> decided = requests
+            .Where(r => r.DecidedAt != null && !r.Actions.Any(a => a.ActionType == RequestActionType.ClosedByExpiry))
+            .ToList();
+        if (decided.Count > 0)
+        {
+            performance.AverageDaysToDecision = Math.Round(decided.Average(r => (r.DecidedAt!.Value - r.SubmittedAt).TotalDays), 1);
+        }
+
+        return performance;
     }
 }

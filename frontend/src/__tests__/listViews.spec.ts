@@ -129,6 +129,7 @@ describe('ReportsView', () => {
         ],
         topProviders: [],
         topEmployees: [],
+        renewals: { renewedOnTime: 3, renewedLate: 1, closedByExpiry: 1, averageDaysToDecision: 2.5, averageDaysToComplete: 6},
     }
 
     function categoryNames(wrapper: Awaited<ReturnType<typeof mountView>>['wrapper']) {

@@ -295,6 +295,12 @@ const costChange = computed(() => {
   if (before === null || after === null || before === 0) return null
   return Math.round((after - before) / before * 100)
 })
+
+// only the time of a date, e.g. 14:05
+function formatTime(value: string) {
+    const utc = value.endsWith('Z') ? value : value + 'Z'
+    return new Date(utc).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+}
 </script>
 
 <template>
@@ -429,25 +435,36 @@ const costChange = computed(() => {
 
     <h3 class="section-title">History</h3>
     <div class="table-box">
-        <table>
+        <table class="history">
             <thead>
                 <tr>
-                <th>When</th>
-                <th>Who</th>
-                <th>Step</th>
-                <th>Status</th>
-                <th>Recommendation</th>
-                <th>Comment</th>
+                    <th>When</th>
+                    <th>Step</th>
+                    <th>Who</th>
+                    <th>Status</th>
+                    <th>Notes</th>
                 </tr>
             </thead>
             <tbody>
                 <tr v-for="(action, index) in request.actions" :key="index">
-                    <td>{{formatDateTime(action.createdAt) }}</td>
-                    <td>{{ action.actorUserName}}</td>
-                    <td>{{ formatLabel(action.type) }}</td>
-                    <td><template v-if="action.fromStatus">{{ formatLabel(action.fromStatus)}} -></template> {{ formatLabel(action.toStatus) }}</td>
-                    <td>{{ action.recommendation ?? '-' }}</td>
-                    <td>{{ action.comment  ?? '-'}}</td>
+                    <td>
+                        <div class="when-date">{{ formatDate(action.createdAt) }}</div>
+                        <div class="muted">{{ formatTime(action.createdAt) }}</div>
+                    </td>
+                    <td class="step">{{ formatLabel(action.type) }}</td>
+                    <td>{{ action.actorUserName }}</td>
+                    <td>
+                        <template v-if="action.fromStatus">
+                            <span class="state" :class="action.fromStatus">{{ formatLabel(action.fromStatus) }}</span>
+                            <span class="arrow">→</span>
+                        </template>
+                        <span class="state" :class="action.toStatus">{{ formatLabel(action.toStatus) }}</span>
+                    </td>
+                    <td>
+                        <div v-if="action.recommendation"><span class="muted">Recommendation:</span> {{ action.recommendation }}</div>
+                        <div v-if="action.comment" class="comment">{{ action.comment }}</div>
+                        <span v-if="!action.recommendation && !action.comment" class="muted">-</span>
+                    </td>
                 </tr>
             </tbody>
         </table>
@@ -684,7 +701,35 @@ const costChange = computed(() => {
 }
 
 .table-box th {
-    background: #b5b5b5;
+    background: #f9fafb;
+}
+
+.history th,
+.history td,
+.compare th,
+.compare td {
+    padding: 14px 16px;
+    border: none;
+    border-bottom: 1px solid #eceef1;
+    vertical-align: top;
+}
+
+.history tbody tr:last-child td,
+.compare tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.when-date,
+.step {
+    font-weight: 600;
+}
+
+.arrow {
+    margin: 0 6px;
+}
+
+.comment {
+    font-style: italic;
 }
 
 .file-row {

@@ -699,8 +699,16 @@ const activeTab = ref('requests')
     margin: 0;
 }
 
-.table-box th {
-    background: #b5b5b5;
+.table-box th,
+.table-box td {
+    padding: 14px 16px;
+    border: none;
+    border-bottom: 1px solid #eceef1;
+    vertical-align: top;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
 }
 
 .file-row {

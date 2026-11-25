@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { formatDate, formatDateTime, formatLabel, formatMoney} from '@/utils/format'
 import { useSort } from '@/utils/sort'
 
@@ -16,6 +16,29 @@ const requests = ref<RenewalRequest[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 
+const search = ref('')
+const tab = ref<'all' | 'open' | 'finished'>('all')
+
+// requests that are not finished yet
+const openStatuses = ['PendingFinancialReview', 'PendingManagerApproval', 'ClarificationRequired', 'Approved']
+
+function isOpen(request: RenewalRequest) {
+  return openStatuses.includes(request.status)
+}
+
+const openCount = computed(() => requests.value.filter(isOpen).length)
+const finishedCount = computed(() => requests.value.length - openCount.value)
+
+
+// the chosen tab and the search text
+const filteredRequests = computed(() => {
+  const text = search.value.trim().toLowerCase()
+  return requests.value.filter((request) => {
+    if (tab.value === 'open' && !isOpen(request)) return false
+    if (tab.value === 'finished' && isOpen(request)) return false
+    return request.itemName.toLowerCase().includes(text)
+  })
+})
 onMounted(async() => {
     const response = await fetch('/api/requests')
     if(response.ok) {
@@ -26,18 +49,27 @@ onMounted(async() => {
     loading.value = false
 })
 
-const { sorted, sortBy, arrow } = useSort(requests, 'submittedAt', false)
+const { sorted, sortBy, arrow } = useSort(filteredRequests, 'submittedAt', false)
 </script>
 
 <template>
     <div class="page-top">
         <h2>Requests</h2>
     </div>
+    <div class="toolbar">
+        <div class="tabs">
+            <button type="button" :class="{active: tab === 'all'}" @click="tab = 'all'">All ({{ requests.length }})</button>
+            <button type="button" :class="{active: tab === 'open'}" @click="tab = 'open'">Open ({{ openCount }})</button>
+            <button type="button" :class="{active: tab === 'finished'}" @click="tab = 'finished'">Finished ({{ finishedCount }})</button>
+        </div> 
+        <input v-model="search" type="search" class="search" placeholder="Search by item" />
+    </div>
 
     <p v-if="loading">Loading...</p>
     <p v-else-if="errorMessage" class="error"> {{ errorMessage }}</p>
     <p v-else-if="requests.length===0">No renewal requests.</p>
-
+    <p v-else-if="filteredRequests.length===0">No requests match.</p>
+    
     <div v-else class="table-box">
         <table>
             <thead>
@@ -110,5 +142,35 @@ tbody tr:last-child td {
 
 .item-link:hover{
     text-decoration: underline;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.tabs {
+    display: flex;
+    gap: 4px;
+}
+
+.tabs button {
+    margin: 0;
+    padding: 5px 15px;
+    background: transparent;
+    color: var(--text);
+}
+
+.tabs button.active {
+    background: var(--primary);
+    color: white;
+}
+
+.search {
+    width: 280px;
+    margin: 0;
 }
 </style>

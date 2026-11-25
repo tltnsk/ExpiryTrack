@@ -26,7 +26,7 @@ async function logout() {
 const sections: Record<string, string> = {
   dashboard: 'Home', items: 'Items', categories: 'Categories', departments: 'Departments',
   users: 'Users', requests: 'Requests', notifications: 'Notifications', reports: 'Reports',
-  'change-password': 'Change password',
+  'change-password': 'Change password', 'my-employees': 'My employees'
 }
 
 // names for the last part 
@@ -96,6 +96,7 @@ watch (() => route.path, () => {
             <RouterLink to="/departments"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><circle cx="12" cy="7" r="4"/><circle cx="4" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="20" cy="19" r="2"/><path d="M8 7a4 4 0 0 0-4 4v6"/><path d="M12 11v6"/><path d="M16 7a4 4 0 0 1 4 4v6"/></svg>Departments</RouterLink>
             <RouterLink to="/users"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg>Team</RouterLink>
         </template>
+        <RouterLink v-if="auth.user.role === 'DepartmentManager'" to="/my-employees"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg>My Employees</RouterLink>
       </nav>
 
       <div class="account">

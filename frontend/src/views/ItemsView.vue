@@ -25,7 +25,7 @@ const route = useRoute()
 
 const stateFilter = ref(String(route.query.state ?? ''))
 const categoryFilter = ref('')
-const responsibleFilter = ref('')
+const responsibleFilter = ref(String(route.query.responsible ?? ''))
 const expiresFrom = ref('')
 const expiresTo = ref('')
 
@@ -172,7 +172,7 @@ watch([search, stateFilter, categoryFilter, responsibleFilter, expiresFrom, expi
   background: white;
   border: 1px solid #eceef1;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 table {
@@ -218,5 +218,18 @@ th:nth-child(7) {width: 12%}
   color: white;
   text-decoration: none;
   font-weight: 500;
+}
+
+@media (max-width: 900px) {
+  table {
+    table-layout: auto;
+    min-width: 820px;
+  }
+  th,
+  td:nth-child(4),
+  td:nth-child(6),
+  td:nth-child(7) {
+    white-space: nowrap;
+  }
 }
 </style>

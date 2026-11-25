@@ -22,6 +22,7 @@ import NotificationsView from '@/views/NotificationsView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import ItemImportView from '@/views/ItemImportView.vue'
 import ReportsView from '@/views/ReportsView.vue'
+import MyEmployeesView from '@/views/MyEmployeesView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -48,7 +49,8 @@ const router = createRouter({
     { path: '/notifications', component: NotificationsView },
     { path: '/dashboard', component: DashboardView },
     { path: '/items/import', component: ItemImportView }, 
-    { path: '/reports', component: ReportsView }
+    { path: '/reports', component: ReportsView },
+    { path: '/my-employees', component: MyEmployeesView },
   ],
 })
 
@@ -90,6 +92,10 @@ router.beforeEach(async (to) => {
   }
 
   if (auth.user?.role === "Employee" && to.path.startsWith('/reports')) {
+    return '/dashboard'
+  }
+
+  if (auth.user?.role !== "DepartmentManager" && to.path.startsWith('/my-employees')) {
     return '/dashboard'
   }
 })

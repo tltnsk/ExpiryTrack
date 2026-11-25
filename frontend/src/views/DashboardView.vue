@@ -6,6 +6,7 @@ import {getTiles, getBarChart, getStateCounts, getMonthChart, percent, daysLeftT
 import type { AdminDashboard, ManagerDashboard, EmployeeDashboard, FinanceDashboard } from '@/utils/dashboard'
 import BarChart from '@/components/BarChart.vue'
 import StateChart from '@/components/StateChart.vue'
+import EmployeeHome from '@/components/dashboards/EmployeeHome.vue'
 
 const auth = useAuthStore()
 
@@ -41,14 +42,6 @@ onMounted(async () => {
             errorMessage.value = 'Could not load the dashboard.'
         }
     }
-    if (auth.user?.role === 'Employee') {
-        const response = await fetch('/api/dashboard/employee')
-        if (response.ok) {
-            employeeDashboard.value = await response.json()
-        } else {
-            errorMessage.value = 'Could not load the dashboard.'
-        }
-    }
     if (auth.user?.role === 'FinanceOfficer') {
         const response = await fetch('/api/dashboard/finance')
         if (response.ok) {
@@ -63,6 +56,8 @@ onMounted(async () => {
 
 </script>
 <template>
+    <EmployeeHome v-if="auth.user?.role === 'Employee'" />
+    <template v-else>
     <p v-if="loading">Loading...</p>
     <p v-else-if="errorMessage" class="error"> {{ errorMessage }}</p>
 
@@ -232,6 +227,7 @@ onMounted(async () => {
         </template>
     </aside>
     </div>
+</template>
 </template>
 <style scoped>
 .dashboard {

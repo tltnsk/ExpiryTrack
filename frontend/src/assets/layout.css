@@ -294,7 +294,7 @@ th.sortable {
 
 /* short fade when moving to another page */
 .fade-enter-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .fade-enter-from {

@@ -67,7 +67,9 @@ const managerSaving = ref(false)
 
 // employee
 const canAnswerClarification = computed(() => auth.user?.role === 'Employee' && request.value?.status === 'ClarificationRequired')
-const canRecordCompletion = computed(() => auth.user?.role === 'Employee' && request.value?.status === 'Approved')
+// the backend refuses to complete a request once its proposed date has passed
+const proposedDatePassed = computed(() => !!request.value && request.value.proposedExpirationDate <= new Date().toISOString().slice(0,10))
+const canRecordCompletion = computed(() => auth.user?.role === 'Employee' && request.value?.status === 'Approved' && !proposedDatePassed.value)
 const employeeError = ref('')
 const employeeSaving = ref(false)
 const employeeComment = ref('')
@@ -399,6 +401,10 @@ function formatTime(value: string) {
                 </div>
                 <p v-if="employeeCompleteError" class="error">{{ employeeCompleteError }}</p>
             </form>
+            <div v-if="auth.user?.role === 'Employee' && request.status === 'Approved' && proposedDatePassed" class="action-panel">
+                <h3>Complete the renewal</h3>
+                <p class="hint">The proposed date has passed, so this renewal can no longer be completed. Your manager can reject it, and then you can submit a new request.</p>
+            </div>
 
         </aside>
     </div>

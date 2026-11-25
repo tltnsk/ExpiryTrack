@@ -88,6 +88,10 @@ router.beforeEach(async (to) => {
   if (auth.user?.role !== "DepartmentManager" && to.path.startsWith('/items/import')) {
     return '/items'
   }
+
+  if (auth.user?.role === "Employee" && to.path.startsWith('/reports')) {
+    return '/dashboard'
+  }
 })
 
 export default router

@@ -66,7 +66,7 @@ public class ReportService
         // count items expiring within the next 30. 60 and 90 days
         ExpiringReport expiringReport = new();
 
-        DateOnly today = DateOnly.FromDateTime(DateTime.Now);
+        DateOnly today = DateOnly.FromDateTime(DateTime.UtcNow);
         foreach (Item item in items)
         {
             if (item.LifecycleState == LifecycleState.ExpiringSoon || item.LifecycleState == LifecycleState.Active)

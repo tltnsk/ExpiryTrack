@@ -7,6 +7,7 @@ import type { AdminDashboard, ManagerDashboard, EmployeeDashboard, FinanceDashbo
 import BarChart from '@/components/BarChart.vue'
 import StateChart from '@/components/StateChart.vue'
 import EmployeeHome from '@/components/dashboards/EmployeeHome.vue'
+import ManagerHome from '@/components/dashboards/ManagerHome.vue'
 
 const auth = useAuthStore()
 
@@ -34,14 +35,6 @@ onMounted(async () => {
             errorMessage.value = 'Could not load the dashboard.'
         }
     }
-    if (auth.user?.role === 'DepartmentManager') {
-        const response = await fetch('/api/dashboard/manager')
-        if (response.ok) {
-            managerDashboard.value = await response.json()
-        } else {
-            errorMessage.value = 'Could not load the dashboard.'
-        }
-    }
     if (auth.user?.role === 'FinanceOfficer') {
         const response = await fetch('/api/dashboard/finance')
         if (response.ok) {
@@ -57,6 +50,7 @@ onMounted(async () => {
 </script>
 <template>
     <EmployeeHome v-if="auth.user?.role === 'Employee'" />
+    <ManagerHome v-else-if="auth.user?.role === 'DepartmentManager'" />
     <template v-else>
     <p v-if="loading">Loading...</p>
     <p v-else-if="errorMessage" class="error"> {{ errorMessage }}</p>
@@ -87,28 +81,6 @@ onMounted(async () => {
                  </div>
             </div>
 
-        <section v-if="managerDashboard" class="table-section">
-            <h3>Requests to review</h3>
-            <p v-if="managerDashboard.requestsToReview.length === 0" class="empty">No requests to review.</p>
-            <div v-else class="table-box">
-                <table>
-                    <thead>
-                        <tr><th>Item</th><th>Requested by</th><th>Submitted</th><th>New expiry</th><th>Cost</th><th></th></tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="request in managerDashboard.requestsToReview" :key="request.id">
-                            <td>{{ request.itemName }}</td>
-                            <td>{{ request.requestedByUserName }}</td>
-                            <td>{{ formatDateTime(request.submittedAt) }}</td>
-                            <td>{{ formatDate(request.proposedExpirationDate) }}</td>
-                            <td>{{ formatMoney(request.proposedCost) }}</td>
-                            <td><RouterLink :to="`/requests/${request.id}`" class="table-link">Review →</RouterLink></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-        
         <section v-if="financeDashboard" class="table-section">
             <h3>Requests to review</h3>
             <p v-if="financeDashboard.requestsNeedingFinancialReview.length === 0" class="empty">No requests to review.</p>
@@ -158,16 +130,6 @@ onMounted(async () => {
                 </span>
                 <span class="row-count">{{ row.itemCount }}</span>
             </div>
-        </section>
-        <section v-if="managerDashboard">
-            <h3>Awaiting completion</h3>
-            <p v-if="managerDashboard.requestsAwaitingCompletion.length === 0" class="empty">No requests awaiting completion.</p>
-            <RouterLink v-for="request in managerDashboard.requestsAwaitingCompletion" :key="request.id" :to="`/requests/${request.id}`" class="list-row">
-                <span class="row-text">
-                    <strong>{{ request.itemName }}</strong>
-                    <small>{{ request.requestedByUserName }}</small>
-                </span>
-            </RouterLink>
         </section>
     </aside>
     </div>

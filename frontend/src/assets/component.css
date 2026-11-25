@@ -234,6 +234,38 @@ dd {
   border-radius: 20px;
 }
 
+/*filters*/
+.filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    align-items: end;
+    margin: 12px 0;
+}
+
+.filters input[type='search'] {
+    grid-column: 1/-1;
+}
+
+.filters input,
+.filters select {
+  margin-top: 2px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.filters label {
+  font-size: 12px;
+  color: #6b6b6b;
+}
+
+.filters button {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
 @media (max-width: 900px) {
     .filters {
         grid-template-columns: 1fr;

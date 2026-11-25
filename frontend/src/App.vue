@@ -22,6 +22,42 @@ async function logout() {
   router.push('/login')
 }
 
+// names for the first part of the URL
+const sections: Record<string, string> = {
+  dashboard: 'Home', items: 'Items', categories: 'Categories', departments: 'Departments',
+  users: 'Users', requests: 'Requests', notifications: 'Notifications', reports: 'Reports',
+  'change-password': 'Change password',
+}
+
+// names for the last part 
+const pages: Record<string, string> = { new: 'New', import: 'Import', edit: 'Edit', renew: 'Renewal request' }
+
+// create breadcrumb
+const breadcrumb = computed(() => {
+  const parts = route.path.split('/').filter((part) => part !== '')
+  const section = parts[0] ?? ''
+  const crumbs = [{ label: sections[section] ?? '', to: '/' + section }]
+
+  if (section === 'items' && parts.length === 3) {
+    crumbs.push({ label: 'Details', to: `/items/${parts[1]}` })
+  }
+  if (parts.length > 1) {
+    const last = parts[parts.length - 1] ?? ''
+    crumbs.push({ label: pages[last] ?? 'Details', to: route.path })
+  }
+  return crumbs
+})
+
+// shortcuts in the top bar
+const quickActions = computed(() => {
+  const role = auth.user?.role
+  if (role === 'Administrator') return [{ label: '+ New user', to: '/users/new' }, { label: '+ New category', to: '/categories/new' }]
+  if (role === 'DepartmentManager') return [{ label: '+ New item', to: '/items/new' }, { label: 'Import', to: '/items/import' }]
+  if (role === 'Employee') return [{ label: '+ New item', to: '/items/new' }]
+  if (role === 'FinanceOfficer') return [{ label: 'Review requests', to: '/requests' }]
+  return []
+})
+
 // reload the unread notifications count every time the user opens another page
 // and once when the application starts
 watch (() => route.path, () => {
@@ -64,11 +100,27 @@ watch (() => route.path, () => {
         <button @click="logout" id="logout-btn">Log out</button>
       </div>
     </aside>
-
     <main>
       <div class="content">
+        <header v-if="auth.user" class="topbar">
+          <nav class="breadcrumb">
+            <template v-for="(crumb, index) in breadcrumb" :key="index">
+              <span v-if="index > 0" class="separator">/</span>
+              <RouterLink v-if="index < breadcrumb.length - 1" :to="crumb.to">{{ crumb.label }}</RouterLink>
+              <span v-else class="current">{{ crumb.label }}</span>
+            </template>
+          </nav>
+
+          <div class="topbar-right">
+            <span class="role-badge">{{ formatLabel(auth.user.role) }}</span>
+            <RouterLink v-for="action in quickActions" :key="action.to" :to="action.to" class="quick-action">
+              {{ action.label }}
+            </RouterLink>
+          </div>
+        </header>
+
         <RouterView />
       </div>
-    </main>
+    </main>     
   </div>
 </template>

@@ -63,7 +63,7 @@ export function makeRouter() {
         '/', '/login', '/dashboard', '/items', '/items/new', '/items/import', '/items/:id', '/items/:id/edit',
         '/items/:id/renew', '/categories', '/categories/new', '/categories/:id/edit', '/departments',
         '/departments/new', '/departments/:id/edit', '/users', '/users/new', '/users/:id/edit',
-        '/requests', '/requests/:id', '/notifications', '/change-password', '/reports',
+        '/requests', '/requests/:id', '/notifications', '/change-password', '/reports', '/my-employees'
     ]
     return createRouter({
         history: createMemoryHistory(),

@@ -64,4 +64,10 @@ describe('router guards', () => {
         expect(await open('/items/import', 'Employee')).toBe('/items')
         expect(await open('/items/import', 'DepartmentManager')).toBe('/items/import')
     })
+
+    it('only lets the department manager open my employees', async () => {
+        expect(await open('my-employees', 'Employee')).toBe('/dashboard')
+        expect(await open('my-employees', 'Administrator')).toBe('/dashboard')
+        expect(await open('my-employees', 'DepartmentManager')).toBe('/my-employees')
+    })
 })

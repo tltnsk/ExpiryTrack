@@ -147,7 +147,7 @@ const { sorted, sortBy, arrow } = useSort(filteredRows, 'name')
                 </thead>
                 <tbody>
                     <template v-for="row in sorted" :key="row.id">
-                        <tr @click="toggle(row.id)">
+                        <tr class="employee-row" @click="toggle(row.id)">
                             <td>
                                 <RouterLink :to="{ path: '/items', query: { responsible: row.name } }" class="name">{{ row.name }}</RouterLink>
                                 <div>{{ row.email }}</div>
@@ -159,7 +159,7 @@ const { sorted, sortBy, arrow } = useSort(filteredRows, 'name')
                             <td>{{ formatMoney(row.totalCost) }}</td>
                         </tr>
                         <!-- their items, shown when the row is clicked -->
-                        <tr v-if="openEmployeeId === row.id">
+                        <tr v-if="openEmployeeId === row.id" class="details">
                             <td colspan="6">
                                 <p v-if="row.itemList.length === 0">No items.</p>
                                 <table v-else>

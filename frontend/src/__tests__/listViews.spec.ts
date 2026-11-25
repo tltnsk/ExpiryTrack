@@ -8,6 +8,8 @@ import NotificationsView from '@/views/NotificationsView.vue'
 import ReportsView from '@/views/ReportsView.vue'
 
 import { mountView, mockFetch, ok, textError, makeUser, sentBody } from './helpers'
+import MyEmployeesView from '@/views/MyEmployeesView.vue'
+
 
 afterEach(() => {
     vi.unstubAllGlobals() // put the real fetch back
@@ -200,5 +202,50 @@ describe('ItemsView', () => {
 
         expect(wrapper.findAll('tbody tr')).toHaveLength(1)
         expect(wrapper.find('tbody').text()).toContain('Item 2')
+    })
+})
+
+describe('MyEmployeesView', () => {
+    function mockTeam() {
+        mockFetch({
+            '/api/users/employees': ok([
+                { id: 7, firstName: 'Ana', lastName: 'Test', email: 'ana@test.com' },
+                { id: 8, firstName: 'Ivan', lastName: 'Petrov', email: 'ivan@test.com' },
+            ]),
+            '/api/items': ok([
+                { id: 1, name: 'Zoom', responsibleUserId: 7, lifecycleState: 'ExpiringSoon', expirationDate: '2026-12-10', cost: 100 },
+                { id: 2, name: 'Old', responsibleUserId: 7, lifecycleState: 'Cancelled', expirationDate: '2026-01-01', cost: 50 }, // not counted
+                { id: 3, name: 'Other', responsibleUserId: 9, lifecycleState: 'Active', expirationDate: '2027-01-01', cost: 70 },  // not in the team
+                { id: 4, name: 'Adobe', responsibleUserId: 7, lifecycleState: 'Expired', expirationDate: '2026-11-01', cost: 20 },
+            ]),
+            '/api/requests': ok([
+                { id: 5, itemId: 1, status: 'PendingManagerApproval' }, 
+                { id: 6, itemId: 4, status: 'Rejected' },               
+            ]),
+        })
+    }
+
+    it('counts the items, open requests, and costs of employees', async () => {
+        mockTeam()
+        const { wrapper } = await mountView(MyEmployeesView, '/my-employees', makeUser('DepartmentManager'))
+        const cells = wrapper.find('tbody tr').findAll('td').map((cell) => cell.text())
+        expect(cells[1]).toBe('2')
+        expect(cells[2]).toBe('1')
+        expect(cells[3]).toBe('1')
+        expect(cells[4]).toBe('1')
+        expect(cells[5]).toBe('$120.00')
+    })
+
+    it('shows the items of an employee when the row is clicked', async () => {
+        mockTeam()
+        const { wrapper } = await mountView(MyEmployeesView, '/my-employees', makeUser('DepartmentManager'))
+
+        expect(wrapper.find('.details').exists()).toBe(false)
+        await wrapper.find('.employee-row').trigger('click')
+
+        const details = wrapper.find('.details').text()
+        expect(details).toContain('Zoom')
+        expect(details).toContain('Adobe')
+        expect(details).toContain('No renewal request')
     })
 })

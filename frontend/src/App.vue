@@ -119,7 +119,13 @@ watch (() => route.path, () => {
           </div>
         </header>
 
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <Transition name="fade" mode="out-in">
+            <div :key="route.path">
+              <component :is="Component" />
+            </div>
+          </Transition>
+        </RouterView>
       </div>
     </main>     
   </div>

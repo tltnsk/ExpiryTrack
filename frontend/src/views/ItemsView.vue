@@ -102,11 +102,6 @@ watch([search, stateFilter, categoryFilter, responsibleFilter, expiresFrom, expi
 
 <template>
     <h2>Items</h2>
-    <div class="page-top">
-       <RouterLink v-if="auth.user?.role === 'Employee' || auth.user?.role === 'DepartmentManager'" to="/items/new" class="add-link">+ New Item</RouterLink>
-       <RouterLink v-if="auth.user?.role === 'DepartmentManager'" to="/items/import" class="add-link">Import Items from Excel</RouterLink>
-    </div>
-
     <div class="card filters">
       <input v-model="search" type="search" placeholder="Search by name or provider" />
        <select v-model="stateFilter">
@@ -223,12 +218,5 @@ th:nth-child(7) {width: 12%}
   color: white;
   text-decoration: none;
   font-weight: 500;
-}
-
-.page-top {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 20px;
 }
 </style>

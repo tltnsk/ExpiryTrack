@@ -26,8 +26,8 @@ describe('RequestsView', () => {
 
         const rows = wrapper.findAll('tbody tr')
         expect(rows).toHaveLength(2)
-        expect(rows[0]!.text()).toContain('Microsoft 365')
-        expect(rows[0]!.text()).toContain('$120.00')
+        expect(rows[1]!.text()).toContain('Microsoft 365')
+        expect(rows[1]!.text()).toContain('$120.00')
     })
 
     it('shows an error when the request cannot be loaded', async () => {

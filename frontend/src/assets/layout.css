@@ -264,3 +264,13 @@ main {
 .quick-action:hover {
   opacity: 0.85;
 }
+
+/* short fade when moving to another page */
+.fade-enter-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}

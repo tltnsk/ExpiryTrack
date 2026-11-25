@@ -108,30 +108,6 @@ onMounted(async () => {
                 </table>
             </div>
         </section>
-
-
-
-        <!--Employee-->
-        <section v-if="employeeDashboard" class="table-section">
-                <h3>Items needing renewal</h3>
-                <p v-if="employeeDashboard.itemsNeedingRenewal.length === 0" class="empty">No items needing renewal.</p>
-                <div v-else class="table-box">
-                    <table>
-                        <thead>
-                            <tr><th>Item</th><th>Department</th><th>Expires</th><th>Time left</th><th></th></tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="item in employeeDashboard.itemsNeedingRenewal" :key="item.id">
-                                <td><RouterLink :to="`/items/${item.id}`">{{ item.name }}</RouterLink></td>
-                                <td>{{ item.departmentName }}</td>
-                                <td>{{ formatDate(item.expirationDate) }}</td>
-                                <td>{{ daysLeftText(item.expirationDate) }}</td>
-                                <td><RouterLink :to="`/items/${item.id}/renew`" class="table-link">Renew →</RouterLink></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-        </section>
         
         <section v-if="financeDashboard" class="table-section">
             <h3>Requests to review</h3>
@@ -193,38 +169,6 @@ onMounted(async () => {
                 </span>
             </RouterLink>
         </section>
-        <template v-if="employeeDashboard">
-            <section>
-                <h3>Needs clarification</h3>
-                <p v-if="employeeDashboard.requestsNeedingClarification.length === 0" class="empty">No requests needing clarification.</p>
-                <RouterLink v-for="request in employeeDashboard.requestsNeedingClarification" :key="request.id" :to="`/requests/${request.id}`" class="list-row">
-                    <span class="row-text">
-                        <strong>{{ request.itemName }}</strong>
-                        <small>Submitted {{ formatDateTime(request.submittedAt) }}</small>
-                    </span>
-                </RouterLink>
-            </section>
-            <section>
-                <h3>Awaiting completion</h3>
-                <p v-if="employeeDashboard.requestsAwaitingCompletion.length === 0" class="empty">No requests awaiting completion.</p>
-                <RouterLink v-for="request in employeeDashboard.requestsAwaitingCompletion" :key="request.id" :to="`/requests/${request.id}`" class="list-row">
-                    <span class="row-text">
-                        <strong>{{ request.itemName }}</strong>
-                        <small>New expiry date</small>
-                    </span>
-                </RouterLink>
-            </section>
-            <section>
-                <h3>My open requests</h3>
-                <p v-if="employeeDashboard.myOpenRequests.length === 0" class="empty">No open requests.</p>
-                <RouterLink v-for="request in employeeDashboard.myOpenRequests" :key="request.id" :to="`/requests/${request.id}`" class="list-row">
-                    <span class="row-text">
-                        <strong>{{ request.itemName }}</strong>
-                        <small>Submitted {{ formatDateTime(request.submittedAt) }}</small>
-                    </span>
-                </RouterLink>
-            </section>
-        </template>
     </aside>
     </div>
 </template>

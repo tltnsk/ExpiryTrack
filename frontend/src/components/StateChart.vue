@@ -4,6 +4,8 @@ import Chart from 'chart.js/auto'
 
 const props = defineProps<{
     values: number[]
+    aspectRatio?: number
+    legendPosition?: 'right' | 'bottom'
 }>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -19,8 +21,8 @@ onMounted(() =>
             }],
         },
         options: {
-            aspectRatio: 2,
-            plugins: { legend: { position: 'right'}},
+            aspectRatio: props.aspectRatio ?? 2,
+            plugins: { legend: { position: props.legendPosition ?? 'right'}},
         },
     
     })

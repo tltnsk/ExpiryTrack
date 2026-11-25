@@ -64,7 +64,7 @@ public class DashboardService
 
         return new List<ChartEntry>
         {
-            new ChartEntry { Label = "7 days of less", Value = week },
+            new ChartEntry { Label = "7 days or less", Value = week },
             new ChartEntry { Label = "8-30 days", Value = month },
             new ChartEntry { Label = "31-90 days", Value = quarter },
             new ChartEntry { Label = "More than 90 days", Value = later }

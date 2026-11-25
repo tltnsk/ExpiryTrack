@@ -2,7 +2,9 @@
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import type { EmployeeDashboard } from '@/utils/dashboard'
-import { percent } from '@/utils/dashboard'
+import StateChart from '../StateChart.vue'
+import { formatLabel } from '@/utils/format'
+import BarChart from '../BarChart.vue'
 
 const auth = useAuthStore()
 
@@ -94,12 +96,8 @@ const expiringWithoutRequest = computed(() =>
 const expiredWithoutRequest = computed(() =>
     dashboard.value ? dashboard.value.itemsNeedingRenewal.length - expiringWithoutRequest.value : 0)
 
-// share of the items (without cancelled ones) that do not need anything
-const coverage = computed(() => {
-    if (!dashboard.value) return 0
-    const counted = dashboard.value.totalItems - dashboard.value.cancelledItems
-    return percent(counted - dashboard.value.itemsNeedingRenewal.length, counted)
-})
+// open requests where someone else has to act    
+const waitingForOthers = computed(() => dashboard.value ? dashboard.value.myOpenRequests.filter((r) => r.status === 'PendingFinancialReview' || r.status === 'PendingManagerApproval') : [])
 </script>
 <template>
     <p v-if="loading">Loading...</p>
@@ -107,7 +105,6 @@ const coverage = computed(() => {
 
     <div v-else-if="dashboard" class="employee-home">
         <header class="greeting">
-            <h2>Hello, {{ auth.user?.firstName }}</h2>
             <p class="summary">
                 <template v-if="todos.length === 0">Nothing needs you right now</template>
                 <template v-else>You have <strong>{{ todos.length }}</strong> {{ todos.length === 1 ? 'thing' : 'things' }} to do.</template>
@@ -128,9 +125,49 @@ const coverage = computed(() => {
                         <RouterLink :to="todo.link" class="todo-button">{{ todo.button }}</RouterLink>
                     </div>
                 </section>
+
+                <section class="box waiting">
+                    <h3>Waiting for others</h3>
+                    <p v-if="waitingForOthers.length === 0" class="empty">None of your requests are waiting.</p>
+
+                    <RouterLink v-for="request in waitingForOthers" :key="request.id" :to="`/requests/${request.id}`" class="waiting-row">
+                        <strong>{{ request.itemName }}</strong>
+                        <span class="state" :class="request.status">{{ formatLabel(request.status) }}</span>
+                    </RouterLink>
+                </section>
+                
+                <section class="box">
+                    <h3>When do my items expire</h3>
+                    <BarChart 
+                        :labels="dashboard.itemsByTimeLeft.map((group) => group.label)"
+                        :values="dashboard.itemsByTimeLeft.map((group) => group.value)"
+                        :aspect-ratio="3"/>
+                </section>
             </div>
 
             <aside class="side-column">
+                <RouterLink to="/items?state=ExpiringSoon" class="stat-card" id="expiring-soon">
+                    <span class="stat-label" >Expiring soon</span>
+                    <strong class="stat-value">{{ dashboard.expiringSoonItems }}</strong>
+                </RouterLink>
+
+                <RouterLink to="/items?state=Expired" class="stat-card" id="expired">
+                    <span class="stat-label">Expired</span>
+                    <strong class="stat-value">{{ dashboard.expiredItems }}</strong>
+                </RouterLink>
+
+                <RouterLink to="/items?state=Active" class="stat-card" id="active">
+                    <span class="stat-label" >Active</span>
+                    <strong class="stat-value">{{ dashboard.activeItems }}</strong>
+                </RouterLink>
+
+                <div class="stat-card coverage">
+                    <span class="stat-label">Your items</span>
+                    <div class="donut">
+                        <StateChart :values="[dashboard.activeItems, dashboard.expiringSoonItems, dashboard.expiredItems, dashboard.cancelledItems]" 
+                                :aspect-ratio="1" legend-position="bottom"/>
+                    </div>
+                </div>
             </aside>
         </div>
     </div>
@@ -147,7 +184,7 @@ const coverage = computed(() => {
 /* main column on the left, cards on the right */
 .home-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
     gap: 20px;
     align-items: start;
 }
@@ -155,6 +192,7 @@ const coverage = computed(() => {
 .box {
     padding: 16px 20px;
     border: 1px solid var(--border);
+    background-color: #f7f7f7;
 }
 
 .box h3 {
@@ -207,9 +245,115 @@ const coverage = computed(() => {
     font-size: 1.5em;
 }
 
-@media (max-width: 900px) {
+.side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.stat-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    color: inherit;
+    text-decoration: none;
+    background-color: rgb(233, 233, 245);
+}
+
+.stat-card:hover {
+    opacity: 0.9;
+}
+
+.stat-label {
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 1.6em;
+    text-align: right;
+}
+
+.main-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.waiting-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    text-decoration: none;
+}
+
+.waiting-row:last-child {
+    border-bottom: none;
+}
+
+.coverage {
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+#expiring-soon {
+    background-color: #3e81ec;
+}
+
+#active {
+    background-color: #618fd8; 
+}
+
+#expired {
+    background-color: #94bcfa;
+}
+
+.donut {
+    width: 100%;
+    max-width: 260px;
+    margin: 0 auto;
+}
+
+@media (max-width: 1100px) {
     .home-grid {
         grid-template-columns: 1fr;
+    }
+
+    .side-column {
+        order: -1;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .coverage {
+        grid-column: 1 / -1;
+    }
+}
+
+
+@media (max-width: 600px) {
+    .stat-grid {
+        grid-template-columns: 1fr;
+        padding: 10px 12px;
+    }
+
+    .stat-label {
+        font-size: 0.85em;
+    }
+
+    .stat-value {
+        font-size: 1.3em;
+        text-align: left;
+    }
+
+    .todo-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding-left: 0;
     }
 }
 </style>

@@ -33,12 +33,16 @@ async function loadNotifications() {
 
 onMounted(loadNotifications)
 
+const showOnlyUnread = ref(false)
+const unreadCount = computed(() => notifications.value.filter((n) => !n.isRead).length)
+
 // only notifications whose message contains the search text
 const filteredNotifications = computed(() => {
     const text = search.value.trim().toLowerCase()
-    return notifications.value.filter(n => 
-        n.message.toLowerCase().includes(text)
-    )
+    return notifications.value.filter((n) =>  {
+        if (showOnlyUnread.value && n.isRead) return false
+        return n.message.toLowerCase().includes(text)
+    })
 })
 
 function dateAndTime(value: string): string[] {
@@ -58,6 +62,26 @@ async function markAsRead(id: number)  {
     }
 }
 
+// opening a notification also marks it as read
+function open(notification: Notification) {
+    if (!notification.isRead) markAsRead(notification.id)
+}
+
+// mark all notifications as read
+async function markAllAsRead() {
+    actionError.value = ''
+    const unread = notifications.value.filter((n) => !n.isRead)
+    for (const notification of unread) {
+        const response = await fetch(`/api/notifications/${notification.id}/read`, { method: 'PUT' })
+        if (!response.ok) {
+            actionError.value = `Could not mark notifications as read (error ${response.status}).`
+            break
+        }
+    }
+    await loadNotifications()
+    notificationsStore.loadUnreadCount()
+}
+
 </script>
 <template>
     <div class="inbox">
@@ -65,11 +89,18 @@ async function markAsRead(id: number)  {
             <h2>Notifications</h2>
             <input v-model="search" type="search" class="inbox-search" placeholder="Search notifications" />
         </div>
+        <div class="inbox-tools">
+            <div class="tabs">
+                <button type="button" :class="{active: !showOnlyUnread}" @click="showOnlyUnread = false">All</button>
+                <button type="button" :class="{active: showOnlyUnread}" @click="showOnlyUnread = true">Unread ({{ unreadCount }})</button>
+            </div> 
+            <button v-if="unreadCount > 0" type="button" class="outline-button" @click="markAllAsRead">Mark all as read</button>
+        </div>
         <p v-if="actionError" class="error inbox-message">{{ actionError }}</p>
             <p v-if="loading" class="inbox-message">Loading...</p>
             <p v-else-if="errorMessage" class="inbox-message"> {{ errorMessage }}</p>
             <p v-else-if="notifications.length===0" class="inbox-message">No notifications.</p> 
-            <p v-else-if="filteredNotifications.length===0" class="inbox-message">No notifications match "{{ search }}".</p> 
+            <p v-else-if="filteredNotifications.length===0" class="inbox-message">{{ showOnlyUnread ? 'You have no unread notifications.' : `No notifications match "${search}".` }}</p> 
             <table v-else>
                 <thead>
                     <tr>
@@ -144,6 +175,29 @@ async function markAsRead(id: number)  {
     padding: 24px;
     margin: 0;
     color: #6b7280;
+}
+
+.inbox-tools {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px 12px;
+}
+
+.tabs {
+    display: flex;
+    gap: 4px;
+}
+
+.tabs button {
+    padding: 5px 15px;
+    background: transparent;
+    color: var(--text);
+}
+
+.tabs button.active {
+    background: var(--primary);
+    color: white;    
 }
 
 table {

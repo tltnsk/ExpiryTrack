@@ -120,6 +120,21 @@ describe('NotificationsView', () => {
 
         expect(fetchMock).toHaveBeenCalledWith('/api/notifications/1/read', { method: 'PUT' })
     })
+
+    it('marks all unread notification as read', async () => {
+        const fetchMock = mockFetch({
+            '/api/notifications': ok(notifications), 
+            'PUT /api/notificatios/1/read': ok(),
+            '/api/notifications/unread-count': ok(0),
+        })
+
+        const { wrapper } = await mountView(NotificationsView, '/notifications', makeUser('Employee'))
+
+        await wrapper.find('.inbox-tools .outline-button').trigger('click')
+        await flushPromises()
+
+        expect(fetchMock).toHaveBeenCalledWith('/api/notifications/1/read', { method: 'PUT' })
+    })
 })
 
 describe('ReportsView', () => {

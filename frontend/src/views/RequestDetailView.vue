@@ -306,8 +306,6 @@ function formatTime(value: string) {
 </script>
 
 <template>
-    <RouterLink to="/requests" class="back-link">Back to Renewal Requests</RouterLink>
-
     <p v-if="loading">Loading...</p>
 
     <p v-else-if="errorMessage" class="error"> {{  errorMessage }}</p>

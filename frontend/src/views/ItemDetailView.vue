@@ -241,10 +241,6 @@ const activeTab = ref('requests')
 </script>
 
 <template>
-  <div class="page-links">
-      <RouterLink to="/items" class="back-link">Back to Items</RouterLink>
-  </div>
-
     <p v-if="loading">Loading...</p>
 
     <p v-else-if="errorMessage" class="error"> {{  errorMessage }}</p>

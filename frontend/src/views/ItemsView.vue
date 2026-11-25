@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { formatDate, formatLabel, formatMoney} from '@/utils/format'
 import { useRoute } from 'vue-router'
+import { useSort } from '@/utils/sort'
 
 // ItemResponse
 interface Item {
@@ -69,6 +70,9 @@ const filteredItems = computed(() => {
   })
 })
 
+// sort the filtered items; at the start the soonest expiration is first
+const { sorted, sortBy, arrow, sortKey, ascending } = useSort(filteredItems, 'expirationDate')
+
 function resetFilters() {
   search.value = ''
   stateFilter.value = ''
@@ -87,11 +91,11 @@ const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.leng
 // show only the itemsof the current page
 const pageItems = computed(() => {
   const start = (page.value - 1) * pageSize
-  return filteredItems.value.slice(start, start + pageSize)
+  return sorted.value.slice(start, start + pageSize)
 })
 
 // go back to the first page when a filter changes
-watch([search, stateFilter, categoryFilter, responsibleFilter, expiresFrom, expiresTo], () => {
+watch([search, stateFilter, categoryFilter, responsibleFilter, expiresFrom, expiresTo, sortKey, ascending], () => {
   page.value = 1
 })
 </script>
@@ -136,13 +140,13 @@ watch([search, stateFilter, categoryFilter, responsibleFilter, expiresFrom, expi
           <table>
             <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Category</th>
-                  <th>Responsible Employee</th>
-                  <th>Expires</th>
-                  <th>Provider</th>
-                  <th>Cost</th>
-                  <th>State</th>
+                    <th class="sortable" @click="sortBy('name')">Name {{ arrow('name') }}</th>
+                    <th class="sortable" @click="sortBy('categoryName')">Category {{ arrow('categoryName') }}</th>
+                    <th class="sortable" @click="sortBy('responsibleUserName')">Responsible Employee {{ arrow('responsibleUserName') }}</th>
+                    <th class="sortable" @click="sortBy('expirationDate')">Expires {{ arrow('expirationDate') }}</th>
+                    <th class="sortable" @click="sortBy('provider')">Provider {{ arrow('provider') }}</th>
+                    <th class="sortable" @click="sortBy('cost')">Cost {{ arrow('cost') }}</th>
+                    <th class="sortable" @click="sortBy('lifecycleState')">State {{ arrow('lifecycleState') }}</th>
                 </tr>
             </thead>
             <tbody>

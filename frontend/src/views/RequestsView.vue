@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { formatDate, formatDateTime, formatLabel, formatMoney} from '@/utils/format'
+import { useSort } from '@/utils/sort'
 
 interface RenewalRequest {
     id: number
@@ -24,6 +25,8 @@ onMounted(async() => {
     }
     loading.value = false
 })
+
+const { sorted, sortBy, arrow } = useSort(requests, 'submittedAt', false)
 </script>
 
 <template>
@@ -39,15 +42,15 @@ onMounted(async() => {
         <table>
             <thead>
                 <tr>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Proposed Expiration Date</th>
-                <th>Proposed Cost</th>
-                <th>Submitted At</th>
+                  <th class="sortable" @click="sortBy('itemName')">Name {{ arrow('itemName') }}</th>
+                  <th class="sortable" @click="sortBy('status')">Status {{ arrow('status') }}</th>
+                  <th class="sortable" @click="sortBy('proposedExpirationDate')">Proposed Expiration Date {{ arrow('proposedExpirationDate') }}</th>
+                  <th class="sortable" @click="sortBy('proposedCost')">Proposed Cost {{ arrow('proposedCost') }}</th>
+                  <th class="sortable" @click="sortBy('submittedAt')">Submitted At {{ arrow('submittedAt') }}</th>
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="request in requests" :key="request.id">
+                <tr v-for="request in sorted" :key="request.id">
                     <td> <RouterLink :to="`/requests/${request.id}`" class="item-link">{{ request.itemName }}</RouterLink></td>
                     <td><span class="state" :class="request.status">{{ formatLabel(request.status) }}</span></td>
                     <td>{{formatDate(request.proposedExpirationDate )}}</td>

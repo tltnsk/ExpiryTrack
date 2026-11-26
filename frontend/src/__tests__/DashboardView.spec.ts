@@ -19,7 +19,7 @@ const request = {
 }
 
 describe('DashboardView', () => {
-    it('shows the admin 5 tiles, department totals, and upcoming expirations', async () => {
+    it('shows the admin the setup checklist', async () => {
         mockFetch({
             '/api/dashboard/admin': ok({
                 ...counts,
@@ -27,12 +27,18 @@ describe('DashboardView', () => {
                 upcomingExpirations: upcoming,
                 expirationsByMonth: months,
             }),
+            '/api/users': ok ([
+                {id: 1, role: 'Administrator', departmentName: null, isActive: true},
+                {id: 2, role: 'Employee', departmentName: 'IT', isActive: true}
+            ]),
+            '/api/departments': ok([{id: 3, name: 'IT', isActive: true, managerName: null}]),
+            '/api/categories': ok([{id: 1, isActive: true, requiresFinancialReview: false}])
         })
         const { wrapper } = await mountView(DashboardView, '/dashboard', makeUser('Administrator'))
-
-        expect(wrapper.findAll('.tile')).toHaveLength(5)
-        expect(wrapper.text()).toContain('Department totals')
-        expect(wrapper.find('.timeline-card').attributes('href')).toBe('/items/4')
+        expect(wrapper.text()).toContain('IT has no manager')
+        expect(wrapper.find('.checklist a[href="/departments/3/edit"]').exists()).toBe(true)
+        expect(wrapper.text()).toContain('There is no active finance officer')
+        expect(wrapper.text()).toContain('Every department has at least one employee')
     })
 
     it('shows the manager the requests to review', async () => {

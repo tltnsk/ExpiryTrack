@@ -76,21 +76,21 @@ describe('DashboardView', () => {
         expect(wrapper.find('a[href="/items/4/renew"]').exists()).toBe(true)
     })
 
-    it('shows the finance officer 4 money tiles', async () => {
+    it('shows the finance officer the money cards, waiting days and total', async () => {
         mockFetch({
             '/api/dashboard/finance': ok({
                 activeItems: 5, expiringSoonItems: 3, expiredItems: 1, cancelledItems: 1,
                 requestsToReviewCount: 1, totalCostWaitingForReview: 320, expectedUpcomingCosts: 900, approvedCost: 100,
                 requestsNeedingFinancialReview: [request],
                 expirationsByMonth: months,
-                costsByDepartment: [],
+                costsByDepartment: [{label: 'IT', value: 300}, {label: 'HR', value: 100}],
             }),
         })
         const { wrapper } = await mountView(DashboardView, '/dashboard', makeUser('FinanceOfficer'))
 
-        expect(wrapper.findAll('.tile')).toHaveLength(4)
-        expect(wrapper.text()).toContain('$320.00')
-        expect(wrapper.find('aside').exists()).toBe(false)
+        expect(wrapper.findAll('.stat-card')).toHaveLength(4)
+        expect(wrapper.find('.total-row').text()).toContain('$320.00')
+        expect(wrapper.find('.late').exists()).toBe(true)
     })
 
     it('shows an error when the dashboard cannot be loaded', async () => {

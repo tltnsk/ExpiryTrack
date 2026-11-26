@@ -212,7 +212,8 @@ const totalDepartmentCost = computed(() => {
 }
 
 @media (max-width: 1100px) {
-    .home-grid {
+    .home-grid,
+    .charts {
         grid-template-columns: 1fr;
     }
 
@@ -220,6 +221,4 @@ const totalDepartmentCost = computed(() => {
         order: -1;
     }
 }
-
-
 </style>

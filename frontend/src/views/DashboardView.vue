@@ -8,6 +8,7 @@ import BarChart from '@/components/BarChart.vue'
 import StateChart from '@/components/StateChart.vue'
 import EmployeeHome from '@/components/dashboards/EmployeeHome.vue'
 import ManagerHome from '@/components/dashboards/ManagerHome.vue'
+import AdminHome from '@/components/dashboards/AdminHome.vue'
 
 const auth = useAuthStore()
 
@@ -27,14 +28,6 @@ const upcoming = computed(() =>
 (adminDashboard.value ?? managerDashboard.value ?? employeeDashboard.value)?.upcomingExpirations ?? [])
 
 onMounted(async () => {
-    if (auth.user?.role === 'Administrator') {
-        const response = await fetch('/api/dashboard/admin')
-        if (response.ok) {
-            adminDashboard.value = await response.json()
-        } else {
-            errorMessage.value = 'Could not load the dashboard.'
-        }
-    }
     if (auth.user?.role === 'FinanceOfficer') {
         const response = await fetch('/api/dashboard/finance')
         if (response.ok) {
@@ -46,11 +39,11 @@ onMounted(async () => {
     loading.value = false
 })
 
-
 </script>
 <template>
     <EmployeeHome v-if="auth.user?.role === 'Employee'" />
     <ManagerHome v-else-if="auth.user?.role === 'DepartmentManager'" />
+    <AdminHome v-else-if="auth.user?.role === 'Administrator'" />
     <template v-else>
     <p v-if="loading">Loading...</p>
     <p v-else-if="errorMessage" class="error"> {{ errorMessage }}</p>
@@ -103,35 +96,6 @@ onMounted(async () => {
             </div>
         </section>
         </div>
-
-    <aside v-if="!financeDashboard" class="side">
-        <section>
-            <h3>Upcoming expirations</h3>
-            <p v-if="upcoming.length === 0" class="empty">No items are expiring soon.</p>
-            <ul v-else class="timeline">
-                <li v-for="item in upcoming" :key="item.id">
-                    <span class="timeline-date">{{ formatDate(item.expirationDate) }}</span>
-                    <RouterLink :to="`/items/${item.id}`" class="timeline-card">
-                        <strong>{{ item.name }}</strong>
-                    </RouterLink>
-                </li>
-            </ul>
-            <RouterLink to="/items" class="all-button">View all items</RouterLink>
-        </section>
-
-        <section v-if="adminDashboard" class="table-section">
-            <h3>Department totals</h3>
-            <div v-for="row in adminDashboard.itemsByDepartment" :key="row.departmentName" class="list-row">
-                <span class="row-text">
-                    <strong>{{ row.departmentName }}</strong>
-                    <span class="share">
-                        <span class="share-bar" :style="{ width: percent(row.itemCount, adminDashboard.totalItems) + '%' }"></span>
-                    </span>
-                </span>
-                <span class="row-count">{{ row.itemCount }}</span>
-            </div>
-        </section>
-    </aside>
     </div>
 </template>
 </template>

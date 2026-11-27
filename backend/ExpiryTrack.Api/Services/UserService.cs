@@ -28,6 +28,9 @@ public class UserService
         var departmentError = await CheckDepartment(role.Name, request.DepartmentId);
         if (departmentError != null) return new UserResult { Error = departmentError };
 
+        if (role.Name == "DepartmentManager" && await DepartmentHasManager(request.DepartmentId!.Value))
+            return new UserResult { Conflict = "This department already has a department manager." };
+
         var user = new User
         {
             FirstName = request.FirstName.Trim(),
@@ -73,6 +76,10 @@ public class UserService
         var user = await LoadUser(id);
         if (user == null)
             return new UserResult { NotFound = true };
+
+        // reactivating an old manager must not give the department a second one
+        if (request.IsActive && !user.IsActive && user.Role.Name == "DepartmentManager" && await DepartmentHasManager(user.DepartmentId!.Value))
+            return new UserResult { Conflict = "This department already has an active department manager." };
 
         if (!request.IsActive)
         {
@@ -146,5 +153,11 @@ public class UserService
             return "The department does not exist or is inactive.";
 
         return null;
+    }
+
+    // a department can have only one active user
+    private async Task<bool> DepartmentHasManager(int departmentId)
+    {
+        return await _db.Users.AnyAsync(u => u.DepartmentId == departmentId && u.Role.Name == "DepartmentManager" && u.IsActive);
     }
 }

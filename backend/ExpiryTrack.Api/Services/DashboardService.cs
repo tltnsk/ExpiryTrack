@@ -58,7 +58,7 @@ public class DashboardService
                                         && i.CurrentPeriod!.ExpirationDate >= today);
 
         int week = await upcoming.CountAsync(i => i.CurrentPeriod!.ExpirationDate <= in7);
-        int month = await upcoming.CountAsync(i => i.CurrentPeriod!.ExpirationDate >= in7 && i.CurrentPeriod!.ExpirationDate <= in30);
+        int month = await upcoming.CountAsync(i => i.CurrentPeriod!.ExpirationDate > in7 && i.CurrentPeriod!.ExpirationDate <= in30);
         int quarter = await upcoming.CountAsync(i => i.CurrentPeriod!.ExpirationDate > in30 && i.CurrentPeriod!.ExpirationDate <= in90);
         int later = await upcoming.CountAsync(i => i.CurrentPeriod!.ExpirationDate > in90);
 

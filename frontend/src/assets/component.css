@@ -266,6 +266,12 @@ dd {
   font-size: 14px;
 }
 
+.field-error {
+  margin: 4px 0 0;
+  color: var(--danger);
+  font-size: 0.85em;
+}
+
 @media (max-width: 900px) {
     .filters {
         grid-template-columns: 1fr;

@@ -8,10 +8,20 @@ const lastName = ref('')
 const email = ref('')
 const role = ref('')
 const password = ref('')
-const departmentId = ref<number | null>(null)
+const departmentId = ref<number | ''>('')
 
 const errorMessage = ref('')
 const saving = ref(false)
+
+const errors = ref<Record<string, string>>({})
+
+function onInvalid(event: Event) {
+    const input = event.target as HTMLInputElement
+    event.preventDefault() 
+    errors.value[input.name] = input.validity.valueMissing
+        ? 'This field is required.'
+        : input.validationMessage 
+}
 
 const roles = ['Administrator', 'Employee', 'DepartmentManager', 'FinanceOfficer']
 
@@ -48,7 +58,7 @@ async function createUser() {
             lastName: lastName.value,
             email: email.value,
             role: role.value,
-            departmentId: departmentId.value,
+            departmentId: departmentId.value === '' ? null : departmentId.value, 
             password: password.value,
         }),
     })
@@ -79,52 +89,58 @@ async function createUser() {
 <template>
   <h2>New user</h2>
 
-  <form @submit.prevent="createUser">
+  <form @submit.prevent="createUser" @invalid.capture="onInvalid" @input="errors = {}">
     <div>
       <label>
         First Name <span class="required">*</span>
-        <input v-model="firstName" required maxlength="100" />
+        <input v-model="firstName" name="firstName" required maxlength="100" />
       </label>
+      <p v-if="errors.firstName" class="field-error">{{ errors.firstName }}</p>
     </div>
     <div>
       <label>
         Last Name <span class="required">*</span>
-        <input v-model="lastName" required maxlength="100" />
+        <input v-model="lastName" name="lastName" required maxlength="100" />
       </label>
+      <p v-if="errors.lastName" class="field-error">{{ errors.lastName }}</p>
     </div>
     <div>
       <label>
         Email <span class="required">*</span>
-        <input v-model="email" type="email" required/>
+        <input v-model="email" name="email" type="email" required/>
       </label>
+      <p v-if="errors.email" class="field-error">{{ errors.email }}</p>
     </div>
     <div>
       <label>
         Password <span class="required">*</span>
-        <input v-model="password" type="password" minlength="8" required/>
+        <input v-model="password" name="password" type="password" minlength="8" required/>
       </label>
+      <p v-if="errors.password" class="field-error">{{ errors.password }}</p>
     </div>
     <div>
         <label>
           Role <span class="required">*</span>
-          <select v-model="role" required>
+          <select v-model="role" name="role" required>
             <option :value="''" >Choose a role</option>
             <option v-for="role in roles" :key="role" :value="role">
               {{  role }}
             </option>
           </select>
         </label>
+        <p v-if="errors.role" class="field-error">{{ errors.role }}</p>
     </div>
     <div>
         <label>
           Department <span v-if="role === 'Employee' || role === 'DepartmentManager'" class="required">*</span>
-          <select v-model="departmentId">
-            <option :value="null">No department</option>
+          <select v-model="departmentId" name="departmentId" :required="role === 'Employee' || role === 'DepartmentManager'">
+            <option value="">No department</option>
             <option v-for="department in departments" :key="department.id" :value="department.id">
               {{ department.name}}
             </option>
           </select>
         </label>
+        <p v-if="errors.departmentId" class="field-error">{{ errors.departmentId }}</p>
         <p v-if="departments.length === 0">
           No active departments yet.
         </p>

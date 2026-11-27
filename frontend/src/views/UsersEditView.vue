@@ -22,6 +22,17 @@ const errorMessage = ref('')
 const saveError = ref('')
 const saving = ref(false)
 
+const errors = ref<Record<string, string>>({})
+
+function onInvalid(event: Event) {
+    const input = event.target as HTMLInputElement
+    event.preventDefault() 
+    errors.value[input.name] = input.validity.valueMissing
+        ? 'This field is required.'
+        : input.validationMessage 
+}
+
+
 const firstName = ref('')
 const lastName = ref('')
 const email = ref('')
@@ -86,24 +97,27 @@ async function editUser() {
   <div v-else-if="user">
     <h2>Edit user</h2>
 
-    <form @submit.prevent="editUser">
+    <form @submit.prevent="editUser" @invalid.capture="onInvalid" @input="errors = {}">
          <div>
       <label>
         First Name <span class="required">*</span>
-        <input v-model="firstName" required maxlength="100" />
+        <input v-model="firstName" name="firstName" required maxlength="100" />
       </label>
+      <p v-if="errors.firstName" class="field-error">{{ errors.firstName }}</p>
     </div>
     <div>
       <label>
         Last Name <span class="required">*</span>
-        <input v-model="lastName" required maxlength="100" />
+        <input v-model="lastName" name="lastName" required maxlength="100" />
       </label>
+      <p v-if="errors.lastName" class="field-error">{{ errors.lastName }}</p>
     </div>
     <div>
       <label>
         Email <span class="required">*</span>
-        <input v-model="email" type="email" required/>
+        <input v-model="email" name="email" type="email" required/>
       </label>
+      <p v-if="errors.email" class="field-error">{{ errors.email }}</p>
     </div>
     <div>
         <label>

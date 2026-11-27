@@ -22,6 +22,17 @@ const errorMessage = ref('')
 const saveError = ref('')
 const saving = ref(false)
 
+const errors = ref<Record<string,string>>({})
+
+function onInvalid(event: Event) {
+  const input = event.target as HTMLInputElement
+  event.preventDefault() 
+  errors.value[input.name] = input.validity.valueMissing
+      ? 'This field is required.'
+      : input.validationMessage
+}
+
+
 const name = ref('')
 const description = ref('')
 const warningPeriodDays = ref('30')
@@ -92,12 +103,13 @@ async function editCategory() {
   <p v-if="loading">Loading...</p>
   <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>
   <div v-else-if="category">
-        <form @submit.prevent="editCategory">
+        <form @submit.prevent="editCategory" @invalid.capture="onInvalid" @input="errors = {}">
     <div>
       <label>
         Name <span class="required">*</span>
-        <input v-model="name" required maxlength="100" />
+        <input v-model="name" name="name" required maxlength="100" />
       </label>
+       <p v-if="errors.name" class="field-error">{{ errors.name }}</p>
     </div>
     <div>
       <label>
@@ -108,8 +120,9 @@ async function editCategory() {
     <div>
       <label>
         Warning Period (days) <span class="required">*</span>
-        <input v-model="warningPeriodDays" type="number" min="1" max="365" required/>
+        <input v-model="warningPeriodDays" name="warningPeriodDays" type="number" min="1" max="365" required/>
       </label>
+       <p v-if="errors.warningPeriodDays" class="field-error">{{ errors.warningPeriodDays }}</p>
     </div>
     <div>
       <label>
@@ -120,8 +133,9 @@ async function editCategory() {
     <div v-if="requiresFinancialReview">
       <label>
         Finance Review Threshold
-        <input v-model="financeReviewThreshold" type="number" min="0" step="0.01"/>
+        <input v-model="financeReviewThreshold" name="financeReviewThreshold" type="number" min="0" step="0.01"/>
       </label>
+       <p v-if="errors.financeReviewThreshold" class="field-error">{{ errors.financeReviewThreshold }}</p>
     </div>
     <div>
       <label>

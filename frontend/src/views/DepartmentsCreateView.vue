@@ -11,6 +11,17 @@ const isActive = ref(true)
 const errorMessage = ref('')
 const saving = ref(false)
 
+
+const errors = ref<Record<string,string>>({})
+
+function onInvalid(event: Event) {
+  const input = event.target as HTMLInputElement
+  event.preventDefault() 
+  errors.value[input.name] = input.validity.valueMissing
+      ? 'This field is required.'
+      : input.validationMessage
+}
+
 async function createDepartment() {
     errorMessage.value = ''
     saving.value = true
@@ -50,12 +61,13 @@ async function createDepartment() {
 <template>
   <h2>New department</h2>
 
-  <form @submit.prevent="createDepartment">
+  <form @submit.prevent="createDepartment" @invalid.capture="onInvalid" @input="errors = {}">
     <div>
       <label>
         Name <span class="required">*</span>
-        <input v-model="name" required maxlength="100" />
+        <input v-model="name" name="name" required maxlength="100" />
       </label>
+      <p v-if="errors.name" class="field-error">{{ errors.name }}</p>
     </div>
     <div>
       <label>

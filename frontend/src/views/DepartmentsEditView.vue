@@ -30,6 +30,16 @@ const errorMessage = ref('')
 const saveError = ref('')
 const saving = ref(false)
 
+const errors = ref<Record<string,string>>({})
+
+function onInvalid(event: Event) {
+  const input = event.target as HTMLInputElement
+  event.preventDefault() 
+  errors.value[input.name] = input.validity.valueMissing
+      ? 'This field is required.'
+      : input.validationMessage
+}
+
 const name = ref('')
 const isActive = ref(true)
 
@@ -128,12 +138,13 @@ async function editDepartment() {
   <p v-if="loading">Loading...</p>
   <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>
   <div v-else-if="department">
-    <form @submit.prevent="editDepartment">
+    <form @submit.prevent="editDepartment" @invalid.capture="onInvalid" @input="errors = {}">
         <div>
         <label>
             Name <span class="required">*</span>
-            <input v-model="name" required maxlength="100" />
+            <input v-model="name" name="name" required maxlength="100" />
         </label>
+        <p v-if="errors.name" class="field-error">{{ errors.name }}</p>
         </div>
         <div>
         <label>

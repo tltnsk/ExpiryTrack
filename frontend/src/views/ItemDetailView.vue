@@ -79,6 +79,17 @@ const errorMessage = ref('')
 const cancelError = ref('')
 const reassignError = ref('')
 
+
+const errors = ref<Record<string, string>>({})
+
+function onInvalid(event: Event) {
+    const input = event.target as HTMLInputElement
+    event.preventDefault() 
+    errors.value[input.name] = input.validity.valueMissing
+        ? 'This field is required.'
+        : input.validationMessage
+}
+
 const employees = ref<User[]>([])
 const responsibleUserId = ref<number | null>(null)
 
@@ -310,15 +321,16 @@ const activeTab = ref('requests')
               <span class="state" :class="openRequest.status">{{ formatLabel(openRequest.status) }}</span>
             </div>
           </RouterLink>
-          <form v-if="canReassign" class="action-panel" @submit.prevent="reassignEmployee">
+          <form v-if="canReassign" class="action-panel" @submit.prevent="reassignEmployee" @invalid.capture="onInvalid" @change="errors = {}">
               <h3>Reassign</h3>
-                <select v-model="responsibleUserId" required>
+                <select v-model="responsibleUserId" name="responsibleUserId" required>
                     <option :value="null" disabled>Select a responsible employee</option>
                     <option v-if="employees.length===0" :value="null" disabled>No active employees in your department.</option>
                     <option v-for="employee in employees" :key="employee.id" :value="employee.id">
                       {{ employee.firstName }} {{  employee.lastName }}
                     </option>
                 </select>
+                <p v-if="errors.responsibleUserId" class="field-error">{{ errors.responsibleUserId }}</p>
                 <button type="submit">Reassign</button>
                 <p v-if="reassignError" class="error">{{ reassignError }}</p>
           </form>

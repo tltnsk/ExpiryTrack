@@ -23,6 +23,15 @@ const saving = ref(false)
 const saveError = ref('')
 const loading = ref(true)
 
+const errors = ref<Record<string, string>>({})
+
+function onInvalid(event: Event) {
+    const input = event.target as HTMLInputElement
+    event.preventDefault()
+    errors.value[input.name] = input.validity.valueMissing
+        ? 'This field is required.'
+        : input.validationMessage 
+}
 
 const selectedFile = ref<File | null>(null)
 
@@ -121,24 +130,27 @@ async function submitRequest() {
     <h2>Submit Renewal Request</h2>
     <p>Renewal for {{ item.name }}, currently valid until {{ formatDate(item.expirationDate) }}</p>
 
-    <form @submit.prevent="submitRequest">
+    <form @submit.prevent="submitRequest" @invalid.capture="onInvalid" @input="errors = {}">
     <div>
       <label>
           Proposed Expiration Date <span class="required">*</span>
-          <input v-model="proposedExpirationDate" required type="date" :min="item.expirationDate"/>
+          <input v-model="proposedExpirationDate" name="proposedExpirationDate" required type="date" :min="item.expirationDate"/>
       </label>
+      <p v-if="errors.proposedExpirationDate" class="field-error">{{ errors.proposedExpirationDate }}</p>
     </div>
     <div>
       <label>
           Proposed Cost (required if the category needs financial review)
-          <input v-model="proposedCost" type="number" step="0.01" min="0.01"/>
+          <input v-model="proposedCost" name="proposedCost" type="number" step="0.01" min="0.01"/>
       </label>
+      <p v-if="errors.proposedCost" class="field-error">{{ errors.proposedCost }}</p>
     </div>
     <div>
       <label>
         Justification <span class="required">*</span>
-          <textarea v-model="justification" required  />
+          <textarea v-model="justification" name="justification" required  />
       </label>
+      <p v-if="errors.justification" class="field-error">{{ errors.justification }}</p>
     </div>
     <div>
       <label>

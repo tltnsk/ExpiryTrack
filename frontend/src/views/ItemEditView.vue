@@ -29,6 +29,16 @@ const errorMessage = ref('')
 const saveError = ref('')
 const saving = ref(false)
 
+const errors = ref<Record<string, string>>({})
+
+function onInvalid(event: Event) {
+    const input = event.target as HTMLInputElement
+    event.preventDefault()
+    errors.value[input.name] = input.validity.valueMissing
+        ? 'This field is required.'
+        : input.validationMessage
+}
+
 // only these descriptive fields can be edited
 const name = ref('')
 const description = ref('')
@@ -96,12 +106,13 @@ async function editItem() {
     <div v-else-if="item">
     <h2>Edit item</h2>
 
-    <form @submit.prevent="editItem">
+    <form @submit.prevent="editItem" @invalid.capture="onInvalid" @input="errors = {}">
       <div>
       <label>
         Name <span class="required">*</span>
-        <input v-model="name" required maxlength="150" />
+        <input v-model="name" name="name" required maxlength="150" />
       </label>
+      <p v-if="errors.name" class="field-error">{{ errors.name }}</p>
        </div>
         <div>
       <label>

@@ -77,6 +77,16 @@ const employeeCompleteSaving = ref(false)
 const employeeCompleteError = ref('')
 
 
+const errors = ref<Record<string, string>>({})
+
+function onInvalid(event: Event) {
+    const input = event.target as HTMLInputElement
+    event.preventDefault() 
+    errors.value[input.name] = input.validity.valueMissing
+        ? 'This field is required.'
+        : input.validationMessage
+}
+
 const documents = ref<RequestDocument[]>([])
 
 async function loadRequest() {
@@ -347,20 +357,22 @@ function formatTime(value: string) {
         </article>
 
         <aside class="side">
-            <form v-if="canFinanceReview" @submit.prevent="financeRecommendation" class="action-panel">
+            <form v-if="canFinanceReview" @submit.prevent="financeRecommendation" @invalid.capture="onInvalid" @input="errors = {}" class="action-panel">
                 <h3>Financial review</h3>
                 <label>
                 Recommendation
-                    <select v-model="recommendation" required>
+                    <select v-model="recommendation" name="recommendation" required>
                         <option value="" disabled>Select a recommendation for the manager</option>
                         <option>Approve</option>
                         <option>Reject</option>
                     </select>
                  </label>
+                 <p v-if="errors.recommendation" class="field-error">{{ errors.recommendation }}</p>
             <label>
                 Comment
-                <textarea v-model="comment" rows="4" required></textarea>
+                <textarea v-model="comment" name="comment" rows="4" required></textarea>
             </label>
+            <p v-if="errors.comment" class="field-error">{{ errors.comment }}</p>
                 <button type="submit" :disabled="financeSaving">{{ financeSaving ? 'Sending...' : 'Send recommendation' }}</button>
             <p v-if="financeError" class="error">{{ financeError }}</p>
             </form>
@@ -381,12 +393,13 @@ function formatTime(value: string) {
                 <p v-if="managerError" class="error">{{ managerError }}</p>
             </div>
 
-            <form @submit.prevent="provideClarification" v-if="canAnswerClarification" class="action-panel">
+            <form @submit.prevent="provideClarification" @invalid.capture="onInvalid" @input="errors = {}" v-if="canAnswerClarification" class="action-panel">
                 <h3>Your answer</h3>
                 <p v-if="clarificationQuestion" class="question">"{{ clarificationQuestion }}"</p>
                 <label> Answer
-                    <textarea v-model="employeeComment" rows="4" required></textarea>
+                    <textarea v-model="employeeComment" name="employeeComment" rows="4" required></textarea>
                 </label>
+                <p v-if="errors.employeeComment" class="field-error">{{ errors.employeeComment }}</p>
                 <button type="submit" :disabled="employeeSaving">{{ employeeSaving ? 'Sending...' : 'Send answer' }}</button>
                 <p v-if="employeeError" class="error">{{ employeeError }}</p>
             </form>

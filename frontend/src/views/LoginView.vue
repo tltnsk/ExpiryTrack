@@ -10,6 +10,16 @@ const password = ref('')
 const errorMessage = ref('')
 const loggingIn = ref(false)
 
+const errors = ref<Record<string, string>>({})
+
+function onInvalid(event: Event) {
+    const input = event.target as HTMLInputElement
+    event.preventDefault()
+    errors.value[input.name] = input.validity.valueMissing
+        ? 'This field is required.'
+        : input.validationMessage 
+}
+
 async function login() {
   errorMessage.value = ''
   loggingIn.value = true
@@ -46,10 +56,12 @@ async function login() {
         <h1>Track your company items, expiration dates, renewal requests and renewal workflow all in one place.</h1>
     </div>
     <div class="login-right">
-      <form class="login-card" @submit.prevent="login">
+      <form class="login-card" @submit.prevent="login" @invalid.capture="onInvalid" @input="errors = {}">
         <h1>ExpiryTrack</h1>
-        <label>Email <input v-model="email" type="email" required /></label>
-        <label>Password <input v-model="password" type="password" required /></label>
+        <label>Email <input v-model="email" name="email" type="email" required /></label>
+        <p v-if="errors.email" class="field-error">{{ errors.email }}</p>
+        <label>Password <input v-model="password" name="password" type="password" required /></label>
+        <p v-if="errors.password" class="field-error">{{ errors.password }}</p>
         <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
           <button type="submit" :disabled="loggingIn"> {{ loggingIn ? 'Logging in...' : 'Log in' }}</button>
         </form>

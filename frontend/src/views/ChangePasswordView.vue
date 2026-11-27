@@ -9,6 +9,16 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const saving = ref(false)
 
+const errors = ref<Record<string,string>>({})
+
+function onInvalid(event: Event) {
+  const input = event.target as HTMLInputElement
+  event.preventDefault() 
+  errors.value[input.name] = input.validity.valueMissing
+      ? 'This field is required.'
+      : input.validationMessage
+}
+
 async function changePassword() {
   errorMessage.value = ''
   successMessage.value = ''
@@ -54,15 +64,18 @@ async function changePassword() {
 
 <template>
     <h2>Change Password</h2>
-      <form @submit.prevent="changePassword">
+      <form @submit.prevent="changePassword" @invalid.capture="onInvalid" @input="errors = {}">
         <div>
-          <label>Current Password <span class="required">*</span> <input v-model="currentPassword" type="password" required /></label>
+          <label>Current Password <span class="required">*</span> <input v-model="currentPassword" name="currentPassword" type="password" required /></label>
+          <p v-if="errors.currentPassword" class="field-error">{{ errors.name }}</p>
         </div>
         <div>
-          <label>New Password <span class="required">*</span> <input v-model="newPassword" type="password" required minlength="8"/></label>
+          <label>New Password <span class="required">*</span> <input v-model="newPassword" name="newPassword"  type="password" required minlength="8"/></label>
+          <p v-if="errors.newPassword" class="field-error">{{ errors.newPassword }}</p>
         </div>
         <div>
-          <label>Confirm New Password <span class="required">*</span> <input v-model="confirmPassword" type="password" required minlength="8"/></label>
+          <label>Confirm New Password <span class="required">*</span> <input v-model="confirmPassword" name="confirmPassword"  type="password" required minlength="8"/></label>
+          <p v-if="errors.confirmPassword" class="field-error">{{ errors.confirmPassword }}</p>
         </div>
         <button type="submit" :disabled="saving">Change Password</button>
         <p v-if="errorMessage" class="error">{{ errorMessage }}</p>

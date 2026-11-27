@@ -21,17 +21,27 @@ const router = useRouter()
 
 const categories = ref<Category[]>([])
 const name = ref('')
-const categoryId = ref<number | null>(null)
+const categoryId = ref<number | ''>('')
 const description = ref('')
 const provider = ref('')
 const referenceNumber = ref('')
 const startDate = ref('')
 const expirationDate = ref('')
 const cost = ref('')
-const responsibleUserId = ref<number | null>(null)
+const responsibleUserId = ref<number | ''>('')
 
 const errorMessage = ref('')
 const saving = ref(false)
+
+const errors = ref<Record<string,string>>({})
+
+function onInvalid(event: Event) {
+  const input = event.target as HTMLInputElement
+  event.preventDefault() 
+  errors.value[input.name] = input.validity.valueMissing
+      ? 'This field is required.'
+      : input.validationMessage
+}
 
 const auth = useAuthStore()
 const employees = ref<User[]>([])
@@ -85,14 +95,14 @@ async function createItem() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name: name.value,
-      categoryId: categoryId.value,
+      categoryId: categoryId.value === '' ? null : categoryId.value,
       description: description.value || null,
       provider: provider.value || null,
       referenceNumber: referenceNumber.value || null,
       startDate: startDate.value,
       expirationDate: expirationDate.value,
       cost: cost.value === '' ? null : Number(cost.value),
-      responsibleUserId: responsibleUserId.value
+      responsibleUserId: responsibleUserId.value === '' ? null : responsibleUserId.value
     }),
   })
 
@@ -139,23 +149,25 @@ async function createItem() {
 <template>
     <h2>New item</h2>
 
-    <form @submit.prevent="createItem">
+    <form @submit.prevent="createItem" @invalid.capture="onInvalid" @input="errors = {}">
       <div>
       <label>
         Name <span class="required">*</span>
-        <input v-model="name" required maxlength="150" />
+        <input v-model="name" name="name" required maxlength="150" />
       </label>
+      <p v-if="errors.name" class="field-error">{{ errors.name }}</p>
        </div>
         <div>
             <label>
                 Category <span class="required">*</span>
-                <select v-model="categoryId" required>
-                    <option :value="null" disabled>Select a category</option>
+                <select v-model="categoryId" name="categoryId" required>
+                    <option value="" disabled>Select a category</option>
                     <option v-for="category in categories" :key="category.id" :value="category.id">
                         {{ category.name }}
                     </option>
                 </select>
             </label>
+            <p v-if="errors.categoryId" class="field-error">{{ errors.categoryId }}</p>
         </div>
         <div>
       <label>
@@ -178,33 +190,37 @@ async function createItem() {
     <div>
       <label>
         Start date <span class="required">*</span>
-        <input v-model="startDate" type="date" required />
+        <input v-model="startDate" name="startDate" type="date" required />
       </label>
+      <p v-if="errors.startDate" class="field-error">{{ errors.startDate }}</p>
     </div>
     <div>
       <label>
         Expiration date <span class="required">*</span>
-        <input v-model="expirationDate" type="date" required />
+        <input v-model="expirationDate" name="expirationDate" type="date" required />
       </label>
+      <p v-if="errors.expirationDate" class="field-error">{{ errors.expirationDate }}</p>
     </div>
     <div>
       <label>
         Cost
-        <input v-model="cost" type="number" min="0.01" step="0.01" placeholder="Leave empty if free" />
+        <input v-model="cost" name="cost" type="number" min="0.01" step="0.01" placeholder="Leave empty if free" />
       </label>
+      <p v-if="errors.cost" class="field-error">{{ errors.cost }}</p>
     </div>
     <div v-if="auth.user?.role === 'DepartmentManager'">
       <label>
         Responsible Employee <span class="required">*</span>
-        <select v-model="responsibleUserId" required>
-          <option :value="null" disabled>Select a responsible user</option>
-          <option v-if="employees.length===0" :value="null" disabled>No active employees in your department.</option>
+        <select v-model="responsibleUserId" name="responsibleUserId" required>
+          <option value="" disabled>Select a responsible user</option>
+          <option v-if="employees.length===0" value="" disabled>No active employees in your department.</option>
           <option v-for="employee in employees" :key="employee.id" :value="employee.id">
             {{ employee.firstName }} {{  employee.lastName }}
           </option>
     
         </select>
       </label>
+      <p v-if="errors.responsibleUserId" class="field-error">{{ errors.responsibleUserId }}</p>
     </div>
     <div>
       <label>

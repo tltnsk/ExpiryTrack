@@ -88,7 +88,6 @@ async function editCategory() {
 </script>
 
 <template>
-  <RouterLink :to="`/categories`">Back to categories</RouterLink>
   <h2>Edit Category</h2>
   <p v-if="loading">Loading...</p>
   <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>

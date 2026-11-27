@@ -48,7 +48,6 @@ async function createDepartment() {
 
 </script>
 <template>
-<RouterLink to="/departments" class="back-link">Back to departments</RouterLink>
   <h2>New department</h2>
 
   <form @submit.prevent="createDepartment">

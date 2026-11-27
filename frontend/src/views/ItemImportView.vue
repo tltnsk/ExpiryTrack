@@ -60,8 +60,6 @@ async function importFile() {
 </script>
 
 <template>
-    <RouterLink to="/items" class="back-link">Back to items</RouterLink>
-
     <div class="import-card">
       <div class="import-header">
         <div>

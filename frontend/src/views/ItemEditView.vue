@@ -89,8 +89,6 @@ async function editItem() {
 </script>
 
 <template>
-    <RouterLink to="/items" class="back-link">Back to items</RouterLink>
-
     <p v-if="loading">Loading...</p>
 
     <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>

@@ -54,7 +54,6 @@ async function createCategory() {
 
 </script>
 <template>
-<RouterLink to="/categories">Back to categories</RouterLink>
   <h2>New category</h2>
 
   <form @submit.prevent="createCategory">

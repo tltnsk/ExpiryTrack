@@ -77,7 +77,6 @@ async function createUser() {
 
 </script>
 <template>
-<RouterLink to="/users" class="back-link">Back to users</RouterLink>
   <h2>New user</h2>
 
   <form @submit.prevent="createUser">

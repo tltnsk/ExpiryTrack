@@ -80,8 +80,6 @@ async function editUser() {
 </script>
 
 <template>
-  <RouterLink :to="'/users'" class="back-link">Back to users</RouterLink>
-
   <p v-if="loading">Loading...</p>
   <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>
 

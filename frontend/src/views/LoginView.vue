@@ -15,6 +15,8 @@ const errors = ref<Record<string, string>>({})
 function onInvalid(event: Event) {
     const input = event.target as HTMLInputElement
     event.preventDefault()
+    // a new attempt, so an old message from the server no longer applies
+    errorMessage.value = ''
     errors.value[input.name] = input.validity.valueMissing
         ? 'This field is required.'
         : input.validationMessage 

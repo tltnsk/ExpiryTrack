@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { checkPdf } from '@/utils/file'
 
 // CategoryResponse
 interface Category {
@@ -78,13 +79,11 @@ function onFileChange(event: Event) {
 async function createItem() {
   errorMessage.value = ''
 
+  // check the file first, so the item is not created with a file that the server would reject
   if (selectedFile.value) {
-    if (selectedFile.value.size > 10 * 1024 * 1024) {
-      errorMessage.value = 'File size should be no more than 10MB.'
-      return
-    }
-    if (selectedFile.value.type !== 'application/pdf') {
-      errorMessage.value = 'File type should be PDF.'
+    const fileError = await checkPdf(selectedFile.value)
+    if (fileError) {
+      errorMessage.value = fileError
       return 
     }
   }

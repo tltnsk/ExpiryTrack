@@ -492,7 +492,7 @@ function formatTime(value: string) {
         <div v-for="doc in documents" :key="doc.id" class="file-row">
             <div class="file-info">
                 <p class="file-name">{{ doc.originalFileName }}</p>
-                <p>{{ Math.ceil(doc.sizeBytes / 1024) }} KB {{ doc.uploadedByUserName }} {{ formatDateTime(doc.uploadedAt) }}</p>
+                <p>{{ Math.ceil(doc.sizeBytes / 1024) }} KB | {{ doc.uploadedByUserName }} | {{ formatDateTime(doc.uploadedAt) }}</p>
             </div>
             <a :href="`/api/documents/${doc.id}/download`" class="download-link">Download</a>
         </div>

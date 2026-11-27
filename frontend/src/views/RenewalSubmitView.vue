@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formatDate } from '@/utils/format'
+import { checkPdf } from '@/utils/file'
 
 interface Item {
     name: string,
@@ -60,12 +61,9 @@ onMounted(async () => {
 async function submitRequest() {
     saveError.value = ''
     if (selectedFile.value) {
-      if (selectedFile.value.size > 10 * 1024 * 1024) {
-        saveError.value = 'File size should be no more than 10MB.'
-        return
-      }
-      if (selectedFile.value.type !== 'application/pdf') {
-        saveError.value = 'File type should be PDF.'
+      const fileError = await checkPdf(selectedFile.value)
+      if (fileError) {
+        saveError.value = fileError
         return 
       }
     }

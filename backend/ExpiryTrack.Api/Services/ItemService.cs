@@ -207,7 +207,7 @@ public class ItemService
         item.Description = request.Description;
         item.Provider = request.Provider;
         item.ReferenceNumber = request.ReferenceNumber;
-        
+
         try
         {
             await _db.SaveChangesAsync();
@@ -215,8 +215,8 @@ public class ItemService
         catch (DbUpdateConcurrencyException)
         {
             // someone else changed the item's state after we checked it, so nothing was saved
-            return new ItemResult 
-                { Error = "Someone else changed this item at the same time. Reload the page and try again." };
+            return new ItemResult
+            { Error = "Someone else changed this item at the same time. Reload the page and try again." };
         }
         return new ItemResult { Item = item };
     }
@@ -293,7 +293,7 @@ public class ItemService
             RecipientUserId = item.ResponsibleUserId,
             CreatedAt = now
         });
-        
+
         try
         {
             await _db.SaveChangesAsync();
@@ -301,8 +301,8 @@ public class ItemService
         catch (DbUpdateConcurrencyException)
         {
             // someone else changed the item's state after we checked it, so nothing was saved
-            return new ItemResult 
-                { Error = "Someone else changed this item at the same time. Reload the page and try again." };
+            return new ItemResult
+            { Error = "Someone else changed this item at the same time. Reload the page and try again." };
         }
         return new ItemResult { Item = item };
     }
@@ -354,7 +354,7 @@ public class ItemService
             RecipientUserId = item.ResponsibleUserId,
             CreatedAt = now
         });
-        
+
         try
         {
             await _db.SaveChangesAsync();
@@ -362,8 +362,8 @@ public class ItemService
         catch (DbUpdateConcurrencyException)
         {
             // someone else changed the item's state after we checked it, so nothing was saved
-            return new ItemResult 
-                { Error = "Someone else changed this item at the same time. Reload the page and try again." };
+            return new ItemResult
+            { Error = "Someone else changed this item at the same time. Reload the page and try again." };
         }
         return new ItemResult { Item = item };
     }
@@ -486,7 +486,7 @@ public class ItemService
                 }
                 var description = sheet.Cell(row, 9).GetString().Trim();
 
-                requests.Add((row, new CreateItemRequest
+                var request = new CreateItemRequest
                 {
                     Name = name,
                     CategoryId = category.Id,
@@ -497,16 +497,18 @@ public class ItemService
                     Provider = provider == "" ? null : provider,
                     ReferenceNumber = referenceNumber == "" ? null : referenceNumber,
                     Description = description == "" ? null : description,
-                }));
-            }
+                };
 
-            foreach (var (row, request) in requests)
-            {
+                // the same rules as creating an item manually,
+                // checked right away so that the errors stay in row order
                 string? error = await CheckNewItem(currentUser, request);
                 if (error != null)
                 {
                     result.RowErrors.Add($"Row {row}: {error}");
+                    continue;
                 }
+
+                requests.Add((row, request));
             }
 
             // if some rows couldn't be read nothing is impored

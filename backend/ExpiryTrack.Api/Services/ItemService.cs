@@ -83,6 +83,12 @@ public class ItemService
             return "The category does not exist or it is not active.";
         }
 
+        // renewals in this category are reviewed by finance, so the item needs a cost
+        if (category.RequiresFinancialReview && request.Cost == null)
+        {
+            return "A cost is required for items in this category.";
+        }
+
         // check the dates
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
@@ -272,11 +278,12 @@ public class ItemService
         }
 
         var now = DateTime.UtcNow;
+        // no link to the item 
         _db.Notifications.Add(new Notification
         {
             Type = "ItemReassigned",
             Message = $"{item.Name} was reassigned to another employee.",
-            ItemId = item.Id,
+            ItemId = null,
             RecipientUserId = item.ResponsibleUserId,
             CreatedAt = now
         });

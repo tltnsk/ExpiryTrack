@@ -178,7 +178,8 @@ public static class ItemSeeder
 
             // about 1 in 10 items has no cost, the rest are rounded to tens
             decimal? cost = null;
-            if (random.Next(10) != 0)
+            bool withoutCost = random.Next(10) == 0;
+            if (!withoutCost || category.RequiresFinancialReview)
             {
                 cost = random.Next(catalog.MinCost / 10, catalog.MaxCost / 10) * 10;
             }

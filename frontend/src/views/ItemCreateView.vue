@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { checkPdf } from '@/utils/file'
@@ -9,7 +9,8 @@ interface Category {
     id: number,
     name: string,
     warningPeriodDays: number,
-    isActive: boolean
+    isActive: boolean,
+    requiresFinancialReview: boolean
 }
 
 interface User {
@@ -29,6 +30,9 @@ const referenceNumber = ref('')
 const startDate = ref('')
 const expirationDate = ref('')
 const cost = ref('')
+// renewals in these categories are reviewed by finance, so the item needs a cost
+const costRequired = computed(() => 
+  categories.value.find((category) => category.id === categoryId.value)?.requiresFinancialReview ?? false)
 const responsibleUserId = ref<number | ''>('')
 
 const errorMessage = ref('')
@@ -204,8 +208,9 @@ async function createItem() {
     </div>
     <div>
       <label>
-        Cost
-        <input v-model="cost" name="cost" type="number" min="0.01" step="0.01" placeholder="Leave empty if free" />
+        Cost <span v-if="costRequired" class=required>*</span>
+        <input v-model="cost" name="cost" type="number" min="0.01" step="0.01" :required="costRequired"
+          :placeholder="costRequired ? 'Required for this category' : 'Leave empty if free'" />
       </label>
       <p v-if="errors.cost" class="field-error">{{ errors.cost }}</p>
     </div>

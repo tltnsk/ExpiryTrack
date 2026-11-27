@@ -138,7 +138,7 @@ watch (() => route.path, () => {
         </header>
 
         <RouterView v-slot="{ Component }">
-          <Transition name="fade" mode="out-in">
+          <Transition :name="route.path === '/login' ? '' : 'fade'" mode="out-in">
             <div :key="route.path">
               <component :is="Component" />
             </div>

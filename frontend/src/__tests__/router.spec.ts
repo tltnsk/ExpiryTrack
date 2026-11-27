@@ -41,6 +41,18 @@ describe('router guards', () => {
         expect(router.currentRoute.value.path).toBe('/items')
     })
 
+    it('does not ask the server again after logout', async () => {
+        const fetchMock = mockFetch({})
+        const auth = useAuthStore()
+        auth.checked = true
+        auth.user = null
+
+        await router.push('/items')
+
+        expect(fetchMock).not.toHaveBeenCalledWith('/api/auth/me')
+        expect(router.currentRoute.value.path).toBe('/login')
+    })
+
     it('sends a logged in user away from login page', async () => {
         expect(await open('/login', 'Employee')).toBe('/dashboard')
     })

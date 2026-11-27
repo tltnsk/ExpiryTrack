@@ -16,6 +16,9 @@ export interface User {
 export const useAuthStore = defineStore('auth', () => {
     const user = ref<User | null>(null)
 
+    // true once we know whether someone is logged in 
+    const checked = ref(false)
+
     async function loadMe() {
         const response = await fetch('/api/auth/me')
         if (response.ok) {
@@ -23,6 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
         } else {
             user.value = null
         }
+        checked.value = true
     }
 
     async function logout() {
@@ -30,5 +34,5 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = null
     }
 
-    return { user, loadMe, logout }
+    return { user, checked, loadMe, logout }
 })

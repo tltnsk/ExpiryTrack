@@ -58,8 +58,9 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
-  // if user is not authenticated, redirect them to login page
-  if (auth.user === null) {
+  // ask the user who is logged in only once on the first page load
+  // after logout we already know that noone is logged in
+  if (auth.user === null && !auth.checked) {
     await auth.loadMe()
   }
 

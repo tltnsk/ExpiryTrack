@@ -60,21 +60,6 @@ onMounted(async () => {
                 </RouterLink>
             </div>
 
-            <div class="charts">
-                <div class="chart-card">
-                    <h3>Items by state</h3>
-                    <StateChart :values="stateCounts" />
-                </div>
-                <div class="chart-card">
-                    <h3>{{barChart.title }}</h3>
-                    <BarChart :labels="barChart.labels" :values="barChart.values" />
-                 </div>
-                <div class="chart-card wide">
-                    <h3>Expirations in the next 12 months</h3>
-                    <BarChart :labels="monthChart.labels" :values="monthChart.values" :aspect-ratio="4"/>
-                 </div>
-            </div>
-
         <section class="table-section">
             <h3>Requests to review</h3>
             <p v-if="dashboard.requestsToReview.length === 0" class="empty">No requests to review.</p>
@@ -96,6 +81,21 @@ onMounted(async () => {
                 </table>
             </div>
         </section>
+
+            <div class="charts">
+                <div class="chart-card">
+                    <h3>Items by state</h3>
+                    <StateChart :values="stateCounts" />
+                </div>
+                <div class="chart-card">
+                    <h3>{{barChart.title }}</h3>
+                    <BarChart :labels="barChart.labels" :values="barChart.values" />
+                 </div>
+                <div class="chart-card wide">
+                    <h3>Expirations in the next 12 months</h3>
+                    <BarChart :labels="monthChart.labels" :values="monthChart.values" :aspect-ratio="4"/>
+                 </div>
+            </div>
     </div>
     <aside class="side">
         <section>
@@ -194,6 +194,10 @@ h3 {
     grid-template-columns: 1fr 1fr;
     gap: 16px;
     margin-bottom: 32px;
+}
+
+.wide {
+    grid-column: 1 / -1;
 }
 
 .chart-card {
@@ -311,10 +315,6 @@ h3 {
     opacity: 0.75;
 }
 
-.wide {
-    grid-column: 1 / -1;
-}
-
 .table-section {
     margin-bottom: 32px;
 }
@@ -340,6 +340,36 @@ h3 {
 
 .side section + section {
     margin-top: 32px;
+}
+
+
+.table-box {
+  background: white;
+  border: 1px solid #eceef1;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+table {
+  margin: 0;
+}
+
+th, td {
+  padding: 18px 20px;
+  border: none;
+  border-bottom: 1px solid #eceef1;
+}
+
+th {
+  background: #f9fafb;
+}
+
+th + th {
+  border-left: 1px solid #eceef1;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
 }
 
 /* keep this last so it wins */

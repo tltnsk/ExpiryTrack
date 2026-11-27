@@ -2,7 +2,7 @@
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth';
 import { useNotificationsStore } from '@/stores/notifications';
-import { computed, watch } from 'vue'
+import { computed, watch, ref } from 'vue'
 import { formatLabel } from '@/utils/format'
 import logo from '@/assets/expiry-track-logo.png'
 
@@ -10,6 +10,9 @@ const auth = useAuthStore()
 const notificationsStore = useNotificationsStore()
 const router = useRouter()
 const route = useRoute()
+
+// on smaller screens the menu is hidden until the user opens it
+const menuOpen = ref(false)
 
 // initials shown in circle
 const initials = computed(() => {
@@ -62,15 +65,19 @@ const quickActions = computed(() => {
 // and once when the application starts
 watch (() => route.path, () => {
   if (auth.user) notificationsStore.loadUnreadCount()
+  menuOpen.value = false
 }, { immediate: true })
 </script>
 
 <template>
   <div class="layout">
-    <aside v-if="auth.user" class="sidebar">
-      <div class="logo">
-        <span class="logo-icon"><img :src="logo" alt=""/></span>
-        <span class="logo-text">ExpiryTrack</span>
+    <aside v-if="auth.user" class="sidebar" :class="{ open: menuOpen}">
+      <div class="sidebar-top">
+        <div class="logo">
+          <span class="logo-icon"><img :src="logo" alt=""/></span>
+          <span class="logo-text">ExpiryTrack</span>
+        </div>
+        <button class="menu-button" @click="menuOpen = !menuOpen" aria-label="Menu">☰</button>
       </div>
       <nav>
         <p class="nav-heading">Work</p>

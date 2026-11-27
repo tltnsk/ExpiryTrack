@@ -317,6 +317,11 @@ const waitingForOthers = computed(() => dashboard.value ? dashboard.value.myOpen
     margin: 0 auto;
 }
 
+.main-column,
+.side-column {
+    min-width: 0;
+}
+
 @media (max-width: 1100px) {
     .home-grid {
         grid-template-columns: 1fr;

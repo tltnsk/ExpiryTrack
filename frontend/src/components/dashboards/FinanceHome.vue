@@ -55,28 +55,30 @@ const totalDepartmentCost = computed(() => {
             <section class="box">
                 <h3>Requests to review</h3>
                 <p v-if="dashboard.requestsNeedingFinancialReview.length === 0" class="empty">No requests to review.</p>
-                <table v-else class="requests">
-                    <thead>
-                        <tr><th>Item</th><th>Requested by</th><th>Waiting</th><th>New expiry</th><th>Cost</th><th></th></tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="request in dashboard.requestsNeedingFinancialReview" :key="request.id">
-                            <td>{{ request.itemName }}</td>
-                            <td>{{ request.requestedByUserName }}</td>
-                            <td :class="{ late: daysWaiting(request.submittedAt) > 3 }">{{ waitingText(request.submittedAt) }}</td>
-                            <td>{{ formatDate(request.proposedExpirationDate) }}</td>
-                            <td>{{ formatMoney(request.proposedCost) }}</td>
-                            <td><RouterLink :to="`/requests/${request.id}`" class="table-link">Review →</RouterLink></td>
-                        </tr>
-                    </tbody>
-                    <tfoot>
-                        <tr class="total-row">
-                            <td colspan="4">Total</td>
-                            <td>{{ formatMoney(dashboard.totalCostWaitingForReview) }}</td>
-                            <td></td>
-                        </tr>
-                    </tfoot>
-                </table>
+                <div v-else class="table-box">
+                    <table class="requests">
+                        <thead>
+                            <tr><th>Item</th><th>Requested by</th><th>Waiting</th><th>New expiry</th><th>Cost</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="request in dashboard.requestsNeedingFinancialReview" :key="request.id">
+                                <td>{{ request.itemName }}</td>
+                                <td>{{ request.requestedByUserName }}</td>
+                                <td :class="{ late: daysWaiting(request.submittedAt) > 3 }">{{ waitingText(request.submittedAt) }}</td>
+                                <td>{{ formatDate(request.proposedExpirationDate) }}</td>
+                                <td>{{ formatMoney(request.proposedCost) }}</td>
+                                <td><RouterLink :to="`/requests/${request.id}`" class="table-link">Review →</RouterLink></td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="total-row">
+                                <td colspan="4">Total</td>
+                                <td>{{ formatMoney(dashboard.totalCostWaitingForReview) }}</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </section>
 
             <div class="charts">
@@ -126,6 +128,7 @@ const totalDepartmentCost = computed(() => {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    min-width: 0;
 }
 
 .box {
@@ -209,6 +212,10 @@ const totalDepartmentCost = computed(() => {
     display: flex;
     justify-content: space-between;
     font-size: 1.3em;
+}
+
+.table-box {
+    overflow-x: auto;
 }
 
 @media (max-width: 1100px) {

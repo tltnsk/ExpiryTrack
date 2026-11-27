@@ -97,7 +97,7 @@ async function editUser() {
   <div v-else-if="user">
     <h2>Edit user</h2>
 
-    <form @submit.prevent="editUser" @invalid.capture="onInvalid" @input="errors = {}">
+    <form @submit.prevent="editUser" @invalid.capture="onInvalid" @change="errors = {}">
          <div>
       <label>
         First Name <span class="required">*</span>

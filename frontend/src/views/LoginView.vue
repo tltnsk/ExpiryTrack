@@ -56,7 +56,7 @@ async function login() {
         <h1>Track your company items, expiration dates, renewal requests and renewal workflow all in one place.</h1>
     </div>
     <div class="login-right">
-      <form class="login-card" @submit.prevent="login" @invalid.capture="onInvalid" @input="errors = {}">
+      <form class="login-card" @submit.prevent="login" @invalid.capture="onInvalid" @change="errors = {}">
         <h1>ExpiryTrack</h1>
         <label>Email <input v-model="email" name="email" type="email" required /></label>
         <p v-if="errors.email" class="field-error">{{ errors.email }}</p>

@@ -65,7 +65,7 @@ async function createCategory() {
 <template>
   <h2>New category</h2>
 
-  <form @submit.prevent="createCategory" @invalid.capture="onInvalid" @input="errors = {}">
+  <form @submit.prevent="createCategory" @invalid.capture="onInvalid" @change="errors = {}">
     <div>
       <label>
         Name <span class="required">*</span>

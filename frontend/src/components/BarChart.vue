@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, onMounted} from 'vue'
+import {ref, onMounted, computed} from 'vue'
 import Chart from 'chart.js/auto'
 
 const props = defineProps<{
@@ -10,7 +10,10 @@ const props = defineProps<{
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 
-onMounted(() =>
+const hasData = computed(() => props.values.some((value) => value > 0))
+
+onMounted(() =>{
+    if (!canvas.value) return // no canvas when there's no data
     new Chart(canvas.value!, {
         type: 'bar',
         data: {
@@ -36,8 +39,17 @@ onMounted(() =>
         },
     
     })
+}
 )
 </script>
 <template>
-    <canvas ref="canvas"></canvas>
+    <p v-if="!hasData" class="no-data">Nothing to show yet.</p>
+    <canvas v-else ref="canvas"></canvas>
 </template>
+<style scoped>
+.no-data {
+    padding: 24px 0;
+    color: #6b6b6b;
+    text-align: center;
+}
+</style>

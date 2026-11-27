@@ -89,7 +89,7 @@ async function createUser() {
 <template>
   <h2>New user</h2>
 
-  <form @submit.prevent="createUser" @invalid.capture="onInvalid" @input="errors = {}">
+  <form @submit.prevent="createUser" @invalid.capture="onInvalid" @change="errors = {}">
     <div>
       <label>
         First Name <span class="required">*</span>

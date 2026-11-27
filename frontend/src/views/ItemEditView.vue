@@ -106,7 +106,7 @@ async function editItem() {
     <div v-else-if="item">
     <h2>Edit item</h2>
 
-    <form @submit.prevent="editItem" @invalid.capture="onInvalid" @input="errors = {}">
+    <form @submit.prevent="editItem" @invalid.capture="onInvalid" @change="errors = {}">
       <div>
       <label>
         Name <span class="required">*</span>

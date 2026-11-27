@@ -103,7 +103,7 @@ async function editCategory() {
   <p v-if="loading">Loading...</p>
   <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>
   <div v-else-if="category">
-        <form @submit.prevent="editCategory" @invalid.capture="onInvalid" @input="errors = {}">
+        <form @submit.prevent="editCategory" @invalid.capture="onInvalid" @change="errors = {}">
     <div>
       <label>
         Name <span class="required">*</span>

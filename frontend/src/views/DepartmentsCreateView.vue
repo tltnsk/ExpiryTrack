@@ -61,7 +61,7 @@ async function createDepartment() {
 <template>
   <h2>New department</h2>
 
-  <form @submit.prevent="createDepartment" @invalid.capture="onInvalid" @input="errors = {}">
+  <form @submit.prevent="createDepartment" @invalid.capture="onInvalid" @change="errors = {}">
     <div>
       <label>
         Name <span class="required">*</span>

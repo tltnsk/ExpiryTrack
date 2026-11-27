@@ -64,7 +64,7 @@ async function changePassword() {
 
 <template>
     <h2>Change Password</h2>
-      <form @submit.prevent="changePassword" @invalid.capture="onInvalid" @input="errors = {}">
+      <form @submit.prevent="changePassword" @invalid.capture="onInvalid" @change="errors = {}">
         <div>
           <label>Current Password <span class="required">*</span> <input v-model="currentPassword" name="currentPassword" type="password" required /></label>
           <p v-if="errors.currentPassword" class="field-error">{{ errors.name }}</p>

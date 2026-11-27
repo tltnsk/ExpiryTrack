@@ -149,7 +149,7 @@ async function createItem() {
 <template>
     <h2>New item</h2>
 
-    <form @submit.prevent="createItem" @invalid.capture="onInvalid" @input="errors = {}">
+    <form @submit.prevent="createItem" @invalid.capture="onInvalid" @change="errors = {}">
       <div>
       <label>
         Name <span class="required">*</span>

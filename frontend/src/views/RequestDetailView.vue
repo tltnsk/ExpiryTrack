@@ -357,7 +357,7 @@ function formatTime(value: string) {
         </article>
 
         <aside class="side">
-            <form v-if="canFinanceReview" @submit.prevent="financeRecommendation" @invalid.capture="onInvalid" @input="errors = {}" class="action-panel">
+            <form v-if="canFinanceReview" @submit.prevent="financeRecommendation" @invalid.capture="onInvalid" @change="errors = {}" class="action-panel">
                 <h3>Financial review</h3>
                 <label>
                 Recommendation

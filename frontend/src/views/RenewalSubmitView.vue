@@ -130,7 +130,7 @@ async function submitRequest() {
     <h2>Submit Renewal Request</h2>
     <p>Renewal for {{ item.name }}, currently valid until {{ formatDate(item.expirationDate) }}</p>
 
-    <form @submit.prevent="submitRequest" @invalid.capture="onInvalid" @input="errors = {}">
+    <form @submit.prevent="submitRequest" @invalid.capture="onInvalid" @change="errors = {}">
     <div>
       <label>
           Proposed Expiration Date <span class="required">*</span>

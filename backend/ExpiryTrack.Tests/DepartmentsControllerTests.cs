@@ -27,12 +27,12 @@ public class DepartmentsControllerTests
         var controller = new DepartmentsController(db);
 
         var result = await controller.Create(new DepartmentRequest { Name = "  IT  ", IsActive = true });
-        
+
         var conflict = Assert.IsType<ConflictObjectResult>(result);
         Assert.Equal("A department with this name already exists.", conflict.Value);
         Assert.Single(db.Departments);
     }
-    
+
     [Fact]
     public async Task Create_NewName_Created()
     {
@@ -40,7 +40,7 @@ public class DepartmentsControllerTests
         var controller = new DepartmentsController(db);
 
         var result = await controller.Create(new DepartmentRequest { Name = "HR", IsActive = true });
-        
+
         var created = Assert.IsType<CreatedResult>(result);
         var response = Assert.IsType<DepartmentResponse>(created.Value);
         Assert.Equal("HR", response.Name);
@@ -52,9 +52,9 @@ public class DepartmentsControllerTests
     {
         using var db = TestData.CreateDb();
         var controller = new DepartmentsController(db);
-        
+
         var result = await controller.Update(999, new DepartmentRequest { Name = "HR", IsActive = true });
-        
+
         var notFound = Assert.IsType<NotFoundResult>(result);
         Assert.NotNull(notFound);
     }
@@ -70,7 +70,7 @@ public class DepartmentsControllerTests
         var controller = new DepartmentsController(db);
 
         var result = await controller.Update(hrDepartment.Id, new DepartmentRequest { Name = "IT", IsActive = true });
-        
+
         var conflict = Assert.IsType<ConflictObjectResult>(result);
         Assert.Equal("Name already exists.", conflict.Value);
         Assert.Equal("HR", hrDepartment.Name);
@@ -83,13 +83,13 @@ public class DepartmentsControllerTests
         var it = new Department { Name = "IT" };
         db.Departments.Add(it);
         db.SaveChanges();
-        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3, DepartmentId = it.Id};
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3, DepartmentId = it.Id };
         db.Users.Add(manager);
         db.SaveChanges();
         var controller = new DepartmentsController(db);
-        
+
         var result = await controller.AssignManager(it.Id, new AssignManagerRequest { UserId = manager.Id });
-        
+
         var ok = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<DepartmentResponse>(ok.Value);
         Assert.Equal(manager.Id, response.ManagerId);
@@ -105,7 +105,7 @@ public class DepartmentsControllerTests
         db.Users.Add(manager);
         db.SaveChanges();
         var controller = new DepartmentsController(db);
-        
+
         var result = await controller.AssignManager(999, new AssignManagerRequest { UserId = manager.Id });
         var notFound = Assert.IsType<NotFoundResult>(result);
         Assert.NotNull(notFound);
@@ -119,9 +119,9 @@ public class DepartmentsControllerTests
         db.Departments.Add(it);
         db.SaveChanges();
         var controller = new DepartmentsController(db);
-        
+
         var result = await controller.AssignManager(it.Id, new AssignManagerRequest { UserId = 999 });
-        
+
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("User not found.", badRequest.Value);
     }
@@ -133,17 +133,17 @@ public class DepartmentsControllerTests
         var it = new Department { Name = "IT" };
         db.Departments.Add(it);
         db.SaveChanges();
-        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3, DepartmentId = it.Id, IsActive = false};
+        var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3, DepartmentId = it.Id, IsActive = false };
         db.Users.Add(manager);
         db.SaveChanges();
         var controller = new DepartmentsController(db);
-        
+
         var result = await controller.AssignManager(it.Id, new AssignManagerRequest { UserId = manager.Id });
-        
+
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("The user is not active.", badRequest.Value);
     }
-    
+
     [Fact]
     public async Task AssignManager_NotAManager_Refused()
     {
@@ -151,17 +151,17 @@ public class DepartmentsControllerTests
         var it = new Department { Name = "IT" };
         db.Departments.Add(it);
         db.SaveChanges();
-        var user = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 2, DepartmentId = it.Id};
+        var user = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 2, DepartmentId = it.Id };
         db.Users.Add(user);
         db.SaveChanges();
         var controller = new DepartmentsController(db);
-        
+
         var result = await controller.AssignManager(it.Id, new AssignManagerRequest { UserId = user.Id });
-        
+
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("The user is not a department manager.", badRequest.Value);
     }
-    
+
     [Fact]
     public async Task AssignManager_OtherDepartment_Refused()
     {
@@ -171,29 +171,30 @@ public class DepartmentsControllerTests
         db.Departments.Add(it);
         db.Departments.Add(hr);
         db.SaveChanges();
-        var user = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3, DepartmentId = it.Id};
+        var user = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3, DepartmentId = it.Id };
         db.Users.Add(user);
         db.SaveChanges();
         var controller = new DepartmentsController(db);
-        
+
         var result = await controller.AssignManager(hr.Id, new AssignManagerRequest { UserId = user.Id });
-        
+
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("The user does not belong to this department.", badRequest.Value);
     }
 
     [Fact]
-    public async Task RemoveManager_RequestsOpen_Refused()
+    public async Task RemoveManager_RequestsOpen_Removed()
     {
         using var db = TestData.CreateDb();
         var manager = new User { FirstName = "Test", LastName = "Manager", Email = "manager@test.com", RoleId = 3 };
         var item = TestData.AddItem(db, LifecycleState.Active, daysLeft: 105, manager: manager);
-        TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
-        
+        var request = TestData.AddRequest(db, item, RequestStatus.PendingManagerApproval);
+
         var controller = new DepartmentsController(db);
         var result = await controller.AssignManager(item.DepartmentId, new AssignManagerRequest { UserId = null });
 
-        Assert.IsType<ConflictObjectResult>(result);
-        Assert.Equal(manager.Id, db.Departments.Find(item.DepartmentId)!.ManagerId);
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Null(db.Departments.Find(item.DepartmentId)!.ManagerId);
+        Assert.Equal(RequestStatus.PendingManagerApproval, request.Status);
     }
 }

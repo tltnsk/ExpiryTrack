@@ -214,7 +214,7 @@ describe('ChangePasswordView', () => {
         await fill(wrapper, 'oldpassword', 'newpassword', 'pass1234')
         await submit(wrapper)
 
-        expect(wrapper.find('.error').text()).toContain('do not match')
+        expect(wrapper.find('.field-error').text()).toContain('do not match')
         expect(fetchMock).not.toHaveBeenCalled()
     })
 

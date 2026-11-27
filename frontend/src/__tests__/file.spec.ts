@@ -10,7 +10,7 @@ describe('checkPdf', () => {
     })
 
     it('refuses a file that is not named .pdf', async () => {
-        expect(await checkPdf(new File([pdfText], 'offer.txt'))).toBe('Only .pdf files can be uploaded.')
+        expect(await checkPdf(new File([pdfText], 'offer.txt'))).toBe('Only .pdf files can be uploaded')
     })
 
     it('refuses a text file that is only named .pdf', async () => {

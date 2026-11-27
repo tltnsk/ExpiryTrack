@@ -24,7 +24,7 @@ async function changePassword() {
   successMessage.value = ''
 
   if (newPassword.value !== confirmPassword.value) {
-    errorMessage.value = 'The passwords do not match'
+    errors.value.confirmPassword = 'The passwords do not match'
     return
   }
 
@@ -74,7 +74,7 @@ async function changePassword() {
           <p v-if="errors.newPassword" class="field-error">{{ errors.newPassword }}</p>
         </div>
         <div>
-          <label>Confirm New Password <span class="required">*</span> <input v-model="confirmPassword" name="confirmPassword"  type="password" required minlength="8"/></label>
+          <label>Confirm New Password <span class="required">*</span> <input v-model="confirmPassword" name="confirmPassword"  type="password" required/></label>
           <p v-if="errors.confirmPassword" class="field-error">{{ errors.confirmPassword }}</p>
         </div>
         <button type="submit" :disabled="saving">Change Password</button>
@@ -84,4 +84,4 @@ async function changePassword() {
 </template>
 
 <style scoped>
-</style>
+</style>4

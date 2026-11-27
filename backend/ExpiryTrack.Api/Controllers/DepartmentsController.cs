@@ -86,6 +86,11 @@ public class DepartmentsController : ControllerBase
         if (await _db.Departments.AnyAsync(d => d.Name == name && d.Id != id))
             return Conflict("Name already exists.");
 
+        // a department can only be closed when nobody works in it anymore
+        // so if there are active users, the department cannot be deactivated
+        if (department.isActive && !departmentRequest.IsActive && await _db.Users.AnyAsync(u => u.DepartmentId == id && u.IsActive))
+            return Conflict("This department still has active users. Deactivate them first.");
+
         CopyFromRequest(departmentRequest, department);
         await _db.SaveChangesAsync();
         return Ok(ToResponse(department));

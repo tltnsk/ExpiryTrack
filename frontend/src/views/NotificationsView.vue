@@ -130,10 +130,10 @@ async function markAllAsRead() {
 
                         <td>
                             <div class="row-actions">
-                                <RouterLink v-if="notification.itemId !== null" :to="`/items/${notification.itemId}`" class="outline-button">
+                                <RouterLink v-if="notification.itemId !== null" :to="`/items/${notification.itemId}`" class="outline-button" @click="open(notification)">
                                     Open item
                                 </RouterLink>
-                                <RouterLink v-else-if="notification.requestId !== null" :to="`/requests/${notification.requestId}`" class="outline-button">
+                                <RouterLink v-else-if="notification.requestId !== null" :to="`/requests/${notification.requestId}`" class="outline-button" @click="open(notification)">
                                     Open request
                                 </RouterLink>
                                 <button v-if="!notification.isRead" type="button" class="outline-button" @click="markAsRead(notification.id)">

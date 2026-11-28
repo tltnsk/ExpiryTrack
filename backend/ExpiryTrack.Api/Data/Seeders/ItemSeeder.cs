@@ -141,6 +141,18 @@ public static class ItemSeeder
             // the background job marks the item as expiring soon
             AddHistory(db, item, LifecycleState.Active, LifecycleState.ExpiringSoon, null, "Item expiring soon.", now);
         }
+        // the daily check would also have told the employee
+        if (state == LifecycleState.ExpiringSoon)
+        {
+            db.Notifications.Add(new Notification
+            {
+                Type = "ItemExpiringSoon",
+                Message = $"{name} is expiring soon.",
+                Item = item,
+                RecipientUserId = employee.Id,
+                CreatedAt = now,
+            });
+        }
         if (state == LifecycleState.Expired)
         {
             AddHistory(db, item, LifecycleState.ExpiringSoon, LifecycleState.Expired, null, "Item expired without being renewed.", now);

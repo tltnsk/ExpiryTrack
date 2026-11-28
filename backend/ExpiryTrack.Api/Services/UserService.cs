@@ -81,6 +81,9 @@ public class UserService
         if (request.IsActive && !user.IsActive && user.Role.Name == "DepartmentManager" && await DepartmentHasManager(user.DepartmentId!.Value))
             return new UserResult { Conflict = "This department already has an active department manager." };
 
+        if (request.IsActive && !user.IsActive && user.Department != null && !user.Department.isActive)
+            return new UserResult { Conflict = "Activate the department first." };
+
         if (!request.IsActive)
         {
             if (id == currentUserId)

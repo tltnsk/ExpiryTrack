@@ -120,6 +120,27 @@ public class UserServiceTests
         Assert.Contains("is still responsible for items", result.Conflict);
     }
 
+    // a user can't be reactivated while department is inactive
+    [Fact]
+    public async Task SetActive_InactiveDepartment_Conflict()
+    {
+        using var db = TestData.CreateDb();
+        var admin = new User { FirstName = "Test", LastName = "Admin", Email = "admin@test.com", RoleId = 1 };
+        db.Users.Add(admin);
+        db.SaveChanges();
+
+        int departmentId = TestData.AddItem(db, LifecycleState.Active, daysLeft: 100).DepartmentId;
+        var employee = TestData.AddUser(db, 2, departmentId, isActive: false);
+        db.Departments.Single(d => d.Id == departmentId).isActive = false;
+        db.SaveChanges();
+
+        var service = new UserService(db);
+        var result = await service.SetActiveAsync(employee.Id, admin.Id, new SetUserActiveRequest { IsActive = true });
+
+        Assert.Equal("Activate the department first.", result.Conflict);
+        Assert.False(db.Users.Single(u => u.Id == employee.Id).IsActive);
+    }
+
     // unknown role
     [Fact]
     public async Task Create_UnknownRole_Error()
@@ -315,7 +336,7 @@ public class UserServiceTests
         using var db = TestData.CreateDb();
         int departmentId = TestData.AddItem(db, LifecycleState.Active, daysLeft: 100).DepartmentId;
         TestData.AddUser(db, 3, departmentId);
-        
+
         var request = new CreateUserRequest
         {
             FirstName = "Test",
@@ -332,14 +353,14 @@ public class UserServiceTests
         Assert.NotNull(result.Conflict);
         Assert.Null(result.Error);
     }
-    
+
     [Fact]
     public async Task Create_ManagerWhenOldOneInactive_Ok()
     {
         using var db = TestData.CreateDb();
         int departmentId = TestData.AddItem(db, LifecycleState.Active, daysLeft: 100).DepartmentId;
         TestData.AddUser(db, 3, departmentId, isActive: false);
-        
+
         var request = new CreateUserRequest
         {
             FirstName = "Test",

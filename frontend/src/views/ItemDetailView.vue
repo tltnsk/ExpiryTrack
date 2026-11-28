@@ -152,8 +152,14 @@ const isOpen = computed(() =>
   item.value?.lifecycleState === 'Active' || item.value?.lifecycleState === 'ExpiringSoon')
 
 const canEdit = computed(() => (isManager.value || isEmployee.value) && isOpen.value)
-const canCancel = computed(() => isManager.value && isOpen.value)
+// the server refuses to cancel an item while a request is open, so the button must be hidden
+const canCancel = computed(() => isManager.value && isOpen.value && !hasOpenRequest.value)
 const canRenew = computed(() => isEmployee.value && !hasOpenRequest.value && (item.value?.lifecycleState === 'ExpiringSoon' || item.value?.lifecycleState === 'Expired'))
+
+// finance can only open requests that needed a financial review
+function canOpenRequest(requestId: number) {
+  return requests.value.some(r => r.id === requestId)
+}
 
 async function cancelItem() {
     cancelError.value = ''
@@ -421,8 +427,9 @@ const activeTab = ref('requests')
                         <td>{{ formatDate(period.expirationDate)}}</td>
                         <td>{{ formatMoney(period.cost) }}</td>
                         <td>{{ formatDateTime(period.createdAt) }}</td>
-                        <td v-if="period.createdFromRequestId!==null"><RouterLink  :to="`/requests/${period.createdFromRequestId}`" >Go to request</RouterLink></td>
-                        <td v-else>Initial Period</td>
+                        <td v-if="period.createdFromRequestId === null">Initial Period</td>
+                        <td v-else-if="canOpenRequest(period.createdFromRequestId)"><RouterLink  :to="`/requests/${period.createdFromRequestId}`" >Go to request</RouterLink></td>
+                        <td v-else>Renewal</td>
                     </tr>
                 </tbody>
               </table>

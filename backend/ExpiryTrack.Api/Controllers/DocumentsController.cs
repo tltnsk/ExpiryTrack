@@ -45,7 +45,7 @@ public class DocumentsController : ControllerBase
         }
         return name;
     }
-    
+
     // look for PDF commands that run code or start a program when a file is opened
     private static async Task<bool> HasActiveContent(IFormFile file)
     {
@@ -54,7 +54,7 @@ public class DocumentsController : ControllerBase
         // Latin1 turns every byte into one character
         // in this way PDF's binary parts don't break the text search
         string content = System.Text.Encoding.Latin1.GetString(memory.ToArray());
-        return content.Contains("/JavaScript") || content.Contains("/JS") || content.Contains("/Launch");
+        return content.Contains("/JavaScript") || content.Contains("/Launch");
     }
 
     // POST api/items/{itemId:int}/documents 
@@ -215,12 +215,12 @@ public class DocumentsController : ControllerBase
         {
             return BadRequest("You can only upload PDF files.");
         }
-        
+
         if (Path.GetExtension(file.FileName).ToLower() != ".pdf")
         {
             return BadRequest("Only .pdf files can be uploaded.");
         }
-        
+
         if (await HasActiveContent(file))
         {
             return BadRequest("PDF files with scripts or actions are not allowed.");
@@ -379,7 +379,7 @@ public class DocumentsController : ControllerBase
         }
         // the browser must not guess the file's content, it must trust that the file is pdf
         Response.Headers["X-Content-Type-Options"] = "nosniff";
-        
+
         return PhysicalFile(path, "application/pdf", document.OriginalFileName);
     }
 

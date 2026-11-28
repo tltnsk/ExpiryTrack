@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useAuthStore } from '@/stores/auth'
 import type { EmployeeDashboard } from '@/utils/dashboard'
 import StateChart from '../StateChart.vue'
 import { formatLabel } from '@/utils/format'
 import BarChart from '../BarChart.vue'
-
-const auth = useAuthStore()
 
 const dashboard = ref<EmployeeDashboard | null>(null)
 const loading = ref(true)
@@ -33,11 +30,6 @@ interface Todo {
 }
 
 const today = new Date().toISOString().slice(0, 10)
-
-// how many days until a date (negative when it has passed)
-function daysLeft(date: string) {
-    return Math.round((Date.parse(date) - Date.parse(today)) / 86400000)
-}
 
 // to do list for the employee containing renewals that need to be submitted, answers to clarification or completion
 const todos = computed<Todo[]>(() => {
@@ -88,13 +80,6 @@ const expiringIn30Days = computed(() => {
     if (!dashboard.value) return 0
     return dashboard.value.itemsByTimeLeft.slice(0, 2).reduce((sum, group) => sum + group.value, 0)
 })
-
-// items without a request: expiring soon ones still have a future date, expired ones a past date
-const expiringWithoutRequest = computed(() =>
-    dashboard.value ? dashboard.value.itemsNeedingRenewal.filter((item) => item.expirationDate >= today).length : 0)
-
-const expiredWithoutRequest = computed(() =>
-    dashboard.value ? dashboard.value.itemsNeedingRenewal.length - expiringWithoutRequest.value : 0)
 
 // open requests where someone else has to act    
 const waitingForOthers = computed(() => dashboard.value ? dashboard.value.myOpenRequests.filter((r) => r.status === 'PendingFinancialReview' || r.status === 'PendingManagerApproval') : [])

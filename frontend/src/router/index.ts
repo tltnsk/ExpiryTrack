@@ -92,6 +92,18 @@ router.beforeEach(async (to) => {
     return '/items'
   }
 
+  // only employees and department managers can create and edit items
+  const isEmployeeOrManager = auth.user?.role === "Employee" || auth.user?.role === "DepartmentManager"
+  const isItemForm = to.path === '/items/new' || (to.path.startsWith('/items/') && to.path.endsWith('/edit'))
+  if (!isEmployeeOrManager && isItemForm) {
+    return '/items'
+  }
+
+  // only employees can submit renewal requests
+  if (auth.user?.role !== "Employee" && to.path.startsWith('/items/') && to.path.endsWith('/renew')) {
+    return '/items'
+  }
+
   if (auth.user?.role === "Employee" && to.path.startsWith('/reports')) {
     return '/dashboard'
   }

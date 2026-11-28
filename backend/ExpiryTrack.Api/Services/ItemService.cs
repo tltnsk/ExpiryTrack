@@ -165,6 +165,20 @@ public class ItemService
             Reason = "Item created",
             ChangedAt = now,
         });
+
+        if (responsibleUserId != currentUser.Id)
+        {
+            _db.Notifications.Add(new Notification
+            {
+                Type = "ItemAssigned",
+                Message = state == LifecycleState.ExpiringSoon
+                    ? $"{item.Name} was assigned to you and is expiring soon."
+                    : $"{item.Name} was assigned to you.",
+                ItemId = item.Id,
+                RecipientUserId = responsibleUserId,
+                CreatedAt = now
+            });
+        }
         await _db.SaveChangesAsync();
         return item;
     }
@@ -470,9 +484,10 @@ public class ItemService
                 decimal? cost = null;
                 if (!sheet.Cell(row, 6).IsEmpty())
                 {
-                    if (!sheet.Cell(row, 6).TryGetValue(out decimal costValue) || costValue <= 0)
+                    // same limit as in the item form
+                    if (!sheet.Cell(row, 6).TryGetValue(out decimal costValue) || costValue < 0.01m || costValue > 9999999.99m)
                     {
-                        result.RowErrors.Add($"Row {row}: Cost must be greater than zero.");
+                        result.RowErrors.Add($"Row {row}: Cost must be between 0.01 and 9,999,999.99.");
                         continue;
                     }
                     cost = costValue;

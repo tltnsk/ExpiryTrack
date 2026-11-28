@@ -147,13 +147,31 @@ th {
 }
 
 .table-box {
-  border: 1px solid rgb(200, 197, 197);
+  background: white;
+  border: 1px solid #eceef1;
   border-radius: 12px;
   overflow: hidden;
 }
 
 table {
   margin: 0;
+}
+
+th, td {
+  border: none;
+  border-bottom: 1px solid #eceef1;
+}
+
+th {
+  background: #f9fafb;
+}
+
+th + th {
+  border-left: 1px solid #eceef1;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
 }
 
 </style>

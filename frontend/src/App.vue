@@ -28,7 +28,7 @@ async function logout() {
 // names for the first part of the URL
 const sections: Record<string, string> = {
   dashboard: 'Home', items: 'Items', categories: 'Categories', departments: 'Departments',
-  users: 'Users', requests: 'Requests', notifications: 'Notifications', reports: 'Reports',
+  users: 'Team', requests: 'Requests', notifications: 'Notifications', reports: 'Reports',
   'change-password': 'Change password', 'my-employees': 'My employees'
 }
 
